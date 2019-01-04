@@ -1,0 +1,32 @@
+Public Function SetScrollListBox()
+	//Page1.VerticalScrollListBox1.SetIconPicture(picBBCAmerica,1)
+	//Page1.VerticalScrollListBox1.SetIconPicture(picFoxNews,2)
+	//Page1.VerticalScrollListBox1.SetIconPicture(picCNN,3)
+	//Page1.VerticalScrollListBox1.SetIconPicture(picNBC,4)
+	//Page1.VerticalScrollListBox1.SetIconPicture(picCNBCworld,5)
+//	NavigationBarHeating.VerticalScrollListBox1.AddItem("	Kitchen",0)
+//	NavigationBarHeating.VerticalScrollListBox1.AddItem("	SleepingRoom",0)
+//	NavigationBarHeating.VerticalScrollListBox1.AddItem("	Bathroom",0)
+//	NavigationBarHeating.VerticalScrollListBox1.AddItem("	ChildEast",0)
+//	NavigationBarHeating.VerticalScrollListBox1.AddItem("	ChildWest",0)
+//	NavigationBarHeating.VerticalScrollListBox1.AddItem("	Bathroom2",0)
+
+	NavigationBarHeating.VerticalScrollListBox1.AddItem(txtKitchen,0)
+	NavigationBarHeating.VerticalScrollListBox1.AddItem(txtSleeping,0)
+	NavigationBarHeating.VerticalScrollListBox1.AddItem(txtBathroom,0)
+	NavigationBarHeating.VerticalScrollListBox1.AddItem(txtChildEast,0)
+	NavigationBarHeating.VerticalScrollListBox1.AddItem(txtChildWest,0)
+	NavigationBarHeating.VerticalScrollListBox1.AddItem(txtBathroom2,0)
+	//NavigationBarHeating.VerticalScrollListBox1.AddItem()
+	
+	Main.InstanceClassModuleThermostat.MenuHeatingXRef_RoomIndx[1]:= INDX_KITCHEN
+	Main.InstanceClassModuleThermostat.MenuHeatingXRef_RoomIndx[2]:= INDX_SLEEPING
+	Main.InstanceClassModuleThermostat.MenuHeatingXRef_RoomIndx[3]:= INDX_BATHROOM
+	Main.InstanceClassModuleThermostat.MenuHeatingXRef_RoomIndx[4]:= INDX_CHILDEAST
+	Main.InstanceClassModuleThermostat.MenuHeatingXRef_RoomIndx[5]:= INDX_CHILDWEST
+	Main.InstanceClassModuleThermostat.MenuHeatingXRef_RoomIndx[6]:= INDX_BATHROOM2
+	
+	
+End Function
+
+

@@ -1,0 +1,107 @@
+
+Global Const COMMAND_OK 							As Long	:= 200
+
+Global Const ERROR_400_BAD_REQUEST					As Long := 400
+Global Const ERROR_401_UNAUTHORIZED					As Long := 401
+
+Global Const ERROR_WRONG_CONNECTION_PARAMETERS		As Long	:= 2000
+Global Const ERROR_WRONG_CONNECTION_TIMEOUT			As Long := 2002
+Global Const ERROR_CONNECTION_FAILED				As Long := 2003
+
+
+Global Const ERROR_DATA_TOO_LONG 					As Long	:= 1002
+Global Const ERROR_UNSUPPORTED_FORMAT 				As Long	:= 1003
+Global Const ERROR_WRONG_SERVER_ANSWER				As Long	:= 1004
+Global Const ERROR_WRONG_PARAMETERS					As Long	:= 1005
+Global Const ERROR_LOCATION_NOT_SPECIFIED			As Long := 1006
+
+Global Const MAX_LOCATIONS						As Long := 5
+Global Const MAX_FORECAST_DAYS					As Long := 5
+Global Const VALUE_NOT_AVAILABLE 				As Double := -1000000
+Global Const NO_TIME 							As Time := :.0
+
+Global Const TEXT_LENGHT						As Long := 100
+Global Const TEXT_SHORT_LENGHT					As Long := 10
+Global Const TEXT_LONG_LENGHT					As Long := 1000
+
+Global Const SERVER_URL 						As Text := "api.apixu.com"
+Global Const SERVER_PORT 						As Long := 80
+Global Const FORECAST_CACHE_TIME 				As Time	:= 1:0:0.0
+Global Const FORECAST_MAX_AGE	 				As Time	:= 24:0:0.0
+Global Const WAIT_AFTER_GETRSS_TIME 			As Time	:= 0:0:0.5
+
+Global Structure AllWeatherStructure
+	Var location 			As LocationStructure
+	Var current 			As CurrentWeatherStructure
+	Var forecast 			As WeatherForecastStructure
+End Structure
+
+Global Structure LocationStructure
+	Var name 				As Text[TEXT_LENGHT]
+	Var region 				As Text[TEXT_LENGHT]
+	Var country 			As Text[TEXT_LENGHT]
+	Var lat 				As Double
+	Var lon					As Double
+End Structure
+
+Global Structure CurrentWeatherStructure
+	Var last_updated_epoch	As Long
+	Var temp_c 				As Double
+	Var temp_f 				As Double
+	Var is_day 				As Long
+	Var condition			As WeatherConditionStructure
+	Var wind_mph			As Double
+	Var wind_kph			As Double
+	Var wind_degree			As Long
+	Var wind_dir			As Text[TEXT_SHORT_LENGHT]
+	Var pressure_mb			As Double
+	Var pressure_in			As Double
+	Var precip_mm			As Double
+	Var precip_in			As Double
+	Var humidity			As Long
+	Var cloud 				As Long
+	Var feelslike_c			As Double
+	Var feelslike_f			As Double
+	Var vis_km				As Double
+	Var vis_miles			As Double
+End Structure
+
+Global Structure WeatherConditionStructure
+	Var code 						As Long
+	Var description Alias "text" 	As Text[TEXT_LENGHT]
+	Var icon					 	As Text[TEXT_LENGHT]
+End Structure
+
+Private Structure WeatherForecastStructure
+	Var forecastday[MAX_FORECAST_DAYS]	As WeatherForecastDayStructure
+End Structure
+
+Global Structure WeatherForecastDayStructure
+	Var date_epoch 			As Long
+	Var day					As DayStructure
+	Var astro				As AstroStructure
+End Structure
+
+Private Structure DayStructure
+	Var maxtemp_c			As Double
+	Var maxtemp_f			As Double
+	Var mintemp_c			As Double
+	Var mintemp_f			As Double
+	Var avgtemp_c			As Double
+	Var avgtemp_f			As Double
+	Var maxwind_mph			As Double
+	Var maxwind_kph			As Double
+	Var totalprecip_mm		As Double
+	Var totalprecip_in		As Double
+	Var avgvis_km			As Double
+	Var avgvis_miles		As Double
+	Var avghumidity			As Long
+	Var condition			As WeatherConditionStructure
+End Structure
+
+Private Structure AstroStructure
+	Var sunrise 			As Text[TEXT_SHORT_LENGHT]
+	Var sunset	 			As Text[TEXT_SHORT_LENGHT]
+	Var moonrise 			As Text[TEXT_SHORT_LENGHT]
+	Var moonset 			As Text[TEXT_SHORT_LENGHT]
+End Structure

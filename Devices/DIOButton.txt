@@ -1,0 +1,41 @@
+Global DeviceClass DIOButton
+Connector DigitalIOConnector
+
+Global Event OnPush As Process ()
+
+
+Private Function Init ()
+
+	DigitalIOConnector.Open ()
+	StartProcess CheckInput ()
+
+End Function
+
+
+Private Process CheckInput ()
+
+	Wait (:0.5)
+	Do
+		DigitalIOConnector.WaitWhileOpened()
+		RaiseEvent OnPush ()
+		DigitalIOConnector.WaitWhileClosed()
+	End Do
+
+End Process
+
+
+Global Function WaitWhilePressed (Optional timeout As Time := _TIME_INFINITE) As Boolean
+
+	Return Value DigitalIOConnector.WaitWhileClosed (timeout)
+	
+End Function
+
+
+Global Function IsPressed () As Boolean
+
+	Return Value DigitalIOConnector.IsClosed ()
+	
+End Function
+
+
+End DeviceClass

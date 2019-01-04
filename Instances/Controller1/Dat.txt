@@ -1,0 +1,50 @@
+
+
+
+Global Var Room[INDX_MAX] As SingleRoomStructure
+//
+//Global Structure SingleRoomStructure
+//	Var	tName								As	Text [MAX_STD_TEXT_LENGTH]
+//	Var Thermometer 						As ThermometerStructure 
+//	Var iSetpoint[MAX_HVAC_MODES - 1] 			As Double 
+//	Var	iHvacMode							As HVAC_MODE
+//
+////	Var LightSwitchable[MAX_ROOM_LIGHTS]	As Lights.LightSwitchableStructure  
+//	Var LightSwitchable[MAX_ROOM_LIGHTS]	As LightSwitchableStructure  
+//	Var Pir 								As PirStructure
+//End Structure
+//
+//Global Structure ThermometerStructure
+//	Var bOK As Boolean
+//	Var dTemperature As Double
+//	Var iModbusAddr As Long
+//End Structure
+//
+//
+//Global Structure LightSwitchableStructure
+//	Var bEnabled 						As Boolean
+//	Var bActualValue					As Boolean
+//	Var iRelay							As AddressOf relayCUE_8.Relay			
+//	Var iPositionInRoom					As Long
+//	Var tName							As Text[MAX_STD_TEXT_LENGTH]
+//End Structure
+//
+//Global Structure PirStructure
+//	Var bOK 			As Boolean
+//	Var bEnabled 		As Boolean 
+//	Var DioPort 		As AddressOf Controller1._DigitalIO
+//End Structure
+//
+//
+
+Function Init()
+	Dat.Room[INDX_SLEEPING	].tName  :=  MyCommon.txtSleeping     //  1  
+	Dat.Room[INDX_KITCHEN 	].tName  :=  MyCommon.txtKitchen   	//  2
+	Dat.Room[INDX_LIVING	].tName  :=  MyCommon.txtLiving   	//  3
+	Dat.Room[INDX_STAIRS 	].tName  :=  MyCommon.txtStairs    	//  4
+	Dat.Room[INDX_CHILDWEST ].tName  :=  MyCommon.txtChildWest    //  6
+	Dat.Room[INDX_CHILDEAST ].tName  :=  MyCommon.txtChildEast    //  7
+	Dat.Room[INDX_BATHROOM 	].tName  :=  MyCommon.txtBathroom     //  8
+	Dat.Room[INDX_BATHROOM2	].tName  :=  MyCommon.txtBathroom2   	//  9
+	Dat.Room[INDX_RESERVE	].tName  :=  MyCommon.txtReserve   	//  9
+End Function

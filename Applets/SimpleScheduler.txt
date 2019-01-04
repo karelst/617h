@@ -1,0 +1,688 @@
+Private Structure SimpleSchedulerStructure
+	Var Start As Time
+	Var Period As Time
+	Var Name As AddressOf Text
+    Var NextRaiseTime As Time
+    Var LastRaiseTime As Time
+    Var Enabled As Boolean
+End Structure
+
+
+Global Class SimpleScheduler
+
+//Global Properties
+Protected Property SchedulerEnabled As Boolean := True WithAttributes
+{
+	PropertyGroup := "Behavior"
+}
+
+//Event1 Properties
+Protected Property Event1Enabled As Boolean := False WithAttributes
+{
+	PropertyGroup := "Event1",
+	DisplayName := "Enabled"
+}
+
+Protected Property Event1Name As AddressOf Text := txtEvent1 WithAttributes
+{
+	PropertyGroup := "Event1",
+	DisplayName := "Name"
+}
+
+Protected Property Event1Period As Time := 1:0.0 WithAttributes
+{
+	PropertyGroup := "Event1",
+	DisplayName := "Period",
+	EditMode := "TimeInterval"
+}
+
+Protected Property Event1Start As Time := #01/01/2010 00:00:00# WithAttributes
+{
+	PropertyGroup := "Event1",
+	DisplayName := "StartTime",
+	EditMode := "Date"
+}
+
+//Event2 Properties
+Protected Property Event2Enabled As Boolean := False WithAttributes
+{
+	PropertyGroup := "Event2",
+	DisplayName := "Enabled"
+}
+
+Protected Property Event2Name As AddressOf Text := txtEvent2 WithAttributes
+{
+	PropertyGroup := "Event2",
+	DisplayName := "Name"
+}
+
+Protected Property Event2Period As Time := 1:0.0 WithAttributes
+{
+	PropertyGroup := "Event2",
+	DisplayName := "Period",
+	EditMode := "TimeInterval"
+}
+
+Protected Property Event2Start As Time := #01/01/2010 00:00:00# WithAttributes
+{
+	PropertyGroup := "Event2",
+	DisplayName := "StartTime",
+	EditMode := "Date"
+}
+
+//Event3 Properties
+Protected Property Event3Enabled As Boolean := False WithAttributes
+{
+	PropertyGroup := "Event3",
+	DisplayName := "Enabled"
+}
+
+Protected Property Event3Name As AddressOf Text := txtEvent3 WithAttributes
+{
+	PropertyGroup := "Event3",
+	DisplayName := "Name"
+}
+
+Protected Property Event3Period As Time := 1:0.0 WithAttributes
+{
+	PropertyGroup := "Event3",
+	DisplayName := "Period",
+	EditMode := "TimeInterval"
+}
+
+Protected Property Event3Start As Time := #01/01/2010 00:00:00# WithAttributes
+{
+	PropertyGroup := "Event3",
+	DisplayName := "StartTime",
+	EditMode := "Date"
+}
+
+//Event4 Properties
+Protected Property Event4Enabled As Boolean := False WithAttributes
+{
+	PropertyGroup := "Event4",
+	DisplayName := "Enabled"
+}
+
+Protected Property Event4Name As AddressOf Text := txtEvent4 WithAttributes
+{
+	PropertyGroup := "Event4",
+	DisplayName := "Name"
+}
+
+Protected Property Event4Period As Time := 1:0.0 WithAttributes
+{
+	PropertyGroup := "Event4",
+	DisplayName := "Period",
+	EditMode := "TimeInterval"
+}
+
+Protected Property Event4Start As Time := #01/01/2010 00:00:00# WithAttributes
+{
+	PropertyGroup := "Event4",
+	DisplayName := "StartTime",
+	EditMode := "Date"
+}
+
+//Event5 Properties
+Protected Property Event5Enabled As Boolean := False WithAttributes
+{
+	PropertyGroup := "Event5",
+	DisplayName := "Enabled"
+}
+
+Protected Property Event5Name As AddressOf Text := txtEvent5 WithAttributes
+{
+	PropertyGroup := "Event5",
+	DisplayName := "Name"
+}
+
+Protected Property Event5Period As Time := 1:0.0 WithAttributes
+{
+	PropertyGroup := "Event5",
+	DisplayName := "Period",
+	EditMode := "TimeInterval"
+}
+
+Protected Property Event5Start As Time := #01/01/2010 00:00:00# WithAttributes
+{
+	PropertyGroup := "Event5",
+	DisplayName := "StartTime",
+	EditMode := "Date"
+}
+
+//Event6 Properties
+Protected Property Event6Enabled As Boolean := False WithAttributes
+{
+	PropertyGroup := "Event6",
+	DisplayName := "Enabled"
+}
+
+Protected Property Event6Name As AddressOf Text := txtEvent6 WithAttributes
+{
+	PropertyGroup := "Event6",
+	DisplayName := "Name"
+}
+
+Protected Property Event6Period As Time := 1:0.0 WithAttributes
+{
+	PropertyGroup := "Event6",
+	DisplayName := "Period",
+	EditMode := "TimeInterval"
+}
+
+Protected Property Event6Start As Time := #01/01/2010 00:00:00# WithAttributes
+{
+	PropertyGroup := "Event6",
+	DisplayName := "StartTime",
+	EditMode := "Date"
+}
+
+//Event7 Properties
+Protected Property Event7Enabled As Boolean := False WithAttributes
+{
+	PropertyGroup := "Event7",
+	DisplayName := "Enabled"
+}
+
+Protected Property Event7Name As AddressOf Text := txtEvent7 WithAttributes
+{
+	PropertyGroup := "Event7",
+	DisplayName := "Name"
+}
+
+Protected Property Event7Period As Time := 1:0.0 WithAttributes
+{
+	PropertyGroup := "Event7",
+	DisplayName := "Period",
+	EditMode := "TimeInterval"
+}
+
+Protected Property Event7Start As Time := #01/01/2010 00:00:00# WithAttributes
+{
+	PropertyGroup := "Event7",
+	DisplayName := "StartTime",
+	EditMode := "Date"
+}
+
+//Event8 Properties
+Protected Property Event8Enabled As Boolean := False WithAttributes
+{
+	PropertyGroup := "Event8",
+	DisplayName := "Enabled"
+}
+
+Protected Property Event8Name As AddressOf Text := txtEvent8 WithAttributes
+{
+	PropertyGroup := "Event8",
+	DisplayName := "Name"
+}
+
+Protected Property Event8Period As Time := 1:0.0 WithAttributes
+{
+	PropertyGroup := "Event8",
+	DisplayName := "Period",
+	EditMode := "TimeInterval"
+}
+
+Protected Property Event8Start As Time := #01/01/2010 00:00:00# WithAttributes
+{
+	PropertyGroup := "Event8",
+	DisplayName := "StartTime",
+	EditMode := "Date"
+}
+
+//Event9 Properties
+Protected Property Event9Enabled As Boolean := False WithAttributes
+{
+	PropertyGroup := "Event9",
+	DisplayName := "Enabled"
+}
+
+Protected Property Event9Name As AddressOf Text := txtEvent9 WithAttributes
+{
+	PropertyGroup := "Event9",
+	DisplayName := "Name"
+}
+
+Protected Property Event9Period As Time := 1:0.0 WithAttributes
+{
+	PropertyGroup := "Event9",
+	DisplayName := "Period",
+	EditMode := "TimeInterval"
+}
+
+Protected Property Event9Start As Time := #01/01/2010 00:00:00# WithAttributes
+{
+	PropertyGroup := "Event9",
+	DisplayName := "StartTime",
+	EditMode := "Date"
+}
+
+//Event10 Properties
+Protected Property Event10Enabled As Boolean := False WithAttributes
+{
+	PropertyGroup := "Event10",
+	DisplayName := "Enabled"
+}
+
+Protected Property Event10Name As AddressOf Text := txtEvent10 WithAttributes
+{
+	PropertyGroup := "Event10",
+	DisplayName := "Name"
+}
+
+Protected Property Event10Period As Time := 1:0.0 WithAttributes
+{
+	PropertyGroup := "Event10",
+	DisplayName := "Period",
+	EditMode := "TimeInterval"
+}
+
+Protected Property Event10Start As Time := #01/01/2010 00:00:00# WithAttributes
+{
+	PropertyGroup := "Event10",
+	DisplayName := "StartTime",
+	EditMode := "Date"
+}
+
+Private Const MAX_EVENTS As Long := 10
+Private Var MyEvents[MAX_EVENTS] As SimpleSchedulerStructure
+Private Var NameBuffer[MAX_EVENTS] As Text[50]
+
+Global Event OnEvent1 As Process ()
+Global Event OnEvent2 As Process ()
+Global Event OnEvent3 As Process ()
+Global Event OnEvent4 As Process ()
+Global Event OnEvent5 As Process ()
+Global Event OnEvent6 As Process ()
+Global Event OnEvent7 As Process ()
+Global Event OnEvent8 As Process ()
+Global Event OnEvent9 As Process ()
+Global Event OnEvent10 As Process ()
+
+Private Var SchedulerSemaphore As _Semaphore
+Private Var UTCOffset As Time := GetUTCOffset()
+
+Private Function Init ()
+Private Var N As Long
+
+	SchedulerSemaphore.Lock()
+
+	MyEvents[1].Period		:=	Event1Period
+	MyEvents[1].Name		:=	Event1Name
+	MyEvents[1].Enabled		:=	Event1Enabled
+	MyEvents[1].Start		:=	Event1Start
+	
+	MyEvents[2].Period		:=	Event2Period
+	MyEvents[2].Name		:=	Event2Name
+	MyEvents[2].Enabled		:=	Event2Enabled
+	MyEvents[2].Start		:=	Event2Start
+	
+	MyEvents[3].Period		:=	Event3Period
+	MyEvents[3].Name		:=	Event3Name
+	MyEvents[3].Enabled		:=	Event3Enabled
+	MyEvents[3].Start		:=	Event3Start
+	
+	MyEvents[4].Period		:=	Event4Period
+	MyEvents[4].Name		:=	Event4Name
+	MyEvents[4].Enabled		:=	Event4Enabled
+	MyEvents[4].Start		:=	Event4Start
+	
+	MyEvents[5].Period		:=	Event5Period
+	MyEvents[5].Name		:=	Event5Name
+	MyEvents[5].Enabled		:=	Event5Enabled
+	MyEvents[5].Start		:=	Event5Start
+	
+	MyEvents[6].Period		:=	Event6Period
+	MyEvents[6].Name		:=	Event6Name
+	MyEvents[6].Enabled		:=	Event6Enabled
+	MyEvents[6].Start		:=	Event6Start
+	
+	MyEvents[7].Period		:=	Event7Period
+	MyEvents[7].Name		:=	Event7Name
+	MyEvents[7].Enabled		:=	Event7Enabled
+	MyEvents[7].Start		:=	Event7Start
+	
+	MyEvents[8].Period		:=	Event8Period
+	MyEvents[8].Name		:=	Event8Name
+	MyEvents[8].Enabled		:=	Event8Enabled
+	MyEvents[8].Start		:=	Event8Start
+	
+	MyEvents[9].Period		:=	Event9Period
+	MyEvents[9].Name		:=	Event9Name
+	MyEvents[9].Enabled		:=	Event9Enabled
+	MyEvents[9].Start		:=	Event9Start
+	
+	MyEvents[10].Period		:=	Event10Period
+	MyEvents[10].Name		:=	Event10Name
+	MyEvents[10].Enabled	:=	Event10Enabled
+	MyEvents[10].Start		:=	Event10Start
+	
+	For N := 1 To MAX_EVENTS
+		MyEvents[N].Period := RoundPeriod (MyEvents[N].Period)
+	End For
+	
+	SchedulerSemaphore.Unlock()
+
+	StartProcess DelayInit ()
+	
+End Function
+
+
+Private Process DelayInit ()
+
+	Wait (:5.0)	
+	If SchedulerEnabled Then
+		InitScheduler ()
+	End If
+
+End Process
+
+
+Private Function InitScheduler ()
+Private Var Now As Time := GetLocalTime()
+Private Var N As Long
+
+	SchedulerSemaphore.Lock()
+	
+	SchedulerEnabled := True
+	For N := 1 To MAX_EVENTS
+		SetNextRaiseTime (Now, MyEvents[N])
+	End For
+	
+	SchedulerSemaphore.Unlock()
+	
+	StartProcess SchedulerServer()
+
+End Function
+
+
+Global Function EnableScheduler ()
+
+	SchedulerSemaphore.Lock()
+	If SchedulerEnabled = False Then InitScheduler () End If
+	SchedulerSemaphore.Unlock()
+		
+End Function
+
+
+Global Function DisableScheduler ()
+
+	SchedulerSemaphore.Lock()
+	SchedulerEnabled := False
+	SchedulerSemaphore.Unlock()
+		
+End Function
+
+
+Global Function IsSchedulerEnabled () As Boolean
+Private Var A As Boolean
+
+	SchedulerSemaphore.Lock()
+	A := SchedulerEnabled
+	SchedulerSemaphore.Unlock()
+	
+	Return Value A
+
+End Function
+
+
+Private Function RoundPeriod (newperiod As Time) As Time
+
+	If newperiod < 1:0.0 Then
+		Return Value 1:0.0
+	Else
+		Return Value  1:0.0 * CLong((newperiod + :30.0) / 1:0.0)
+	End If
+
+End Function
+
+
+Global Function SetEventParameters (eventnumber As Long, neweventstarttime As Time, neweventperiod As Time) As Boolean
+
+	If eventnumber < 1 Or eventnumber > MAX_EVENTS Then
+		Return Value False
+	Else
+		SchedulerSemaphore.Lock()
+		MyEvents[eventnumber].Period :=	RoundPeriod (neweventperiod)
+		MyEvents[eventnumber].Start := neweventstarttime
+		SetNextRaiseTime (GetLocalTime(), MyEvents[eventnumber])
+		SchedulerSemaphore.Unlock()
+		Return Value True
+	End If
+
+End Function
+
+
+Global Function GetEventParameters (eventnumber As Long, ByRef eventstarttime As Time, ByRef eventperiod As Time) As Boolean
+	
+	If eventnumber < 1 Or eventnumber > MAX_EVENTS Then
+		Return Value False
+	Else
+		SchedulerSemaphore.Lock()
+		eventstarttime := MyEvents[eventnumber].Start
+		eventperiod := MyEvents[eventnumber].Period
+		SchedulerSemaphore.Unlock()
+		Return Value True
+	End If
+	
+End Function
+
+
+Global Function EnableEvent (eventnumber As Long) As Boolean
+
+	If eventnumber < 1 Or eventnumber > MAX_EVENTS Then
+		Return Value False
+	Else
+		SchedulerSemaphore.Lock()
+		MyEvents[eventnumber].Enabled := True
+		SchedulerSemaphore.Unlock()
+		Return Value True
+	End If
+
+End Function
+
+
+Global Function DisableEvent (eventnumber As Long) As Boolean
+
+	If eventnumber < 1 Or eventnumber > MAX_EVENTS Then
+		Return Value False
+	Else
+		SchedulerSemaphore.Lock()
+		MyEvents[eventnumber].Enabled := False
+		SchedulerSemaphore.Unlock()
+		Return Value True
+	End If
+
+End Function
+
+
+Global Function IsEventEnabled (eventnumber As Long) As Boolean
+Private Var A As Boolean
+
+	If eventnumber < 1 Or eventnumber > MAX_EVENTS Then
+		Return Value False
+	Else
+		SchedulerSemaphore.Lock()
+		A := MyEvents[eventnumber].Enabled
+		SchedulerSemaphore.Unlock()
+		Return Value A
+	End If
+	
+End Function
+
+
+Public Function SetEventName (eventnumber As Long, neweventname As Text) As Boolean
+
+	If eventnumber < 1 Or eventnumber > MAX_EVENTS Then
+		Return Value False
+	Else
+		SchedulerSemaphore.Lock()
+		If GetMemorySegment(neweventname) = _MSEG_RESOURCEDATA Then
+			MyEvents[eventnumber].Name := neweventname
+		Else
+			NameBuffer[eventnumber] := neweventname
+			MyEvents[eventnumber].Name := NameBuffer[eventnumber]
+		End If
+		SchedulerSemaphore.Unlock()
+		Return Value True
+	End If
+	
+End Function
+
+
+Public Function GetEventName (eventnumber As Long, ByRef eventname As AddressOf Text) As Boolean
+
+	If eventnumber < 1 Or eventnumber > MAX_EVENTS Then
+		Return Value False
+	Else
+		eventname := MyEvents[eventnumber].Name
+		Return Value True
+	End If
+	
+End Function
+
+
+Private Function SetNextRaiseTime (now As Time, ByRef myevent As SimpleSchedulerStructure)
+
+	SchedulerSemaphore.Lock()
+
+	If Now <= myevent.Start Then
+		myevent.NextRaiseTime := myevent.Start
+	Else
+		myevent.NextRaiseTime := (myevent.Period * (1 + CLong((Now - myevent.Start) / myevent.Period))) + myevent.Start
+	End If
+	
+	SchedulerSemaphore.Unlock()
+	
+End Function
+
+
+Private Function GetNowMinute (mytime As Time) As Time
+Private Var TSctructure As _TimeStructure
+Private Var T As Time
+	
+	TimeToTimeStructure(mytime, TSctructure)
+	
+	TSctructure.Second := 0
+	TSctructure.MicroSecond := 0
+	TimeStructureToTime(TSctructure, T)
+	Return Value T
+
+End Function
+
+
+Private Process SchedulerServer ()
+Private Var NextEventTime As Time
+Private Var Now As Time
+Private Var N As Long
+Private Var ChangeSummerTime As Boolean
+Private Var UtcOffsetChange As Time
+	
+	Do
+		WaitForNextMinute (ChangeSummerTime, UtcOffsetChange)
+		
+		Now := GetNowMinute(GetLocalTime())
+
+		SchedulerSemaphore.Lock()
+		
+		If Not SchedulerEnabled Then
+			SchedulerSemaphore.Unlock()
+			Return
+		End If
+		
+		For N := 1 To MAX_EVENTS
+			
+			If ChangeSummerTime And MyEvents[N].Period < 2:0:0.0 Then
+				MyEvents[N].NextRaiseTime += UtcOffsetChange
+			End If
+			
+			If Now >= MyEvents[N].NextRaiseTime Then
+				If  MyEvents[N].Enabled Then
+					RaiseMyEvent(N)
+				End If
+				SetNextRaiseTime (Now, MyEvents[N])
+			End If
+		End For
+		
+		SchedulerSemaphore.Unlock()
+	End Do
+	
+End Process
+
+
+Private Function GetUTCOffset () As Time
+Private Var Difference As Time := GetLocalTime() - GetUTCTime()
+
+	If Difference >= :.0 Then
+		Difference += :5.0
+	Else
+		Difference -= :5.0
+	End If
+	
+	Return Value (15:0.0 * CLong (Difference / 15:0.0))
+
+End Function
+
+
+Private Function WaitForNextMinute (ByRef changesummertime As Boolean, ByRef utcoffsetchange As Time)
+Private Var T As _TimeStructure
+Private Var TLast As _TimeStructure
+Private Var NewUTCOffset As Time
+ 
+	GetLocalTimeStructure(TLast)
+	Wait ((61 - TLast.Second) * :1.0)
+	GetLocalTimeStructure(T)
+	
+	//check daylight saving time change every hour
+	If T.Minute < TLast.Minute Then
+		NewUTCOffset := GetUTCOffset()
+		SchedulerSemaphore.Lock ()
+		If NewUTCOffset <> UTCOffset Then
+			changesummertime := True
+			utcoffsetchange := NewUTCOffset - UTCOffset
+			UTCOffset := NewUTCOffset
+		Else
+			changesummertime := False
+			utcoffsetchange := :.0
+		End If
+		SchedulerSemaphore.Unlock ()
+		Return
+	End If
+	
+	changesummertime := False
+	utcoffsetchange := :.0
+
+End Function
+
+
+Private Function RaiseMyEvent(number As Long)
+	
+	Select number
+		Case 1
+			RaiseEvent OnEvent1 ()
+		Case 2
+			RaiseEvent OnEvent2 ()
+		Case 3
+			RaiseEvent OnEvent3 ()
+		Case 4
+			RaiseEvent OnEvent4 ()
+		Case 5
+			RaiseEvent OnEvent5 ()
+		Case 6
+			RaiseEvent OnEvent6 ()
+		Case 7
+			RaiseEvent OnEvent7 ()
+		Case 8
+			RaiseEvent OnEvent8 ()
+		Case 9
+			RaiseEvent OnEvent9 ()
+		Case 10
+			RaiseEvent OnEvent10 ()
+	End Select
+	
+End Function
+
+
+End Class

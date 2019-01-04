@@ -1,0 +1,881 @@
+GraphicClass CheckBox Inherits Namespace "CUE.GraphicCollection.CheckBox.1".CheckBox 
+	Public Const FRAME_ALIGNBOTTOMLINE				As Long := 1000
+	
+	Protected Function OnDown(x As Long,y As Long,eventtime As Time) As Boolean
+		Return Value False
+	End Function
+	
+	Protected Function SetComponentPositionDimension()
+		GetSize(ObjectWidth,ObjectHeight)
+		FrameHeight := ObjectHeight 
+		FrameWidth := ObjectHeight  
+		FramePosY := ObjectHeight - FrameHeight
+		Select FrameAlign
+		Case FRAME_ALIGNLEFT
+			FramePosX := FrameOffsetX
+//		Case FRAME_ALIGNHCENTER
+//			FramePosX := FrameOffsetX + (ObjectWidth - FrameWidth)/2
+		Case FRAME_ALIGNRIGHT
+			FramePosX := FrameOffsetX + (ObjectWidth - FrameWidth)
+		Case FRAME_ALIGNBOTTOMLINE	
+			FramePosX := 0
+		End Select
+	End Function
+	
+		Protected Function OnDraw()
+		If ActiveState Then
+			If Checked Then
+				Select FrameAlign
+				Case FRAME_ALIGNLEFT,FRAME_ALIGNRIGHT
+					DrawRectangle(CheckedBackgroundCol, FramePosX + 2*FrameLineWeight, FramePosY + 2*FrameLineWeight, FrameWidth - 4*FrameLineWeight, FrameHeight - 4*FrameLineWeight)
+				Case FRAME_ALIGNBOTTOMLINE
+					DrawRectangle(NonActiveCheckedBackgroundColor, 0, 0, ObjectWidth, ObjectHeight)
+				End Select
+		End If
+			//vykreslení rámečku
+			Select FrameAlign
+			Case FRAME_ALIGNBOTTOMLINE
+				DrawRectangle(FrameCol, 0, 0, ObjectWidth, FrameLineWeight)
+				DrawRectangle(FrameCol, 0, ObjectHeight-FrameLineWeight, ObjectWidth, FrameLineWeight)
+				DrawRectangle(FrameCol, 0, 0, FrameLineWeight, ObjectHeight)
+				DrawRectangle(FrameCol, ObjectWidth - FrameLineWeight, 0, FrameLineWeight, ObjectHeight)
+			Case Else
+				DrawRectangle(FrameCol, FramePosX, FramePosY, FrameWidth, FrameLineWeight)
+				DrawRectangle(FrameCol, FramePosX, FramePosY + FrameHeight - FrameLineWeight, FrameWidth, FrameLineWeight)
+				DrawRectangle(FrameCol, FramePosX, FramePosY + FrameLineWeight, FrameLineWeight, FrameHeight - 2*FrameLineWeight)
+				DrawRectangle(FrameCol, FramePosX + FrameWidth - FrameLineWeight, FramePosY + FrameLineWeight, FrameLineWeight, FrameHeight - 2*FrameLineWeight)
+			End Select
+			// text
+//			DrawText(Font,CheckBoxText,FontColor,TextOffsetX,TextOffsetY,-1,-1,TextAlign)			
+			Select FrameAlign
+			Case FRAME_ALIGNLEFT
+				DrawText(Font,CheckBoxText,FontCol,TextOffsetX+FrameWidth+FrameOffsetX,TextOffsetY,ObjectWidth-FrameWidth+FrameOffsetX,-1,TextAlign)
+			Case FRAME_ALIGNRIGHT
+				DrawText(Font,CheckBoxText,FontCol,TextOffsetX,TextOffsetY,ObjectWidth-FrameWidth+FrameOffsetX,-1,TextAlign)
+			Case FRAME_ALIGNBOTTOMLINE
+				DrawText(Font,CheckBoxText,FontCol,TextOffsetX,TextOffsetY,ObjectWidth-FrameWidth+FrameOffsetX,-1,TextAlign)
+			End Select
+				
+		Else
+			If Checked Then
+				Select FrameAlign
+				Case FRAME_ALIGNLEFT, FRAME_ALIGNRIGHT
+					DrawRectangle(NonActiveCheckedBackgroundColor, FramePosX + 2*FrameLineWeight, FramePosY + 2*FrameLineWeight, FrameWidth - 4*FrameLineWeight, FrameHeight - 4*FrameLineWeight)
+				Case FRAME_ALIGNBOTTOMLINE
+					DrawRectangle(NonActiveCheckedBackgroundColor, 0, 0, ObjectWidth, ObjectHeight)
+				End Select
+			End If
+			//vykreslení rámečku
+			Select FrameAlign
+			Case FRAME_ALIGNBOTTOMLINE
+				DrawRectangle(FrameCol, 0, 0, ObjectWidth, FrameLineWeight)
+				DrawRectangle(FrameCol, 0, ObjectHeight-FrameLineWeight, ObjectWidth, FrameLineWeight)
+				DrawRectangle(FrameCol, 0, 0, FrameLineWeight, ObjectHeight)
+				DrawRectangle(FrameCol, ObjectWidth - FrameLineWeight, 0, FrameLineWeight, ObjectHeight)
+			Case Else
+				DrawRectangle(NonActiveFrameColor, FramePosX, FramePosY, FrameWidth, FrameLineWeight)
+				DrawRectangle(NonActiveFrameColor, FramePosX, FramePosY + FrameHeight - FrameLineWeight, FrameWidth, FrameLineWeight)
+				DrawRectangle(NonActiveFrameColor, FramePosX, FramePosY + FrameLineWeight, FrameLineWeight, FrameHeight - 2*FrameLineWeight)
+				DrawRectangle(NonActiveFrameColor, FramePosX + FrameWidth - FrameLineWeight, FramePosY + FrameLineWeight, FrameLineWeight, FrameHeight - 2*FrameLineWeight)
+			End Select
+			// text
+//			DrawText(Font,CheckBoxText,NonActiveFontColor,TextOffsetX,TextOffsetY,-1,-1,TextAlign)		
+			Select FrameAlign
+			Case FRAME_ALIGNLEFT
+				DrawText(Font,CheckBoxText,NonActiveFontColor,TextOffsetX+FrameWidth+FrameOffsetX,TextOffsetY,ObjectWidth-FrameWidth+FrameOffsetX,-1,TextAlign)
+			Case FRAME_ALIGNRIGHT
+				DrawText(Font,CheckBoxText,NonActiveFontColor,TextOffsetX,TextOffsetY,ObjectWidth-FrameWidth+FrameOffsetX,-1,TextAlign)
+			Case FRAME_ALIGNBOTTOMLINE
+				DrawText(Font,CheckBoxText,NonActiveFontColor,TextOffsetX,TextOffsetY,ObjectWidth-FrameWidth+FrameOffsetX,-1,TextAlign)
+			End Select
+		End If
+	End Function
+	
+	Public Function SetFrameAlign(newframealign As Long) As Boolean
+		If newframealign = FRAME_ALIGNLEFT Or newframealign = FRAME_ALIGNRIGHT Or newframealign = FRAME_ALIGNBOTTOMLINE Then			
+			FrameAlign := newframealign
+			SetComponentPositionDimension()
+			Redraw()
+			Return Value True
+		Else
+			Return Value False
+		End If
+	End Function
+	
+End GraphicClass
+
+Global GraphicClass IndicationPushButton Inherits Namespace "CUE.GraphicCollection.MulticolorButtons.1".PushButton WithAttributes {defaultwidth := 120, defaultheight := 80, DesignName := "Multicolor", GroupName := "Buttons"}
+	Protected Property Indication As Boolean := False WithAttributes {PropertyGroup := "Behavior", EditMode := "Boolean; 'Yes' := True, 'No' := False"}
+	Protected Property IndicationBackgroundColor As Long := _COLOR_WHITE WithAttributes {PropertyGroup := "Appearance", EditMode := "Color"}
+	Protected Property IndicationFrameLineWeight As Long := 2 WithAttributes {PropertyGroup := "Appearance"}
+	Protected Property IndicationFrameAlign As Long := FRAME_ALIGNLEFT WithAttributes {PropertyGroup := "Appearance", EditMode := "ENUM; 'Left-Top' := FRAME_ALIGNLEFT, 'Right-Top' := FRAME_ALIGNRIGHT, 'Bottom-Line' := FRAME_ALIGNBOTTOMLINE"}
+	
+	Protected Var MyChectBox As CheckBox 
+	Protected Var BackgroundOffset As Long
+	
+	Public Const FRAME_ALIGNLEFT 					As Long := &H00000003	// Horizontal align left
+//	Public Const FRAME_ALIGNHCENTER 				As Long := &H00000002	// Horizontal align center
+	Public Const FRAME_ALIGNRIGHT 					As Long := &H00000004	// Horizontal align right
+//	Public Const FRAME_ALIGNTOP 					As Long := &H00000008	// Vertical align top
+//	Public Const FRAME_ALIGNVCENTER 				As Long := &H00000010	// Vertical align center
+//	Public Const FRAME_ALIGNBOTTOM 					As Long := &H00000020	// Vertical align bottom
+	Public Const FRAME_ALIGNBOTTOMLINE				As Long := 1000			// Bottomline
+	
+		
+	Protected Function Init()
+		SetCheckBox()
+	End Function
+	
+	Protected Function SetCheckBox()
+		If GetPrimaryDisplay().GetWidth() >= 1500 And GetPrimaryDisplay().GetHeight() >= 900 Then
+			BackgroundOffset := 3
+		Else
+			BackgroundOffset := 2
+		End If
+		Select IndicationFrameAlign
+		Case FRAME_ALIGNBOTTOMLINE
+			MyChectBox.SetObjectPosition(0,ObjectHeight-UpFont.GetHeight()/4)//(ObjectHeight - 2*UpFont.GetHeight())/2)	
+			MyChectBox.SetObjectDimensions(ObjectWidth,UpFont.GetHeight()/4)
+		Case Else
+			MyChectBox.SetObjectPosition(4*BackgroundOffset,4*BackgroundOffset)//(ObjectHeight - 2*UpFont.GetHeight())/2)	
+			MyChectBox.SetObjectDimensions(ObjectWidth-8*BackgroundOffset,UpFont.GetHeight())
+		End Select
+		MyChectBox.SetFrameColor(UpFontColor)
+		MyChectBox.SetCheckedBackgroundColor(0)
+		MyChectBox.SetValue(Indication)
+		MyChectBox.SetCheckedSymbol(MyChectBox.CHECKEDSYMBOLBACKGROUNDCOLOR)
+		MyChectBox.SetCheckedBackgroundColor(IndicationBackgroundColor)
+		MyChectBox.SetFrameLineWeight(IndicationFrameLineWeight)
+		MyChectBox.SetEnabled(MEnabled)
+
+		MyChectBox.SetFrameAlign(IndicationFrameAlign)
+	End Function
+
+	Public Function SetEnabled(newenabled As Boolean) As Boolean
+	
+		If Not newenabled Then
+			IsPressed := False
+		End If
+	
+		MEnabled := newenabled
+		UpdateDrawColors()
+		RedrawCompoundObject()
+		SetCheckBox()
+		Return Value True
+	
+	End Function
+
+	Public Function SetIndication(newindication As Boolean)As Boolean
+		If newindication <> Indication Then
+			Indication := newindication
+			MyChectBox.SetValue(Indication)
+			Redraw()
+			Return Value True
+		End If
+		Return Value False
+	End Function
+	
+	Public Function GetIndication()As Boolean
+		Return Value Indication
+	End Function
+	
+	Public Function SetObjectDimensions(newwidth As Long, newheight As Long) As Boolean
+		SetSize(newwidth, newheight)
+		UpdateDimensions()
+		RedrawCompoundObject()
+		SetCheckBox()
+		Return Value True
+	End Function
+	
+	Public Function SetUpFontColor(newupfontcolor As Long) As Boolean
+		MUpFontColor := newupfontcolor
+		UpdateDrawColors()
+		RedrawCompoundObject()
+		SetCheckBox()
+		Return Value True	
+	End Function
+
+	Public Function SetDownFontColor(newdownfontcolor As Long) As Boolean
+		MDownFontColor := newdownfontcolor
+		UpdateDrawColors()
+		RedrawCompoundObject()
+		SetCheckBox()
+		Return Value True	
+	End Function
+	
+	Public Function SetUpFont(newupfont As AddressOf _Font) As Boolean
+		MUpFont := newupfont
+		RedrawCompoundObject()
+		SetCheckBox()
+		Return Value True	
+	End Function
+	
+	Public Function SetIndicationBackgroundColor(newindicationbackgroundcolor As Long)As Boolean
+		IndicationBackgroundColor := newindicationbackgroundcolor
+		SetCheckBox()
+		Return Value True
+	End Function
+	
+	Public Function GetIndicationBackgroundColor()As Long
+		Return Value IndicationBackgroundColor
+	End Function
+		
+	Public Function SetIndicationFrameLineWeight(newindicationframelineweight As Long)As Boolean
+		IndicationFrameLineWeight := newindicationframelineweight
+		SetCheckBox()
+		Return Value True	
+	End Function	
+		
+	Public Function GetIndicationFrameLineWeight()As Long
+		Return Value IndicationFrameLineWeight	
+	End Function	
+		
+Protected Function OnDown(x As Long, y As Long, eventtime As Time) As Boolean
+Private Var ButtonPictureWidth As Long
+Private Var ButtonPictureZoomX As Double
+Private Var ButtonPictureZoomY As Double
+Private Var PixelColor As Long
+Private Var PixelX As Long
+Private Var PixelY As Long
+If MEnabled Then
+
+	MyChectBox.SetFrameColor(DownFontColor)
+	
+	If MIgnoreTransparentArea Then
+		ButtonPictureWidth := MUpPicture.GetWidth()
+		ButtonPictureZoomX := ObjectWidth / CDouble(ButtonPictureWidth)
+		ButtonPictureZoomY := ObjectHeight / CDouble(MUpPicture.GetHeight())
+
+		If MSmartScaling Then
+			If x <= PictureLayer1Width Then
+				PixelX := x / ButtonPictureZoomY 
+			Else
+				PixelX := ButtonPictureWidth - (ObjectWidth - x) / ButtonPictureZoomY 
+			End If
+		Else
+			PixelX := x / ButtonPictureZoomX 
+		End If 
+
+		PixelY := y / ButtonPictureZoomY
+
+		MUpPicture.GetPixel(PixelX, PixelY, PixelColor)
+
+		If (PixelColor BitAnd &HFF000000) = 0 Then
+			Return Value False
+		End If
+	End If
+
+	
+		IsPressed := True
+		RedrawCompoundObject()
+
+		RaiseEvent OnPush()
+
+	Return Value True
+	End If
+	Return Value False
+End Function	
+
+Protected Function OnUp(x As Long, y As Long, eventtime As Time, isinside As Boolean)
+	MyChectBox.SetFrameColor(UpFontColor)
+	If MEnabled Then
+		IsPressed := False
+		RedrawCompoundObject()
+	End If
+
+End Function
+
+End GraphicClass
+
+Global GraphicClass IndicationPushButton2 Inherits Namespace "CUE.GraphicCollection.GenericObjects.3".PushButton WithAttributes {defaultwidth := 120, defaultheight := 80, DesignName := "Multicolor", GroupName := "Buttons"}
+	Protected Property Indication As Boolean := False WithAttributes {PropertyGroup := "Behavior", EditMode := "Boolean; 'Yes' := True, 'No' := False"}
+	Protected Property IndicationBackgroundColor As Long := _COLOR_WHITE WithAttributes {PropertyGroup := "Appearance", EditMode := "Color"}
+	Protected Property IndicationFrameLineWeight As Long := 2 WithAttributes {PropertyGroup := "Appearance"}
+	Protected Property IndicationFrameAlign As Long := FRAME_ALIGNLEFT WithAttributes {PropertyGroup := "Appearance", EditMode := "ENUM; 'Left-Top' := FRAME_ALIGNLEFT, 'Right-Top' := FRAME_ALIGNRIGHT, 'Bottom-Line' := FRAME_ALIGNBOTTOMLINE"}
+	
+	Protected Var MyChectBox As CheckBox 
+	Protected Var BackgroundOffset As Long
+	
+	Public Const FRAME_ALIGNLEFT 					As Long := &H00000003	// Horizontal align left
+//	Public Const FRAME_ALIGNHCENTER 				As Long := &H00000002	// Horizontal align center
+	Public Const FRAME_ALIGNRIGHT 					As Long := &H00000004	// Horizontal align right
+//	Public Const FRAME_ALIGNTOP 					As Long := &H00000008	// Vertical align top
+//	Public Const FRAME_ALIGNVCENTER 				As Long := &H00000010	// Vertical align center
+//	Public Const FRAME_ALIGNBOTTOM 					As Long := &H00000020	// Vertical align bottom
+	Public Const FRAME_ALIGNBOTTOMLINE				As Long := 1000			// Bottomline
+	
+		
+	Protected Function Init()
+		SetCheckBox()
+	End Function
+	
+	Protected Function SetCheckBox()
+		If GetPrimaryDisplay().GetWidth() >= 1500 And GetPrimaryDisplay().GetHeight() >= 900 Then
+			BackgroundOffset := 3
+		Else
+			BackgroundOffset := 2
+		End If
+		Select IndicationFrameAlign
+		Case FRAME_ALIGNBOTTOMLINE
+			MyChectBox.SetObjectPosition(0,ObjectHeight-UpFont.GetHeight()/4)//(ObjectHeight - 2*UpFont.GetHeight())/2)	
+			MyChectBox.SetObjectDimensions(ObjectWidth,UpFont.GetHeight()/4)
+		Case Else
+			MyChectBox.SetObjectPosition(4*BackgroundOffset,4*BackgroundOffset)//(ObjectHeight - 2*UpFont.GetHeight())/2)	
+			MyChectBox.SetObjectDimensions(ObjectWidth-8*BackgroundOffset,UpFont.GetHeight())
+		End Select
+		MyChectBox.SetFrameColor(UpFontColor)
+		MyChectBox.SetCheckedBackgroundColor(0)
+		MyChectBox.SetValue(Indication)
+		MyChectBox.SetCheckedSymbol(MyChectBox.CHECKEDSYMBOLBACKGROUNDCOLOR)
+		MyChectBox.SetCheckedBackgroundColor(IndicationBackgroundColor)
+		MyChectBox.SetFrameLineWeight(IndicationFrameLineWeight)
+		MyChectBox.SetEnabled(MEnabled)
+
+		MyChectBox.SetFrameAlign(IndicationFrameAlign)
+	End Function
+
+	Public Function SetEnabled(newenabled As Boolean) As Boolean
+	
+		If Not newenabled Then
+			IsPressed := False
+		End If
+	
+		MEnabled := newenabled
+		UpdateDrawColors()
+		RedrawCompoundObject()
+		SetCheckBox()
+		Return Value True
+	
+	End Function
+
+	Public Function SetIndication(newindication As Boolean)As Boolean
+		If newindication <> Indication Then
+			Indication := newindication
+			MyChectBox.SetValue(Indication)
+			Redraw()
+			Return Value True
+		End If
+		Return Value False
+	End Function
+	
+	Public Function GetIndication()As Boolean
+		Return Value Indication
+	End Function
+	
+	Public Function SetObjectDimensions(newwidth As Long, newheight As Long) As Boolean
+		SetSize(newwidth, newheight)
+		UpdateDimensions()
+		RedrawCompoundObject()
+		SetCheckBox()
+		Return Value True
+	End Function
+	
+	Public Function SetUpFontColor(newupfontcolor As Long) As Boolean
+		MUpFontColor := newupfontcolor
+		UpdateDrawColors()
+		RedrawCompoundObject()
+		SetCheckBox()
+		Return Value True	
+	End Function
+
+	Public Function SetDownFontColor(newdownfontcolor As Long) As Boolean
+		MDownFontColor := newdownfontcolor
+		UpdateDrawColors()
+		RedrawCompoundObject()
+		SetCheckBox()
+		Return Value True	
+	End Function
+	
+	Public Function SetUpFont(newupfont As AddressOf _Font) As Boolean
+		MUpFont := newupfont
+		RedrawCompoundObject()
+		SetCheckBox()
+		Return Value True	
+	End Function
+	
+	Public Function SetIndicationBackgroundColor(newindicationbackgroundcolor As Long)As Boolean
+		IndicationBackgroundColor := newindicationbackgroundcolor
+		SetCheckBox()
+		Return Value True
+	End Function
+	
+	Public Function GetIndicationBackgroundColor()As Long
+		Return Value IndicationBackgroundColor
+	End Function
+		
+	Public Function SetIndicationFrameLineWeight(newindicationframelineweight As Long)As Boolean
+		IndicationFrameLineWeight := newindicationframelineweight
+		SetCheckBox()
+		Return Value True	
+	End Function	
+		
+	Public Function GetIndicationFrameLineWeight()As Long
+		Return Value IndicationFrameLineWeight	
+	End Function	
+		
+Protected Function OnDown(x As Long, y As Long, eventtime As Time) As Boolean
+Private Var ButtonPictureWidth As Long
+Private Var ButtonPictureZoomX As Double
+Private Var ButtonPictureZoomY As Double
+Private Var PixelColor As Long
+Private Var PixelX As Long
+Private Var PixelY As Long
+If MEnabled Then
+
+	MyChectBox.SetFrameColor(DownFontColor)
+	
+	If MIgnoreTransparentArea Then
+		ButtonPictureWidth := MUpPicture.GetWidth()
+		ButtonPictureZoomX := ObjectWidth / CDouble(ButtonPictureWidth)
+		ButtonPictureZoomY := ObjectHeight / CDouble(MUpPicture.GetHeight())
+
+		If MSmartScaling Then
+			If x <= PictureLayer1Width Then
+				PixelX := x / ButtonPictureZoomY 
+			Else
+				PixelX := ButtonPictureWidth - (ObjectWidth - x) / ButtonPictureZoomY 
+			End If
+		Else
+			PixelX := x / ButtonPictureZoomX 
+		End If 
+
+		PixelY := y / ButtonPictureZoomY
+
+		MUpPicture.GetPixel(PixelX, PixelY, PixelColor)
+
+		If (PixelColor BitAnd &HFF000000) = 0 Then
+			Return Value False
+		End If
+	End If
+
+	
+		IsPressed := True
+		RedrawCompoundObject()
+
+		RaiseEvent OnPush()
+
+	Return Value True
+	End If
+	Return Value False
+End Function	
+
+Protected Function OnUp(x As Long, y As Long, eventtime As Time, isinside As Boolean)
+	MyChectBox.SetFrameColor(UpFontColor)
+	If MEnabled Then
+		IsPressed := False
+		RedrawCompoundObject()
+	End If
+
+End Function
+
+End GraphicClass
+
+Global GraphicClass IndicationToggleButton2 Inherits IndicationToggleButton WithAttributes {defaultwidth := 120, defaultheight := 80, DesignName := "Multicolor", GroupName := "Buttons"}
+	Protected Property UpIndicationOffsetX As Long := 0 WithAttributes {PropertyGroup := "Up"}
+	Protected Property UpIndicationOffsetY As Long := 0 WithAttributes {PropertyGroup := "Up"}
+	Protected Property UpIndicationColor As Long := UpFontColor WithAttributes {PropertyGroup := "Up", EditMode := "color"}
+	Protected Property DownIndicationOffsetX As Long := UpIndicationOffsetX WithAttributes {PropertyGroup := "Down"}
+	Protected Property DownIndicationOffsetY As Long := UpIndicationOffsetY WithAttributes {PropertyGroup := "Down"}
+	Protected Property DownIndicationColor As Long := UpIndicationColor WithAttributes {PropertyGroup := "Down", EditMode := "color"}
+	
+	Protected Var BackgroundOffset As Long
+	
+	Protected Function Init()
+		If GetPrimaryDisplay().GetWidth() >= 1500 And GetPrimaryDisplay().GetHeight() >= 900 Then
+			BackgroundOffset := 3
+		Else
+			BackgroundOffset := 2
+		End If
+	End Function
+		
+	Private Function Draw3DButton(state As Boolean)
+		Var Width As Long
+		Var Height As Long
+
+		Me.GetSize(Width,Height)
+		If ButtonCorner = BUTTON_STYLE_ROUNDED_CORNER Then
+			If 	state Then
+				DrawStretchedTintedPicture(LineUp,DownButtonColor,Down_RUp.GetWidth(),0,Width-2*Down_RUp.GetWidth(),Down_RUp.GetHeight(),0,0,-1,-1,DownColorOpacity*MOpacity/255)
+				DrawStretchedTintedPicture(LineRight,DownButtonColor,Width-Down_RUp.GetWidth(),Down_RUp.GetHeight(),Down_RUp.GetWidth(),Height-2*Down_RUp.GetHeight(),0,0,-1,-1,DownColorOpacity*MOpacity/255)
+				DrawStretchedTintedPicture(LineDown,DownButtonColor,Down_RUp.GetWidth(),Height-Down_RUp.GetHeight(),Width-2*Down_RUp.GetWidth(),Down_RUp.GetHeight(),0,0,-1,-1,DownColorOpacity*MOpacity/255)
+				DrawStretchedTintedPicture(LineLeft,DownButtonColor,0,Down_RUp.GetHeight(),Down_RUp.GetWidth(),Height-2*Down_RUp.GetHeight(),0,0,-1,-1,DownColorOpacity*MOpacity/255)			
+				DrawStretchedTintedPicture(Centre,DownButtonColor,Down_RUp.GetWidth(),Down_RUp.GetHeight(),Width-2*Down_RUp.GetWidth(),Height-2*Down_RUp.GetHeight(),0,0,-1,-1,DownColorOpacity*MOpacity/255)
+
+				DrawTintedPicture(LUp,DownButtonColor,0,0,-1,-1,0,0,DownColorOpacity*MOpacity/255)
+				DrawTintedPicture(RUp,DownButtonColor,Width-Down_RUp.GetWidth(),0,-1,-1,0,0,DownColorOpacity*MOpacity/255)
+				DrawTintedPicture(LDown,DownButtonColor,0,Height-Down_RUp.GetHeight(),-1,-1,0,0,DownColorOpacity*MOpacity/255)
+				DrawTintedPicture(RDown,DownButtonColor,Width-Down_RUp.GetWidth(),Height-Down_RUp.GetHeight(),-1,-1,0,0,DownColorOpacity*MOpacity/255)	
+			Else
+				DrawStretchedTintedPicture(LineUp,UpButtonColor,Down_RUp.GetWidth(),0,Width-2*Down_RUp.GetWidth(),Down_RUp.GetHeight(),0,0,-1,-1,UpColorOpacity*MOpacity/255)
+				DrawStretchedTintedPicture(LineRight,UpButtonColor,Width-Down_RUp.GetWidth(),Down_RUp.GetHeight(),Down_RUp.GetWidth(),Height-2*Down_RUp.GetHeight(),0,0,-1,-1,UpColorOpacity*MOpacity/255)
+				DrawStretchedTintedPicture(LineDown,UpButtonColor,Down_RUp.GetWidth(),Height-Down_RUp.GetHeight(),Width-2*Down_RUp.GetWidth(),Down_RUp.GetHeight(),0,0,-1,-1,UpColorOpacity*MOpacity/255)
+				DrawStretchedTintedPicture(LineLeft,UpButtonColor,0,Down_RUp.GetHeight(),Down_RUp.GetWidth(),Height-2*Down_RUp.GetHeight(),0,0,-1,-1,UpColorOpacity*MOpacity/255)			
+				DrawStretchedTintedPicture(Centre,UpButtonColor,Down_RUp.GetWidth(),Down_RUp.GetHeight(),Width-2*Down_RUp.GetWidth(),Height-2*Down_RUp.GetHeight(),0,0,-1,-1,UpColorOpacity*MOpacity/255)
+			
+				DrawTintedPicture(LUp,UpButtonColor,0,0,-1,-1,0,0,UpColorOpacity*MOpacity/255)
+				DrawTintedPicture(RUp,UpButtonColor,Width-Down_RUp.GetWidth(),0,-1,-1,0,0,UpColorOpacity*MOpacity/255)
+				DrawTintedPicture(LDown,UpButtonColor,0,Height-Down_RUp.GetHeight(),-1,-1,0,0,UpColorOpacity*MOpacity/255)
+				DrawTintedPicture(RDown,UpButtonColor,Width-Down_RUp.GetWidth(),Height-Down_RUp.GetHeight(),-1,-1,0,0,UpColorOpacity*MOpacity/255)
+			End If	
+		Else	
+			If 	state Then
+				DrawRectangle(SetColorComponentOpacity(DownColor,GetColorComponentOpacity(DownColor)*MOpacity/255),RectangleEdge,RectangleEdge,Width-2*RectangleEdge,Height-2*RectangleEdge)
+			Else
+				DrawRectangle(SetColorComponentOpacity(UpColor,GetColorComponentOpacity(UpColor)*MOpacity/255),RectangleEdge,RectangleEdge,Width-2*RectangleEdge,Height-2*RectangleEdge)
+			End If
+		End If
+		
+			If 	state Then
+				DrawStretchedPicture(Down_LineUp,Down_RUp.GetWidth(),0,Width-2*Down_RUp.GetWidth(),Down_RUp.GetHeight(),0,0,-1,-1,MOpacity)
+				DrawStretchedPicture(Down_LineRight,Width-Down_RUp.GetWidth(),Down_RUp.GetHeight(),Down_RUp.GetWidth(),Height-2*Down_RUp.GetHeight(),0,0,-1,-1,MOpacity)
+				DrawStretchedPicture(Down_LineDown,Down_RUp.GetWidth(),Height-Down_RUp.GetHeight(),Width-2*Down_RUp.GetWidth(),Down_RUp.GetHeight(),0,0,-1,-1,MOpacity)
+				DrawStretchedPicture(Down_LineLeft,0,Down_RUp.GetHeight(),Down_RUp.GetWidth(),Height-2*Down_RUp.GetHeight(),0,0,-1,-1,MOpacity)			
+				DrawStretchedPicture(Down_Centre,Down_RUp.GetWidth(),Down_RUp.GetHeight(),Width-2*Down_RUp.GetWidth(),Height-2*Down_RUp.GetHeight(),0,0,-1,-1,MOpacity)
+			
+				DrawPicture(Down_LUp,0,0,-1,-1,0,0,MOpacity)
+				DrawPicture(Down_RUp,Width-Down_RUp.GetWidth(),0,-1,-1,0,0,MOpacity)
+				DrawPicture(Down_LDown,0,Height-Down_RUp.GetHeight(),-1,-1,0,0,MOpacity)
+				DrawPicture(Down_RDown,Width-Down_RUp.GetWidth(),Height-Down_RUp.GetHeight(),-1,-1,0,0,MOpacity)			
+			Else						
+				DrawStretchedPicture(Up_LineUp,Up_RUp.GetWidth(),0,Width-2*Up_RUp.GetWidth(),Up_RUp.GetHeight(),0,0,-1,-1,MOpacity)
+				DrawStretchedPicture(Up_LineRight,Width-Up_RUp.GetWidth(),Up_RUp.GetHeight(),Up_RUp.GetWidth(),Height-2*Up_RUp.GetHeight(),0,0,-1,-1,MOpacity)
+				DrawStretchedPicture(Up_LineDown,Up_RUp.GetWidth(),Height-Up_RUp.GetHeight(),Width-2*Up_RUp.GetWidth(),Up_RUp.GetHeight(),0,0,-1,-1,MOpacity)
+				DrawStretchedPicture(Up_LineLeft,0,Up_RUp.GetHeight(),Up_RUp.GetWidth(),Height-2*Up_RUp.GetHeight(),0,0,-1,-1,MOpacity)
+				DrawStretchedPicture(Up_Centre,Up_RUp.GetWidth(),Up_RUp.GetHeight(),Width-2*Up_RUp.GetWidth(),Height-2*Up_RUp.GetHeight(),0,0,-1,-1,MOpacity)
+			
+				DrawPicture(Up_LUp,0,0,-1,-1,0,0,MOpacity)
+				DrawPicture(Up_RUp,Width-Up_RUp.GetWidth(),0,-1,-1,0,0,MOpacity)
+				DrawPicture(Up_LDown,0,Height-Up_RUp.GetHeight(),-1,-1,0,0,MOpacity)
+				DrawPicture(Up_RDown,Width-Up_RUp.GetWidth(),Height-Up_RUp.GetHeight(),-1,-1,0,0,MOpacity)
+			End If
+			
+			If Indication Then
+				If 	state Then
+					DrawRectangle(SetColorComponentOpacity(DownIndicationColor, GetColorComponentOpacity(DownIndicationColor) * DrawOpacity / 255),DownIndicationOffsetX,DownIndicationOffsetY,DownFont.GetHeight(),BackgroundOffset)
+					DrawRectangle(SetColorComponentOpacity(DownIndicationColor, GetColorComponentOpacity(DownIndicationColor) * DrawOpacity / 255),DownIndicationOffsetX,DownIndicationOffsetY + DownFont.GetHeight() - BackgroundOffset,DownFont.GetHeight(),BackgroundOffset)
+					DrawRectangle(SetColorComponentOpacity(DownIndicationColor, GetColorComponentOpacity(DownIndicationColor) * DrawOpacity / 255),DownIndicationOffsetX,DownIndicationOffsetY+BackgroundOffset ,BackgroundOffset,DownFont.GetHeight() - 2*BackgroundOffset)
+					DrawRectangle(SetColorComponentOpacity(DownIndicationColor, GetColorComponentOpacity(DownIndicationColor) * DrawOpacity / 255),DownIndicationOffsetX + DownFont.GetHeight() - BackgroundOffset,DownIndicationOffsetY+BackgroundOffset ,BackgroundOffset,DownFont.GetHeight() - 2*BackgroundOffset)
+					DrawLine(DownIndicationOffsetX+DownFont.GetHeight()/3,DownIndicationOffsetY+DownFont.GetHeight()/3,DownIndicationOffsetX+DownFont.GetHeight()/2,DownIndicationOffsetY+DownFont.GetHeight()*2/3,SetColorComponentOpacity(DownIndicationColor, GetColorComponentOpacity(DownIndicationColor) * DrawOpacity / 255))
+					DrawLine(DownIndicationOffsetX+DownFont.GetHeight()/2,DownIndicationOffsetY+DownFont.GetHeight()*2/3,DownIndicationOffsetX+DownFont.GetHeight(),DownIndicationOffsetY,SetColorComponentOpacity(DownIndicationColor, GetColorComponentOpacity(DownIndicationColor) * DrawOpacity / 255))
+	
+				Else
+					DrawRectangle(SetColorComponentOpacity(UpIndicationColor, GetColorComponentOpacity(UpIndicationColor) * DrawOpacity / 255),UpIndicationOffsetX,UpIndicationOffsetY,DownFont.GetHeight(),BackgroundOffset)
+					DrawRectangle(SetColorComponentOpacity(UpIndicationColor, GetColorComponentOpacity(UpIndicationColor) * DrawOpacity / 255),UpIndicationOffsetX,UpIndicationOffsetY + DownFont.GetHeight() - BackgroundOffset,DownFont.GetHeight(),BackgroundOffset)
+					DrawRectangle(SetColorComponentOpacity(UpIndicationColor, GetColorComponentOpacity(UpIndicationColor) * DrawOpacity / 255),UpIndicationOffsetX,UpIndicationOffsetY+BackgroundOffset ,BackgroundOffset,DownFont.GetHeight() - 2*BackgroundOffset)
+					DrawRectangle(SetColorComponentOpacity(UpIndicationColor, GetColorComponentOpacity(UpIndicationColor) * DrawOpacity / 255),UpIndicationOffsetX + DownFont.GetHeight() - BackgroundOffset,DownIndicationOffsetY+BackgroundOffset ,BackgroundOffset,DownFont.GetHeight() - 2*BackgroundOffset)
+					DrawLine(UpIndicationOffsetX+DownFont.GetHeight()/3,UpIndicationOffsetY+DownFont.GetHeight()/3,UpIndicationOffsetX+DownFont.GetHeight()/2,UpIndicationOffsetY+DownFont.GetHeight()*2/3,SetColorComponentOpacity(UpIndicationColor, GetColorComponentOpacity(UpIndicationColor) * DrawOpacity / 255))
+					DrawLine(UpIndicationOffsetX+DownFont.GetHeight()/2,UpIndicationOffsetY+DownFont.GetHeight()*2/3,UpIndicationOffsetX+DownFont.GetHeight(),UpIndicationOffsetY,SetColorComponentOpacity(UpIndicationColor, GetColorComponentOpacity(UpIndicationColor) * DrawOpacity / 255))
+
+				End If
+			Else
+				If 	state Then
+					DrawRectangle(SetColorComponentOpacity(DownIndicationColor, GetColorComponentOpacity(DownIndicationColor) * DrawOpacity / 255),DownIndicationOffsetX,DownIndicationOffsetY,DownFont.GetHeight(),BackgroundOffset)
+					DrawRectangle(SetColorComponentOpacity(DownIndicationColor, GetColorComponentOpacity(DownIndicationColor) * DrawOpacity / 255),DownIndicationOffsetX,DownIndicationOffsetY + DownFont.GetHeight() - BackgroundOffset,DownFont.GetHeight(),BackgroundOffset)
+					DrawRectangle(SetColorComponentOpacity(DownIndicationColor, GetColorComponentOpacity(DownIndicationColor) * DrawOpacity / 255),DownIndicationOffsetX,DownIndicationOffsetY+BackgroundOffset ,BackgroundOffset,DownFont.GetHeight() - 2*BackgroundOffset)
+					DrawRectangle(SetColorComponentOpacity(DownIndicationColor, GetColorComponentOpacity(DownIndicationColor) * DrawOpacity / 255),DownIndicationOffsetX + DownFont.GetHeight() - BackgroundOffset,DownIndicationOffsetY+BackgroundOffset ,BackgroundOffset,DownFont.GetHeight() - 2*BackgroundOffset)
+
+				Else
+					DrawRectangle(SetColorComponentOpacity(UpIndicationColor, GetColorComponentOpacity(UpIndicationColor) * DrawOpacity / 255),UpIndicationOffsetX,UpIndicationOffsetY,DownFont.GetHeight(),BackgroundOffset)
+					DrawRectangle(SetColorComponentOpacity(UpIndicationColor, GetColorComponentOpacity(UpIndicationColor) * DrawOpacity / 255),UpIndicationOffsetX,UpIndicationOffsetY + DownFont.GetHeight() - BackgroundOffset,DownFont.GetHeight(),BackgroundOffset)
+					DrawRectangle(SetColorComponentOpacity(UpIndicationColor, GetColorComponentOpacity(UpIndicationColor) * DrawOpacity / 255),UpIndicationOffsetX,UpIndicationOffsetY+BackgroundOffset ,BackgroundOffset,DownFont.GetHeight() - 2*BackgroundOffset)
+					DrawRectangle(SetColorComponentOpacity(UpIndicationColor, GetColorComponentOpacity(UpIndicationColor) * DrawOpacity / 255),UpIndicationOffsetX + DownFont.GetHeight() - BackgroundOffset,DownIndicationOffsetY+BackgroundOffset ,BackgroundOffset,DownFont.GetHeight() - 2*BackgroundOffset)
+
+				End If			
+			End If		
+	End Function
+	
+		
+End GraphicClass
+
+Global GraphicClass IndicationToggleButton Inherits Namespace "CUE.GraphicCollection.MulticolorButtons.1".ToggleButton WithAttributes {defaultwidth := 120, defaultheight := 80, DesignName := "Multicolor", GroupName := "Buttons"}
+	Protected Property Indication As Boolean := True WithAttributes {PropertyGroup := "Behavior", EditMode := "Boolean; 'Yes' := True, 'No' := False"}
+	
+	Protected Function Init()
+		If Indication Then
+			MOpacity := 255
+		Else
+			MOpacity := 127
+		End If
+		UpdateDrawColors()
+		RedrawCompoundObject()
+	End Function
+	
+	Public Function SetIndication(newindication As Boolean)As Boolean
+		If newindication <> Indication Then
+			Indication := newindication
+			If Indication Then
+				MOpacity := 255
+			Else
+				MOpacity := 127
+			End If
+			UpdateDrawColors()
+			RedrawCompoundObject()
+			Redraw()
+			Return Value True
+		End If
+		Return Value False
+	End Function
+	
+	Public Function GetIndication()As Boolean
+		Return Value Indication
+	End Function
+
+Protected Function OnDown(x As Long, y As Long, eventtime As Time) As Boolean
+Private Var ButtonPicture As AddressOf _Picture
+Private Var ButtonPictureWidth As Long
+Private Var ButtonPictureZoomX As Double
+Private Var ButtonPictureZoomY As Double
+Private Var PixelColor As Long
+Private Var PixelX As Long
+Private Var PixelY As Long
+	If Indication Then
+	If MIgnoreTransparentArea Then
+		If IsPressed Then
+			ButtonPicture := MDownPicture
+		Else
+			ButtonPicture := MUpPicture
+		End If
+
+		ButtonPictureWidth := ButtonPicture.GetWidth()
+		ButtonPictureZoomX := ObjectWidth / CDouble(ButtonPictureWidth)
+		ButtonPictureZoomY := ObjectHeight / CDouble(ButtonPicture.GetHeight())
+
+		If MSmartScaling Then
+			If x <= PictureLayer1Width Then
+				PixelX := x / ButtonPictureZoomY 
+			Else
+				PixelX := ButtonPictureWidth - (ObjectWidth - x) / ButtonPictureZoomY 
+			End If
+		Else
+			PixelX := x / ButtonPictureZoomX 
+		End If 
+
+		PixelY := y / ButtonPictureZoomY
+
+		ButtonPicture.GetPixel(PixelX, PixelY, PixelColor)
+
+		If (PixelColor BitAnd &HFF000000) = 0 Then
+			Return Value False
+		End If
+	End If
+
+	If MEnabled Then
+		IsPressed := Not IsPressed
+		RedrawCompoundObject()
+		If MEventType = EVENT_TYPE_ON_DOWN Then
+			RaiseEvent OnToggle(IsPressed)
+		End If
+	End If
+
+	Return Value True
+	End If
+	Return Value False
+End Function
+
+	Private Function Draw3DButton(state As Boolean)
+		Var Width As Long
+		Var Height As Long
+
+		Me.GetSize(Width,Height)
+		If ButtonCorner = BUTTON_STYLE_ROUNDED_CORNER Then
+			If 	state Then
+				DrawStretchedTintedPicture(LineUp,DownButtonColor,Down_RUp.GetWidth(),0,Width-2*Down_RUp.GetWidth(),Down_RUp.GetHeight(),0,0,-1,-1,DownColorOpacity*MOpacity/255)
+				DrawStretchedTintedPicture(LineRight,DownButtonColor,Width-Down_RUp.GetWidth(),Down_RUp.GetHeight(),Down_RUp.GetWidth(),Height-2*Down_RUp.GetHeight(),0,0,-1,-1,DownColorOpacity*MOpacity/255)
+				DrawStretchedTintedPicture(LineDown,DownButtonColor,Down_RUp.GetWidth(),Height-Down_RUp.GetHeight(),Width-2*Down_RUp.GetWidth(),Down_RUp.GetHeight(),0,0,-1,-1,DownColorOpacity*MOpacity/255)
+				DrawStretchedTintedPicture(LineLeft,DownButtonColor,0,Down_RUp.GetHeight(),Down_RUp.GetWidth(),Height-2*Down_RUp.GetHeight(),0,0,-1,-1,DownColorOpacity*MOpacity/255)			
+				DrawStretchedTintedPicture(Centre,DownButtonColor,Down_RUp.GetWidth(),Down_RUp.GetHeight(),Width-2*Down_RUp.GetWidth(),Height-2*Down_RUp.GetHeight(),0,0,-1,-1,DownColorOpacity*MOpacity/255)
+
+				DrawTintedPicture(LUp,DownButtonColor,0,0,-1,-1,0,0,DownColorOpacity*MOpacity/255)
+				DrawTintedPicture(RUp,DownButtonColor,Width-Down_RUp.GetWidth(),0,-1,-1,0,0,DownColorOpacity*MOpacity/255)
+				DrawTintedPicture(LDown,DownButtonColor,0,Height-Down_RUp.GetHeight(),-1,-1,0,0,DownColorOpacity*MOpacity/255)
+				DrawTintedPicture(RDown,DownButtonColor,Width-Down_RUp.GetWidth(),Height-Down_RUp.GetHeight(),-1,-1,0,0,DownColorOpacity*MOpacity/255)	
+			Else
+				DrawStretchedTintedPicture(LineUp,UpButtonColor,Down_RUp.GetWidth(),0,Width-2*Down_RUp.GetWidth(),Down_RUp.GetHeight(),0,0,-1,-1,UpColorOpacity*MOpacity/255)
+				DrawStretchedTintedPicture(LineRight,UpButtonColor,Width-Down_RUp.GetWidth(),Down_RUp.GetHeight(),Down_RUp.GetWidth(),Height-2*Down_RUp.GetHeight(),0,0,-1,-1,UpColorOpacity*MOpacity/255)
+				DrawStretchedTintedPicture(LineDown,UpButtonColor,Down_RUp.GetWidth(),Height-Down_RUp.GetHeight(),Width-2*Down_RUp.GetWidth(),Down_RUp.GetHeight(),0,0,-1,-1,UpColorOpacity*MOpacity/255)
+				DrawStretchedTintedPicture(LineLeft,UpButtonColor,0,Down_RUp.GetHeight(),Down_RUp.GetWidth(),Height-2*Down_RUp.GetHeight(),0,0,-1,-1,UpColorOpacity*MOpacity/255)			
+				DrawStretchedTintedPicture(Centre,UpButtonColor,Down_RUp.GetWidth(),Down_RUp.GetHeight(),Width-2*Down_RUp.GetWidth(),Height-2*Down_RUp.GetHeight(),0,0,-1,-1,UpColorOpacity*MOpacity/255)
+			
+				DrawTintedPicture(LUp,UpButtonColor,0,0,-1,-1,0,0,UpColorOpacity*MOpacity/255)
+				DrawTintedPicture(RUp,UpButtonColor,Width-Down_RUp.GetWidth(),0,-1,-1,0,0,UpColorOpacity*MOpacity/255)
+				DrawTintedPicture(LDown,UpButtonColor,0,Height-Down_RUp.GetHeight(),-1,-1,0,0,UpColorOpacity*MOpacity/255)
+				DrawTintedPicture(RDown,UpButtonColor,Width-Down_RUp.GetWidth(),Height-Down_RUp.GetHeight(),-1,-1,0,0,UpColorOpacity*MOpacity/255)
+			End If	
+		Else	
+			If 	state Then
+				DrawRectangle(SetColorComponentOpacity(DownColor,GetColorComponentOpacity(DownColor)*MOpacity/255),RectangleEdge,RectangleEdge,Width-2*RectangleEdge,Height-2*RectangleEdge)
+			Else
+				DrawRectangle(SetColorComponentOpacity(UpColor,GetColorComponentOpacity(UpColor)*MOpacity/255),RectangleEdge,RectangleEdge,Width-2*RectangleEdge,Height-2*RectangleEdge)
+			End If
+		End If
+		
+			If 	state Then
+				DrawStretchedPicture(Down_LineUp,Down_RUp.GetWidth(),0,Width-2*Down_RUp.GetWidth(),Down_RUp.GetHeight(),0,0,-1,-1,MOpacity)
+				DrawStretchedPicture(Down_LineRight,Width-Down_RUp.GetWidth(),Down_RUp.GetHeight(),Down_RUp.GetWidth(),Height-2*Down_RUp.GetHeight(),0,0,-1,-1,MOpacity)
+				DrawStretchedPicture(Down_LineDown,Down_RUp.GetWidth(),Height-Down_RUp.GetHeight(),Width-2*Down_RUp.GetWidth(),Down_RUp.GetHeight(),0,0,-1,-1,MOpacity)
+				DrawStretchedPicture(Down_LineLeft,0,Down_RUp.GetHeight(),Down_RUp.GetWidth(),Height-2*Down_RUp.GetHeight(),0,0,-1,-1,MOpacity)			
+				DrawStretchedPicture(Down_Centre,Down_RUp.GetWidth(),Down_RUp.GetHeight(),Width-2*Down_RUp.GetWidth(),Height-2*Down_RUp.GetHeight(),0,0,-1,-1,MOpacity)
+			
+				DrawPicture(Down_LUp,0,0,-1,-1,0,0,MOpacity)
+				DrawPicture(Down_RUp,Width-Down_RUp.GetWidth(),0,-1,-1,0,0,MOpacity)
+				DrawPicture(Down_LDown,0,Height-Down_RUp.GetHeight(),-1,-1,0,0,MOpacity)
+				DrawPicture(Down_RDown,Width-Down_RUp.GetWidth(),Height-Down_RUp.GetHeight(),-1,-1,0,0,MOpacity)			
+			Else						
+				DrawStretchedPicture(Up_LineUp,Up_RUp.GetWidth(),0,Width-2*Up_RUp.GetWidth(),Up_RUp.GetHeight(),0,0,-1,-1,MOpacity)
+				DrawStretchedPicture(Up_LineRight,Width-Up_RUp.GetWidth(),Up_RUp.GetHeight(),Up_RUp.GetWidth(),Height-2*Up_RUp.GetHeight(),0,0,-1,-1,MOpacity)
+				DrawStretchedPicture(Up_LineDown,Up_RUp.GetWidth(),Height-Up_RUp.GetHeight(),Width-2*Up_RUp.GetWidth(),Up_RUp.GetHeight(),0,0,-1,-1,MOpacity)
+				DrawStretchedPicture(Up_LineLeft,0,Up_RUp.GetHeight(),Up_RUp.GetWidth(),Height-2*Up_RUp.GetHeight(),0,0,-1,-1,MOpacity)
+				DrawStretchedPicture(Up_Centre,Up_RUp.GetWidth(),Up_RUp.GetHeight(),Width-2*Up_RUp.GetWidth(),Height-2*Up_RUp.GetHeight(),0,0,-1,-1,MOpacity)
+			
+				DrawPicture(Up_LUp,0,0,-1,-1,0,0,MOpacity)
+				DrawPicture(Up_RUp,Width-Up_RUp.GetWidth(),0,-1,-1,0,0,MOpacity)
+				DrawPicture(Up_LDown,0,Height-Up_RUp.GetHeight(),-1,-1,0,0,MOpacity)
+				DrawPicture(Up_RDown,Width-Up_RUp.GetWidth(),Height-Up_RUp.GetHeight(),-1,-1,0,0,MOpacity)
+			End If
+		
+	End Function	
+		
+End GraphicClass
+
+Global GraphicClass IndicationRadioButton Inherits Namespace "CUE.GraphicCollection.MulticolorButtons.1".RadioButton WithAttributes {defaultwidth := 120, defaultheight := 80, DesignName := "Multicolor", GroupName := "Buttons"}
+	Protected Property Indication As Boolean := True WithAttributes {PropertyGroup := "Behavior", EditMode := "Boolean; 'Yes' := True, 'No' := False"}
+	
+	Protected Function Init()
+		If Indication Then
+			MOpacity := 255
+		Else
+			MOpacity := 127
+		End If
+		UpdateDrawColors()
+		RedrawCompoundObject()
+	End Function
+
+	Public Function SetIndication(newindication As Boolean)As Boolean
+		If newindication <> Indication Then
+			Indication := newindication
+			If Indication Then
+				MOpacity := 255
+			Else
+				MOpacity := 127
+			End If
+			UpdateDrawColors()
+			RedrawCompoundObject()
+			Redraw()
+			Return Value True
+		End If
+		Return Value False
+	End Function
+	
+	Public Function GetIndication()As Boolean
+		Return Value Indication
+	End Function
+	
+Protected Function OnDown(x As Long, y As Long, eventtime As Time) As Boolean
+Private Var ButtonPictureWidth As Long
+Private Var ButtonPictureZoomX As Double
+Private Var ButtonPictureZoomY As Double
+Private Var PixelColor As Long
+Private Var PixelX As Long
+Private Var PixelY As Long
+	If Indication Then
+	If MIgnoreTransparentArea Then
+		ButtonPictureWidth := MUpPicture.GetWidth()
+		ButtonPictureZoomX := ObjectWidth / CDouble(ButtonPictureWidth)
+		ButtonPictureZoomY := ObjectHeight / CDouble(MUpPicture.GetHeight())
+
+		If MSmartScaling Then
+			If x <= PictureLayer1Width Then
+				PixelX := x / ButtonPictureZoomY 
+			Else
+				PixelX := ButtonPictureWidth - (ObjectWidth - x) / ButtonPictureZoomY 
+			End If
+		Else
+			PixelX := x / ButtonPictureZoomX 
+		End If 
+
+		PixelY := y / ButtonPictureZoomY
+
+		MUpPicture.GetPixel(PixelX, PixelY, PixelColor)
+
+		If (PixelColor BitAnd &HFF000000) = 0 Then
+			Return Value False
+		End If
+	End If
+
+	If MEnabled Then
+		IsPressed := True
+		RedrawCompoundObject()
+		SendJoinMessage(False, 2)
+		SendJoinMessage(False, 1, MNavigationBarButtonID)
+		RaiseEvent OnPush()
+	End If
+
+	Return Value True
+	Else
+	Return Value False
+	End If
+End Function
+
+	Private Function Draw3DButton(state As Boolean)
+		Var Width As Long
+		Var Height As Long
+
+		Me.GetSize(Width,Height)
+		If ButtonCorner = BUTTON_STYLE_ROUNDED_CORNER Then
+			If 	state Then
+				DrawStretchedTintedPicture(LineUp,DownButtonColor,Down_RUp.GetWidth(),0,Width-2*Down_RUp.GetWidth(),Down_RUp.GetHeight(),0,0,-1,-1,DownColorOpacity*MOpacity/255)
+				DrawStretchedTintedPicture(LineRight,DownButtonColor,Width-Down_RUp.GetWidth(),Down_RUp.GetHeight(),Down_RUp.GetWidth(),Height-2*Down_RUp.GetHeight(),0,0,-1,-1,DownColorOpacity*MOpacity/255)
+				DrawStretchedTintedPicture(LineDown,DownButtonColor,Down_RUp.GetWidth(),Height-Down_RUp.GetHeight(),Width-2*Down_RUp.GetWidth(),Down_RUp.GetHeight(),0,0,-1,-1,DownColorOpacity*MOpacity/255)
+				DrawStretchedTintedPicture(LineLeft,DownButtonColor,0,Down_RUp.GetHeight(),Down_RUp.GetWidth(),Height-2*Down_RUp.GetHeight(),0,0,-1,-1,DownColorOpacity*MOpacity/255)			
+				DrawStretchedTintedPicture(Centre,DownButtonColor,Down_RUp.GetWidth(),Down_RUp.GetHeight(),Width-2*Down_RUp.GetWidth(),Height-2*Down_RUp.GetHeight(),0,0,-1,-1,DownColorOpacity*MOpacity/255)
+
+				DrawTintedPicture(LUp,DownButtonColor,0,0,-1,-1,0,0,DownColorOpacity*MOpacity/255)
+				DrawTintedPicture(RUp,DownButtonColor,Width-Down_RUp.GetWidth(),0,-1,-1,0,0,DownColorOpacity*MOpacity/255)
+				DrawTintedPicture(LDown,DownButtonColor,0,Height-Down_RUp.GetHeight(),-1,-1,0,0,DownColorOpacity*MOpacity/255)
+				DrawTintedPicture(RDown,DownButtonColor,Width-Down_RUp.GetWidth(),Height-Down_RUp.GetHeight(),-1,-1,0,0,DownColorOpacity*MOpacity/255)	
+			Else
+				DrawStretchedTintedPicture(LineUp,UpButtonColor,Down_RUp.GetWidth(),0,Width-2*Down_RUp.GetWidth(),Down_RUp.GetHeight(),0,0,-1,-1,UpColorOpacity*MOpacity/255)
+				DrawStretchedTintedPicture(LineRight,UpButtonColor,Width-Down_RUp.GetWidth(),Down_RUp.GetHeight(),Down_RUp.GetWidth(),Height-2*Down_RUp.GetHeight(),0,0,-1,-1,UpColorOpacity*MOpacity/255)
+				DrawStretchedTintedPicture(LineDown,UpButtonColor,Down_RUp.GetWidth(),Height-Down_RUp.GetHeight(),Width-2*Down_RUp.GetWidth(),Down_RUp.GetHeight(),0,0,-1,-1,UpColorOpacity*MOpacity/255)
+				DrawStretchedTintedPicture(LineLeft,UpButtonColor,0,Down_RUp.GetHeight(),Down_RUp.GetWidth(),Height-2*Down_RUp.GetHeight(),0,0,-1,-1,UpColorOpacity*MOpacity/255)			
+				DrawStretchedTintedPicture(Centre,UpButtonColor,Down_RUp.GetWidth(),Down_RUp.GetHeight(),Width-2*Down_RUp.GetWidth(),Height-2*Down_RUp.GetHeight(),0,0,-1,-1,UpColorOpacity*MOpacity/255)
+			
+				DrawTintedPicture(LUp,UpButtonColor,0,0,-1,-1,0,0,UpColorOpacity*MOpacity/255)
+				DrawTintedPicture(RUp,UpButtonColor,Width-Down_RUp.GetWidth(),0,-1,-1,0,0,UpColorOpacity*MOpacity/255)
+				DrawTintedPicture(LDown,UpButtonColor,0,Height-Down_RUp.GetHeight(),-1,-1,0,0,UpColorOpacity*MOpacity/255)
+				DrawTintedPicture(RDown,UpButtonColor,Width-Down_RUp.GetWidth(),Height-Down_RUp.GetHeight(),-1,-1,0,0,UpColorOpacity*MOpacity/255)
+			End If	
+		Else	
+			If 	state Then
+				DrawRectangle(SetColorComponentOpacity(DownColor,GetColorComponentOpacity(DownColor)*MOpacity/255),RectangleEdge,RectangleEdge,Width-2*RectangleEdge,Height-2*RectangleEdge)
+			Else
+				DrawRectangle(SetColorComponentOpacity(UpColor,GetColorComponentOpacity(UpColor)*MOpacity/255),RectangleEdge,RectangleEdge,Width-2*RectangleEdge,Height-2*RectangleEdge)
+			End If
+		End If
+		
+			If 	state Then
+				DrawStretchedPicture(Down_LineUp,Down_RUp.GetWidth(),0,Width-2*Down_RUp.GetWidth(),Down_RUp.GetHeight(),0,0,-1,-1,MOpacity)
+				DrawStretchedPicture(Down_LineRight,Width-Down_RUp.GetWidth(),Down_RUp.GetHeight(),Down_RUp.GetWidth(),Height-2*Down_RUp.GetHeight(),0,0,-1,-1,MOpacity)
+				DrawStretchedPicture(Down_LineDown,Down_RUp.GetWidth(),Height-Down_RUp.GetHeight(),Width-2*Down_RUp.GetWidth(),Down_RUp.GetHeight(),0,0,-1,-1,MOpacity)
+				DrawStretchedPicture(Down_LineLeft,0,Down_RUp.GetHeight(),Down_RUp.GetWidth(),Height-2*Down_RUp.GetHeight(),0,0,-1,-1,MOpacity)			
+				DrawStretchedPicture(Down_Centre,Down_RUp.GetWidth(),Down_RUp.GetHeight(),Width-2*Down_RUp.GetWidth(),Height-2*Down_RUp.GetHeight(),0,0,-1,-1,MOpacity)
+			
+				DrawPicture(Down_LUp,0,0,-1,-1,0,0,MOpacity)
+				DrawPicture(Down_RUp,Width-Down_RUp.GetWidth(),0,-1,-1,0,0,MOpacity)
+				DrawPicture(Down_LDown,0,Height-Down_RUp.GetHeight(),-1,-1,0,0,MOpacity)
+				DrawPicture(Down_RDown,Width-Down_RUp.GetWidth(),Height-Down_RUp.GetHeight(),-1,-1,0,0,MOpacity)			
+			Else						
+				DrawStretchedPicture(Up_LineUp,Up_RUp.GetWidth(),0,Width-2*Up_RUp.GetWidth(),Up_RUp.GetHeight(),0,0,-1,-1,MOpacity)
+				DrawStretchedPicture(Up_LineRight,Width-Up_RUp.GetWidth(),Up_RUp.GetHeight(),Up_RUp.GetWidth(),Height-2*Up_RUp.GetHeight(),0,0,-1,-1,MOpacity)
+				DrawStretchedPicture(Up_LineDown,Up_RUp.GetWidth(),Height-Up_RUp.GetHeight(),Width-2*Up_RUp.GetWidth(),Up_RUp.GetHeight(),0,0,-1,-1,MOpacity)
+				DrawStretchedPicture(Up_LineLeft,0,Up_RUp.GetHeight(),Up_RUp.GetWidth(),Height-2*Up_RUp.GetHeight(),0,0,-1,-1,MOpacity)
+				DrawStretchedPicture(Up_Centre,Up_RUp.GetWidth(),Up_RUp.GetHeight(),Width-2*Up_RUp.GetWidth(),Height-2*Up_RUp.GetHeight(),0,0,-1,-1,MOpacity)
+			
+				DrawPicture(Up_LUp,0,0,-1,-1,0,0,MOpacity)
+				DrawPicture(Up_RUp,Width-Up_RUp.GetWidth(),0,-1,-1,0,0,MOpacity)
+				DrawPicture(Up_LDown,0,Height-Up_RUp.GetHeight(),-1,-1,0,0,MOpacity)
+				DrawPicture(Up_RDown,Width-Up_RUp.GetWidth(),Height-Up_RUp.GetHeight(),-1,-1,0,0,MOpacity)
+			End If
+		
+	End Function	
+End GraphicClass

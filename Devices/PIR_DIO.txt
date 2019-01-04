@@ -1,0 +1,93 @@
+Global DeviceClass PIR_DIO
+Connector DigitalInputConnector
+//
+Protected Property enabled As Boolean := True WithAttributes
+{
+	PropertyGroup := "PIR sensor",
+	DisplayName := "Enable"
+}
+
+Protected Property unitId As Long := 0 WithAttributes
+{
+	PropertyGroup := "PIR sensor",
+	DisplayName := "UnitID"
+}
+
+//Protected Property timeWindow As Time := 1:20 WithAttributes
+//{
+//	PropertyGroup := "PIR sensor",
+//	DisplayName := "Time Window",
+//	EditMode := "TimeInterval"
+//}
+//
+//Protected Property eventsInTimeWinwdowForAlarm As Long := 1 WithAttributes
+//{
+//	PropertyGroup := "PIR sensor",
+//	DisplayName := "Events count"
+//}
+//
+//Var timeCounter As Time
+//Var eventCounter As Long := 0
+//Var isTimeWindow As Boolean := False
+
+//Global Event Alarm As Process (unitID As Long, alarmTime As Time )
+Global Event OnClose As Process (unitID As Long )
+Global Event OnOpen As Process (unitID As Long)
+
+Private Function Init ()
+	DigitalInputConnector.Open ()
+	StartProcess IOCheck ()
+End Function
+
+
+Private Process IOCheck()
+	Do
+		DigitalInputConnector.WaitWhileOpened()
+		If enabled And DigitalInputConnector.IsClosed() Then 
+			RaiseEvent OnClose(unitId )
+			 
+		End If
+		DigitalInputConnector.WaitWhileClosed ()
+		If enabled And Not DigitalInputConnector.IsClosed() Then 
+			RaiseEvent OnOpen(unitId ) 
+		End If
+		Wait(:0.1)
+	End Do
+End Process
+
+
+Global Function setEnable (newstate As Boolean)
+	enabled := newstate
+End Function
+
+
+Global Function getStatus()  As Boolean
+	Return Value DigitalInputConnector.IsClosed()
+End Function
+
+
+//
+//Private Function checkAlarm ()
+//	If Not isTimeWindow Then
+//		StopProcess runTimeWindow ()
+//		eventCounter := eventsInTimeWinwdowForAlarm
+//		StartProcess runTimeWindow ()
+//	End If
+//	eventCounter -= 1
+//	If eventCounter = 0 Then
+//		StopProcess runTimeWindow ()
+//		isTimeWindow := False
+//		RaiseEvent Alarm(unitId, GetLocalTime())
+//	End If
+//End Function
+//
+//Private Process runTimeWindow()
+//	isTimeWindow := True	
+//		Wait(timeWindow)
+//	isTimeWindow := False
+//End Process
+//
+
+
+
+End DeviceClass

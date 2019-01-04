@@ -1,0 +1,15 @@
+Private Process Keyboard1_OnCancel(id As Long) Link Keyboard1.OnCancel
+End Process
+
+Private Process Win_PushButton1_OnPush(  ) Link Win.PushButton1.OnPush
+	MainMenu.NavigationBarMainSelect(1)
+End Process
+
+Private Process WinLights_LightPresetAllOff_OnPush(  ) Link WinLights.LightPresetAllOff.OnPush
+	Controller1.Lights.LightsAllOff()
+End Process
+
+Private Process WinLights_LightPresetAllOn_OnPush(  ) Link WinLights.LightPresetAllOn.OnPush
+	Controller1.Lights.LightsAllOn()
+End Process
+

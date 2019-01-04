@@ -1,0 +1,1677 @@
+Public GraphicClass TemperatureVerticalWithActualT2 Inherits BaseTemperature WithAttributes {DefaultWidth := 300, DefaultHeight := 210, DesignName := "Multicolor"}
+	Protected Property CurrentTemperature As Double := (Minimum + Maximum) / 2  WithAttributes {PropertyGroup := "Behavior"}
+
+//	Protected Property BackgroundColorCurrentTemperature As Long := &Hff808080 WithAttributes {PropertyGroup := "Appearance", EditMode := "color"}
+//	Protected Property BackgroundOffsetCurrentTemperature As Long := 10 WithAttributes {PropertyGroup := "Appearance"}
+
+	Protected Property CurrentTemperatureFont As AddressOf _Font := fntVerdana40 WithAttributes {PropertyGroup := "Appearance", EditMode := "font"}
+	Protected Property CurrentTemperatureFontColor As Long := _COLOR_WHITE WithAttributes {PropertyGroup := "Appearance", EditMode := "color"}
+//	Protected Var CurrentTemperatureAlign As Long := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER //WithAttributes {PropertyGroup := "Appearance", EditMode := "ENUM; 'Left-Top' := _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNTOP, 'Left-Middle' := _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNVCENTER, 'Left-Bottom' := _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNBOTTOM, 'Center-Top' := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNTOP, 'Center-Middle' := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER, 'Center-Bottom' := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNBOTTOM, 'Right-Top' := _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNTOP, 'Right-Middle' := _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNVCENTER, 'Right-Bottom' := _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNBOTTOM"}
+	Protected Property CurrentTemperatureValueFormat As Text[30] := txtteplota  WithAttributes{PropertyGroup := "Appearance"}
+	Protected Property CurrentTemperatureValueAlign As Long := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER WithAttributes {PropertyGroup := "Appearance", EditMode := "ENUM; 'Left-Top' := _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNTOP, 'Left-Middle' := _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNVCENTER, 'Left-Bottom' := _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNBOTTOM, 'Center-Top' := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNTOP, 'Center-Middle' := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER, 'Center-Bottom' := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNBOTTOM, 'Right-Top' := _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNTOP, 'Right-Middle' := _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNVCENTER, 'Right-Bottom' := _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNBOTTOM"}
+
+	Protected Var ButtonDownPX As Long
+	Protected Var ButtonDownPY As Long
+	Protected Var ButtonDownWidth As Long
+	Protected Var ButtonDownHeight As Long	
+	Protected Var ButtonUpPX As Long
+	Protected Var ButtonUpPY As Long
+	Protected Var ButtonUpWidth As Long
+	Protected Var ButtonUpHeight As Long	
+	
+		
+	Protected Var TextValueCurrentTemperatureBuffer As Text[30] := ""	
+	
+	Protected Function SetObjectParams()
+	
+		If GetPrimaryDisplay().GetWidth() >= 1500 And GetPrimaryDisplay().GetHeight() >= 900 Then
+			BackgroundOffset := 3
+		Else
+			BackgroundOffset := 2
+		End If
+		
+		GetSize(ObjectWidth,ObjectHeight)
+		
+		ButtonDownPX		:= ObjectWidth/2
+		ButtonDownPY		:= ObjectHeight/2
+		ButtonDownWidth		:= ObjectWidth/2
+		ButtonDownHeight	:= ObjectHeight/2
+
+		ButtonUpPX		:= ObjectWidth/2
+		ButtonUpPY		:= 0
+		ButtonUpWidth	:= ObjectWidth/2
+		ButtonUpHeight	:= ObjectHeight/2
+				
+		SetPointDown.SetObjectPosition(ButtonDownPX,ButtonDownPY)
+		SetPointDown.SetObjectDimensions(ButtonDownWidth,ButtonDownHeight)
+		SetPointDown.SetButtonStyle(SetPointDown.BUTTON_STYLE_SHARP_CORNER)
+		SetPointDown.SetUpColor(UpColor)
+		SetPointDown.SetDownColor(DownColor)
+		SetPointDown.SetUpIcon(DownButtonIcon)
+		SetPointDown.SetDownIcon(DownButtonIcon)
+		SetPointDown.SetUpText(Nothing)
+		SetPointDown.SetDownText(Nothing)
+		SetPointDown.SetRepeatInterval(RepeatInterval)
+		
+		SetPointUp.SetObjectPosition(ButtonUpPX,ButtonUpPY)
+		SetPointUp.SetObjectDimensions(ButtonUpWidth,ButtonUpHeight)
+		SetPointUp.SetButtonStyle(SetPointUp.BUTTON_STYLE_SHARP_CORNER)
+		SetPointUp.SetUpColor(UpColor)
+		SetPointUp.SetDownColor(DownColor)
+		SetPointUp.SetUpIcon(UpButtonIcon)
+		SetPointUp.SetDownIcon(UpButtonIcon)
+		SetPointUp.SetUpText(Nothing)
+		SetPointUp.SetDownText(Nothing)
+		SetPointUp.SetRepeatInterval(RepeatInterval)
+		
+		RealStepValue := Abs (StepValue)
+		If Minimum > Maximum Then
+			LastValue := Min (Minimum, LastValue) 
+			LastValue := Max (Maximum, LastValue)
+		Else
+			LastValue := Max (Minimum, LastValue) 
+			LastValue := Min(Maximum, LastValue)
+		End If				
+
+		LastValue := GetValueByStepValue(LastValue)
+
+		Redraw()
+	End Function
+	
+	Protected Function OnDraw()
+		Var txt As Text[30]
+		Var actualtxt As Text[30]
+
+//		DrawRectangle(BackgroundColor,0,ObjectHeight/3 + BackgroundOffset,ObjectWidth/2 + BackgroundOffset,ObjectHeight*2/3 - 2*BackgroundOffset)		
+//		DrawRectangle(BackgroundColorCurrentTemperature,0,BackgroundOffsetCurrentTemperature,ObjectWidth - BackgroundOffset,ObjectHeight/3 + BackgroundOffset - 2.5*BackgroundOffsetCurrentTemperature)		
+		DrawRectangle(BackgroundColor,0,BackgroundOffset,ObjectWidth/2 + BackgroundOffset,ObjectHeight - 2*BackgroundOffset)		
+
+		FormatText(txt,SetpointValueFormat,LastValue)	
+//		DrawText(SetpointTemperatureFont,txt,SetpointTemperatureFontColor,0,ObjectHeight/3 + BackgroundOffset,ObjectWidth/2 + BackgroundOffset,ObjectHeight*2/3 - 2*BackgroundOffset,_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER)
+		DrawText(SetpointTemperatureFont,txt,SetpointTemperatureFontColor,0,ObjectHeight/2 + BackgroundOffset,ObjectWidth/2 + BackgroundOffset,ObjectHeight/2 - 2*BackgroundOffset,_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER)
+		
+		FormatText(actualtxt,CurrentTemperatureValueFormat,CurrentTemperature)
+//		DrawText(CurrentTemperatureFont,actualtxt,CurrentTemperatureFontColor,0,0,ObjectWidth - BackgroundOffset,ObjectHeight/3 + BackgroundOffset,CurrentTemperatureValueAlign)
+		DrawText(CurrentTemperatureFont,actualtxt,CurrentTemperatureFontColor,0,0,ObjectWidth/2 - BackgroundOffset,ObjectHeight/2 + BackgroundOffset,CurrentTemperatureValueAlign)
+
+	End Function
+	
+	Public Function SetCurrentTemperature(newcurrenttemperature As Double) As Boolean
+		CurrentTemperature := newcurrenttemperature
+		Redraw()
+		Return Value True
+	End Function
+	
+	Public Function GetCurrentTemperature()As Double
+		Return Value CurrentTemperature
+	End Function
+	
+	Public Function SetCurrentTemperatureValueFormat(newcurrenttemperaturevalueformat As Text)As Boolean
+		If GetMemorySegment(newcurrenttemperaturevalueformat) = _MSEG_RESOURCEDATA Then
+			CurrentTemperatureValueFormat := newcurrenttemperaturevalueformat
+		Else
+			TextValueCurrentTemperatureBuffer := newcurrenttemperaturevalueformat
+			CurrentTemperatureValueFormat := TextValueCurrentTemperatureBuffer
+		End If	
+		Return Value True
+	End Function
+
+	Public Function GetCurrentTemperatureFormat()As AddressOf Text
+		Return Value CurrentTemperatureValueFormat
+	End Function
+	
+End GraphicClass
+
+GraphicClass TemperatureVerticalWithActualT Inherits BaseTemperature WithAttributes {DefaultWidth := 450, DefaultHeight := 210, DesignName := "Multicolor"}
+	Protected Property CurrentTemperature As Double := (Minimum + Maximum) / 2  WithAttributes {PropertyGroup := "Behavior"}
+
+	Protected Property BackgroundColorCurrentTemperature As Long := &Hff808080 WithAttributes {PropertyGroup := "Appearance", EditMode := "color"}
+	Protected Property BackgroundOffsetCurrentTemperature As Long := 1 WithAttributes {PropertyGroup := "Appearance"}
+
+	Protected Property CurrentTemperatureFont As AddressOf _Font := fntVerdana72 WithAttributes {PropertyGroup := "Appearance", EditMode := "font"}
+	Protected Property CurrentTemperatureFontColor As Long := _COLOR_WHITE WithAttributes {PropertyGroup := "Appearance", EditMode := "color"}
+	Protected Var CurrentTemperatureAlign As Long := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER //WithAttributes {PropertyGroup := "Appearance", EditMode := "ENUM; 'Left-Top' := _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNTOP, 'Left-Middle' := _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNVCENTER, 'Left-Bottom' := _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNBOTTOM, 'Center-Top' := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNTOP, 'Center-Middle' := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER, 'Center-Bottom' := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNBOTTOM, 'Right-Top' := _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNTOP, 'Right-Middle' := _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNVCENTER, 'Right-Bottom' := _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNBOTTOM"}
+	Protected Property CurrentTemperatureValueFormat As Text[30] := txtteplota  WithAttributes{PropertyGroup := "Appearance"}
+	Protected Var TextValueCurrentTemperatureBuffer As Text[30] := ""	
+		
+	Protected Function SetObjectParams()
+	
+		If GetPrimaryDisplay().GetWidth() >= 1500 And GetPrimaryDisplay().GetHeight() >= 900 Then
+			BackgroundOffset := 3
+		Else
+			BackgroundOffset := 2
+		End If
+		
+		GetSize(ObjectWidth,ObjectHeight)
+		SetPointDown.SetObjectPosition(ObjectWidth*2/3,ObjectHeight*2/3)
+		SetPointDown.SetObjectDimensions(ObjectWidth/3,ObjectHeight/3)
+		SetPointDown.SetButtonStyle(SetPointDown.BUTTON_STYLE_SHARP_CORNER)
+		SetPointDown.SetUpColor(UpColor)
+		SetPointDown.SetDownColor(DownColor)
+		SetPointDown.SetUpIcon(DownButtonIcon)
+		SetPointDown.SetDownIcon(DownButtonIcon)
+		SetPointDown.SetUpText(Nothing)
+		SetPointDown.SetDownText(Nothing)
+		
+		SetPointUp.SetObjectPosition(ObjectWidth*2/3,0)
+		SetPointUp.SetObjectDimensions(ObjectWidth/3,ObjectHeight/3)
+		SetPointUp.SetButtonStyle(SetPointUp.BUTTON_STYLE_SHARP_CORNER)
+		SetPointUp.SetUpColor(UpColor)
+		SetPointUp.SetDownColor(DownColor)
+		SetPointUp.SetUpIcon(UpButtonIcon)
+		SetPointUp.SetDownIcon(UpButtonIcon)
+		SetPointUp.SetUpText(Nothing)
+		SetPointUp.SetDownText(Nothing)
+		
+		RealStepValue := Abs (StepValue)
+		If Minimum > Maximum Then
+			LastValue := Min (Minimum, LastValue) 
+			LastValue := Max (Maximum, LastValue)
+		Else
+			LastValue := Max (Minimum, LastValue) 
+			LastValue := Min(Maximum, LastValue)
+		End If				
+
+		LastValue := GetValueByStepValue(LastValue)
+
+		Redraw()
+	End Function
+	
+	Protected Function OnDraw()
+		Var txt As Text[30]
+		Var actualtxt As Text[30]
+
+		DrawRectangle(BackgroundColor,ObjectWidth*2/3 + BackgroundOffset,ObjectHeight/3 - BackgroundOffset,ObjectWidth/3 - 2*BackgroundOffset,ObjectHeight/3 + 2* BackgroundOffset)		
+		DrawRectangle(BackgroundColorCurrentTemperature,0,BackgroundOffset,ObjectWidth*2/3 - 2*BackgroundOffsetCurrentTemperature,ObjectHeight - 2* BackgroundOffset)		
+	
+		FormatText(txt,SetpointValueFormat,LastValue)	
+		DrawText(SetpointTemperatureFont,txt,SetpointTemperatureFontColor,ObjectWidth*2/3 + BackgroundOffset,ObjectHeight/3 - BackgroundOffset,ObjectWidth/3 - 2*BackgroundOffset,ObjectHeight/3 + 2* BackgroundOffset ,_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER)
+		
+		FormatText(actualtxt,CurrentTemperatureValueFormat,CurrentTemperature)
+		DrawText(CurrentTemperatureFont,actualtxt,CurrentTemperatureFontColor,0,BackgroundOffset,ObjectWidth*2/3 - 2*BackgroundOffsetCurrentTemperature,ObjectHeight - 2* BackgroundOffset,CurrentTemperatureAlign)
+		
+	End Function
+	
+	Public Function SetCurrentTemperature(newcurrenttemperature As Double) As Boolean
+		CurrentTemperature := newcurrenttemperature
+		Redraw()
+		Return Value True
+	End Function
+	
+	Public Function GetCurrentTemperature()As Double
+		Return Value CurrentTemperature
+	End Function
+	
+	Public Function SetCurrentTemperatureValueFormat(newcurrenttemperaturevalueformat As Text)As Boolean
+		If GetMemorySegment(newcurrenttemperaturevalueformat) = _MSEG_RESOURCEDATA Then
+			CurrentTemperatureValueFormat := newcurrenttemperaturevalueformat
+		Else
+			TextValueCurrentTemperatureBuffer := newcurrenttemperaturevalueformat
+			CurrentTemperatureValueFormat := TextValueCurrentTemperatureBuffer
+		End If	
+		Return Value True
+	End Function
+
+	Public Function GetCurrentTemperatureFormat()As AddressOf Text
+		Return Value CurrentTemperatureValueFormat
+	End Function
+End GraphicClass
+
+//GraphicClass TemperatureVertical2 Inherits BaseTemperature WithAttributes {DefaultWidth := 40, DefaultHeight := 100, DesignName := "Multicolor"}
+//	Protected Function SetObjectParams()
+//	
+//		If GetPrimaryDisplay().GetWidth() >= 1500 And GetPrimaryDisplay().GetHeight() >= 900 Then
+//			BackgroundOffset := 3
+//		Else
+//			BackgroundOffset := 2
+//		End If
+//		
+//		GetSize(ObjectWidth,ObjectHeight)
+//		SetPointDown.SetObjectPosition(0,ObjectHeight*2/3)
+//		SetPointDown.SetObjectDimensions(ObjectWidth,ObjectHeight/3)
+//		SetPointDown.SetButtonStyle(SetPointDown.BUTTON_STYLE_SHARP_CORNER)
+//		SetPointDown.SetUpColor(UpColor)
+//		SetPointDown.SetDownColor(DownColor)
+//		SetPointDown.SetUpIcon(DownButtonIcon)
+//		SetPointDown.SetDownIcon(DownButtonIcon)
+//		SetPointDown.SetUpText(Nothing)
+//		SetPointDown.SetDownText(Nothing)
+//		
+//		SetPointUp.SetObjectPosition(0,0)
+//		SetPointUp.SetObjectDimensions(ObjectWidth,ObjectHeight/3)
+//		SetPointUp.SetButtonStyle(SetPointUp.BUTTON_STYLE_SHARP_CORNER)
+//		SetPointUp.SetUpColor(UpColor)
+//		SetPointUp.SetDownColor(DownColor)
+//		SetPointUp.SetUpIcon(UpButtonIcon)
+//		SetPointUp.SetDownIcon(UpButtonIcon)
+//		SetPointUp.SetUpText(Nothing)
+//		SetPointUp.SetDownText(Nothing)
+//		
+//		RealStepValue := Abs (StepValue)
+//		If Minimum > Maximum Then
+//			LastValue := Min (Minimum, LastValue) 
+//			LastValue := Max (Maximum, LastValue)
+//		Else
+//			LastValue := Max (Minimum, LastValue) 
+//			LastValue := Min(Maximum, LastValue)
+//		End If				
+//
+//		LastValue := GetValueByStepValue(LastValue)
+//
+//		Redraw()
+//	End Function
+//	
+//	Protected Function OnDraw()
+//		Var txt As Text[30]
+//
+////		DrawRectangle(SetColorComponentOpacity(BackgroundColor,GetColorComponentOpacity(BackgroundColor)*Opacity/255),ObjectWidth/3 - BackgroundOffset,BackgroundOffset,ObjectWidth/3 + 2*BackgroundOffset,ObjectHeight - 2*BackgroundOffset)
+//		DrawRectangle(BackgroundColor,BackgroundOffset,ObjectHeight/3 - BackgroundOffset,ObjectWidth - 2*BackgroundOffset,ObjectHeight/3 + 2* BackgroundOffset)		
+//		FormatText(txt,SetpointValueFormat,LastValue)	
+//		DrawText(SetpointTemperatureFont,txt,SetpointTemperatureFontColor,BackgroundOffset,ObjectHeight/3 - BackgroundOffset,ObjectWidth - 2*BackgroundOffset,ObjectHeight/3 + 2* BackgroundOffset ,_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER)
+//
+//	End Function
+//End GraphicClass
+
+Public GraphicClass TemperatureVertical Inherits BaseSetingBox WithAttributes {DefaultWidth := 300, DefaultHeight := 140, DesignName := "Multicolor"}
+	Protected Function SetObjectParams()
+	
+		If GetPrimaryDisplay().GetWidth() >= 1500 And GetPrimaryDisplay().GetHeight() >= 900 Then
+			BackgroundOffset := 3
+		Else
+			BackgroundOffset := 2
+		End If
+		
+		GetSize(ObjectWidth,ObjectHeight)
+		SetPointDown.SetObjectPosition(ObjectWidth/2,ObjectHeight/2)
+		SetPointDown.SetObjectDimensions(ObjectWidth/2,ObjectHeight/2)
+		SetPointDown.SetButtonStyle(SetPointDown.BUTTON_STYLE_SHARP_CORNER)
+		SetPointDown.SetUpColor(UpColor)
+		SetPointDown.SetDownColor(DownColor)
+		SetPointDown.SetUpIcon(DownButtonIcon)
+		SetPointDown.SetDownIcon(DownButtonIcon)
+		SetPointDown.SetUpText(Nothing)
+		SetPointDown.SetDownText(Nothing)
+		SetPointDown.SetRepeatInterval(RepeatInterval)
+		
+		SetPointUp.SetObjectPosition(ObjectWidth/2,0)
+		SetPointUp.SetObjectDimensions(ObjectWidth/2,ObjectHeight/2)
+		SetPointUp.SetButtonStyle(SetPointUp.BUTTON_STYLE_SHARP_CORNER)
+		SetPointUp.SetUpColor(UpColor)
+		SetPointUp.SetDownColor(DownColor)
+		SetPointUp.SetUpIcon(UpButtonIcon)
+		SetPointUp.SetDownIcon(UpButtonIcon)
+		SetPointUp.SetUpText(Nothing)
+		SetPointUp.SetDownText(Nothing)
+		SetPointUp.SetRepeatInterval(RepeatInterval)
+		
+		RealStepValue := Abs (StepValue)
+		If Minimum > Maximum Then
+			LastValue := Min (Minimum, LastValue) 
+			LastValue := Max (Maximum, LastValue)
+		Else
+			LastValue := Max (Minimum, LastValue) 
+			LastValue := Min(Maximum, LastValue)
+		End If				
+
+		LastValue := GetValueByStepValue(LastValue)
+
+		Redraw()
+	End Function
+	
+	Protected Function OnDraw()
+		Var txt As Text[30]
+
+//		DrawRectangle(SetColorComponentOpacity(BackgroundColor,GetColorComponentOpacity(BackgroundColor)*Opacity/255),ObjectWidth/3 - BackgroundOffset,BackgroundOffset,ObjectWidth/3 + 2*BackgroundOffset,ObjectHeight - 2*BackgroundOffset)
+		DrawRectangle(BackgroundColor,0,BackgroundOffset,ObjectWidth/2 + BackgroundOffset,ObjectHeight - 2*BackgroundOffset)		
+		FormatText(txt,ValueFormat,LastValue)	
+		DrawText(ValueFont,txt,ValueFontColor,ValueOffsetX,BackgroundOffset+ValueOffsetY,ObjectWidth/2,ObjectHeight - 2*BackgroundOffset,_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER)
+
+	End Function
+End GraphicClass
+
+
+Public GraphicClass TemperatureVertical2 Inherits BaseSetingBox2 WithAttributes {DefaultWidth := 300, DefaultHeight := 140, DesignName := "Multicolor"}
+	Protected Function SetObjectParams()
+	
+		If GetPrimaryDisplay().GetWidth() >= 1500 And GetPrimaryDisplay().GetHeight() >= 900 Then
+			BackgroundOffset := 3
+		Else
+			BackgroundOffset := 2
+		End If
+		
+		GetSize(ObjectWidth,ObjectHeight)
+		SetPointDown.SetObjectPosition(ObjectWidth/2,ObjectHeight/2+1)
+		SetPointDown.SetObjectDimensions(ObjectWidth/2,ObjectHeight/2-1)
+//		SetPointDown.SetButtonStyle(SetPointDown.BUTTON_STYLE_SHARP_CORNER)
+		SetPointDown.SetBevelWidth(0)
+		SetPointDown.SetUpColor(UpColor)
+		SetPointDown.SetDownColor(DownColor)
+		SetPointDown.SetUpIcon(DownButtonIconUp)
+		SetPointDown.SetDownIcon(DownButtonIconDown)
+		SetPointDown.SetUpText(Nothing)
+		SetPointDown.SetDownText(Nothing)
+		SetPointDown.SetRepeatInterval(RepeatInterval)
+		
+		SetPointUp.SetObjectPosition(ObjectWidth/2,0)
+		SetPointUp.SetObjectDimensions(ObjectWidth/2,ObjectHeight/2)
+//		SetPointUp.SetButtonStyle(SetPointUp.BUTTON_STYLE_SHARP_CORNER)
+		SetPointUp.SetBevelWidth(0)
+		SetPointUp.SetUpColor(UpColor)
+		SetPointUp.SetDownColor(DownColor)
+		SetPointUp.SetUpIcon(UpButtonIconUp)
+		SetPointUp.SetDownIcon(UpButtonIconDown)
+		SetPointUp.SetUpText(Nothing)
+		SetPointUp.SetDownText(Nothing)
+		SetPointUp.SetRepeatInterval(RepeatInterval)
+		
+		RealStepValue := Abs (StepValue)
+		If Minimum > Maximum Then
+			LastValue := Min (Minimum, LastValue) 
+			LastValue := Max (Maximum, LastValue)
+		Else
+			LastValue := Max (Minimum, LastValue) 
+			LastValue := Min(Maximum, LastValue)
+		End If				
+
+		LastValue := GetValueByStepValue(LastValue)
+
+		Redraw()
+	End Function
+	
+	Protected Function OnDraw()
+		Var txt As Text[30]
+
+//		DrawRectangle(SetColorComponentOpacity(BackgroundColor,GetColorComponentOpacity(BackgroundColor)*Opacity/255),ObjectWidth/3 - BackgroundOffset,BackgroundOffset,ObjectWidth/3 + 2*BackgroundOffset,ObjectHeight - 2*BackgroundOffset)
+		DrawRectangle(BackgroundColor,0,BackgroundOffset,ObjectWidth/2 + BackgroundOffset,ObjectHeight - 2*BackgroundOffset)		
+		FormatText(txt,ValueFormat,LastValue)	
+		DrawText(ValueFont,txt,ValueFontColor,ValueOffsetX,BackgroundOffset+ValueOffsetY,ObjectWidth/2,ObjectHeight - 2*BackgroundOffset,_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER)
+
+	End Function
+End GraphicClass
+
+
+GraphicClass TemperatureHorizontal Inherits BaseTemperature
+
+End GraphicClass
+
+GraphicClass RepeatButton Inherits  Namespace "CUE.GraphicCollection.MulticolorButtons.1".RepeatButton
+
+Public Event EndOnUp As Process()
+
+Public Function OnUp(x As Long, y As Long, eventtime As Time, isinside As Boolean)
+	If MEnabled Then
+		IsPressed := False
+		RedrawCompoundObject()
+		StopTimer(1)
+		RaiseEvent EndOnUp()
+	End If
+End Function
+
+End GraphicClass
+
+GraphicClass RepeatButton2 Inherits  Namespace "CUE.GraphicCollection.GenericObjects.3".RepeatButton
+
+Public Event EndOnUp As Process()
+
+Public Function OnUp(x As Long, y As Long, eventtime As Time, isinside As Boolean)
+	If MEnabled Then
+		IsPressed := False
+		RedrawCompoundObject()
+		StopTimer(1)
+		RaiseEvent EndOnUp()
+	End If
+End Function
+
+End GraphicClass
+
+GraphicClass BaseTemperature Inherits BaseGraphicClass	
+	Protected Var SetPointDown As RepeatButton
+	Protected Var SetPointUp As RepeatButton
+
+	Protected Property RepeatInterval 					As Time := :.2 WithAttributes {PropertyGroup := "Behavior", EditMode := "TimeInterval"}
+	
+//	Protected Var		ButtonFont						As AddressOf _Font := GetButtonFont(GetPrimaryDisplay().GetWidth(),GetPrimaryDisplay().GetHeight()) 
+	Protected Property ControlEnabled 					As Boolean := True WithAttributes {PropertyGroup := "Behavior", EditMode := "Boolean; 'Yes' := True, 'No' := False"}
+	Protected Property EventDelay						As Time := :.4 WithAttributes {PropertyGroup := "Behavior", EditMode := "TimeInterval"}
+	Protected Property SetpointTemperature 				As Double := 22.5 WithAttributes {PropertyGroup := "Behavior"}
+//	Protected Property AutoSetValue 					As Boolean := False WithAttributes {PropertyGroup := "Behavior"}
+//	Protected Property SnapBackTime 					As Time := :1.0 WithAttributes {PropertyGroup := "Behavior", EditMode := "TimeInterval"}
+
+//	Protected Property Opacity As Byte := 255 WithAttributes {PropertyGroup := "Appearance", EditMode := "opacity"}
+	Protected Property BackgroundColor As Long := &HFF808080 WithAttributes {PropertyGroup := "Appearance", EditMode := "color"}
+	Protected Property SetpointTemperatureFont As AddressOf _Font := fntVerdana23 WithAttributes {PropertyGroup := "Appearance", EditMode := "font"}
+	Protected Property SetpointTemperatureFontColor As Long := _COLOR_WHITE WithAttributes {PropertyGroup := "Appearance", EditMode := "color"}	
+
+	Protected Property UpButtonIcon As AddressOf _Picture := Namespace "CUE.GraphicCollection.CueIcons1White32.1".picCueIcons1White32_ArrowUp WithAttributes {PropertyGroup := "Appearance"}	
+	Protected Property DownButtonIcon As AddressOf _Picture := Namespace "CUE.GraphicCollection.CueIcons1White32.1".picCueIcons1White32_ArrowDown WithAttributes {PropertyGroup := "Appearance"}
+	
+	Protected Property UpColor As Long := &hffff4444 WithAttributes {PropertyGroup := "Up", EditMode := "color"}	
+	Protected Property DownColor As Long := &hff999999 WithAttributes {PropertyGroup := "Down", EditMode := "color"}	
+	
+	Protected Property Maximum As Double := 30 WithAttributes {PropertyGroup := "Scale"}
+	Protected Property Minimum As Double := 0 WithAttributes {PropertyGroup := "Scale"}
+	Protected Property StepValue As Double := 0.1 WithAttributes {PropertyGroup := "Scale"}
+	Protected Property SetpointValueFormat As Text[30] := txtNastavNa  WithAttributes{PropertyGroup := "Appearance"}
+	
+	Protected Var ObjectWidth As Long
+	Protected Var ObjectHeight As Long
+	
+	Protected Var BackgroundOffset As Long := 2
+	Protected Var TextValueBuffer As Text[30] := ""	
+	
+	Protected Var NowAdjust As Boolean := False
+//	Protected Var OnDownValue As Double
+		
+	Protected Var RealStepValue			As Double := 0
+	Protected Var LastValue				As Double := 0
+	Public Event OnValueChange 			As Process (newvalue As Double)
+		
+	Protected Process SetPointDownRepeat()Link SetPointDown.OnRepeat
+		NowAdjust := True
+		SPDown ()
+		StopTimer(1)
+	End Process
+	
+	Protected Process SetPointUpRepeat()Link SetPointUp.OnRepeat
+		NowAdjust := True
+		SPUp ()
+		StopTimer(1)
+	End Process
+
+	Protected Process SetPointDownOnUp()Link SetPointDown.EndOnUp
+//		If LastValue <> OnDownValue Then
+//			RaiseEvent OnValueChange(LastValue)			
+//		End If
+//		NowAdjust := False
+		StartTimer(1,EventDelay)
+	End Process
+	
+	Protected Process SetPointUpOnUp()Link SetPointUp.EndOnUp
+//		If LastValue <> OnDownValue Then
+//			RaiseEvent OnValueChange(LastValue)			
+//		End If
+//		NowAdjust := False
+		StartTimer(1,EventDelay)
+	End Process
+	
+	
+	Protected Function OnTimer(timerId As Long)
+		RaiseEvent OnValueChange(LastValue)	
+		NowAdjust := False
+	End Function
+
+		
+	Protected Function Init()
+		LastValue := SetpointTemperature
+		SetControlEnabled(ControlEnabled)
+		SetObjectParams()
+	End Function
+	
+	Protected Function SetObjectParams()
+	
+		If GetPrimaryDisplay().GetWidth() >= 1500 And GetPrimaryDisplay().GetHeight() >= 900 Then
+			BackgroundOffset := 3
+		Else
+			BackgroundOffset := 2
+		End If
+		
+		GetSize(ObjectWidth,ObjectHeight)
+		SetPointDown.SetObjectPosition(0,0)
+		SetPointDown.SetObjectDimensions(ObjectWidth/3,ObjectHeight)
+		SetPointDown.SetButtonStyle(SetPointDown.BUTTON_STYLE_SHARP_CORNER)
+		SetPointDown.SetUpColor(UpColor)
+		SetPointDown.SetDownColor(DownColor)
+		SetPointDown.SetUpIcon(DownButtonIcon)
+		SetPointDown.SetDownIcon(DownButtonIcon)
+		SetPointDown.SetUpText(Nothing)
+		SetPointDown.SetDownText(Nothing)
+		
+		SetPointUp.SetObjectPosition(ObjectWidth*2/3,0)
+		SetPointUp.SetObjectDimensions(ObjectWidth/3,ObjectHeight)
+		SetPointUp.SetButtonStyle(SetPointUp.BUTTON_STYLE_SHARP_CORNER)
+		SetPointUp.SetUpColor(UpColor)
+		SetPointUp.SetDownColor(DownColor)
+		SetPointUp.SetUpIcon(UpButtonIcon)
+		SetPointUp.SetDownIcon(UpButtonIcon)
+		SetPointUp.SetUpText(Nothing)
+		SetPointUp.SetDownText(Nothing)
+		
+		RealStepValue := Abs (StepValue)
+		If Minimum > Maximum Then
+			LastValue := Min (Minimum, LastValue) 
+			LastValue := Max (Maximum, LastValue)
+		Else
+			LastValue := Max (Minimum, LastValue) 
+			LastValue := Min(Maximum, LastValue)
+		End If				
+
+		LastValue := GetValueByStepValue(LastValue)
+
+		Redraw()
+	End Function
+	
+	Protected Function OnDraw()
+		Var txt As Text[30]
+
+//		DrawRectangle(SetColorComponentOpacity(BackgroundColor,GetColorComponentOpacity(BackgroundColor)*Opacity/255),ObjectWidth/3 - BackgroundOffset,BackgroundOffset,ObjectWidth/3 + 2*BackgroundOffset,ObjectHeight - 2*BackgroundOffset)
+		DrawRectangle(BackgroundColor,ObjectWidth/3 - BackgroundOffset,BackgroundOffset,ObjectWidth/3 + 2*BackgroundOffset,ObjectHeight - 2*BackgroundOffset)		
+		FormatText(txt,SetpointValueFormat,LastValue)	
+		DrawText(SetpointTemperatureFont,txt,SetpointTemperatureFontColor,ObjectWidth/3,BackgroundOffset,ObjectWidth/3,ObjectHeight - 2*BackgroundOffset,_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER)
+
+	End Function
+
+
+	Protected Function SPDown() 
+		Var oldvalue As Double := LastValue
+		
+		If Minimum > Maximum Then
+			If RealStepValue <> 0 Then 
+				SetValueIntern(LastValue+RealStepValue)
+			Else
+				If LastValue+1 > Minimum Then
+					SetValueIntern(Minimum)
+				Else
+					SetValueIntern(LastValue+1)
+				End If
+			End If
+		Else
+			If RealStepValue <> 0 Then
+				SetValueIntern(LastValue-RealStepValue)
+			Else			
+				If LastValue-1 < Minimum Then
+					SetValueIntern(Minimum)
+				Else
+					SetValueIntern(LastValue-1)
+				End If		
+			End If
+		End If
+		
+//		If LastValue <> oldvalue Then
+//			RaiseEvent OnValueChange(LastValue)			
+//		End If
+	End Function
+
+	Protected Function SPUp()
+		Var oldvalue As Double := LastValue
+		
+		If Minimum > Maximum Then
+			If RealStepValue <> 0 Then
+				SetValueIntern(LastValue-RealStepValue)
+			Else
+				If LastValue-1 < Maximum Then
+					SetValueIntern(Maximum)
+				Else
+					SetValueIntern(LastValue-1)
+				End If	
+			End If
+		Else
+			If RealStepValue <> 0 Then
+				SetValueIntern(LastValue+RealStepValue)
+			Else
+				If LastValue+1 > Maximum Then
+					SetValueIntern(Maximum)
+				Else
+					SetValueIntern(LastValue+1)
+				End If
+			End If
+		End If
+		
+//		If LastValue <> oldvalue Then
+//			RaiseEvent OnValueChange(LastValue)			
+//		End If
+	End Function
+
+	Protected Function GetValueByStepValue (newvalue As Double) As Double
+		Var N As Double := newvalue - Minimum	
+		If RealStepValue = 0 Then
+			Return Value newvalue
+		Else
+			If N >= 0 Then
+				Return Value RealStepValue * CLong (((N + (RealStepValue / 2)) / RealStepValue)) + Minimum
+			Else
+				Return Value RealStepValue * CLong (((N - (RealStepValue / 2)) / RealStepValue)) + Minimum
+			End If
+		End If
+	End Function
+
+	Protected Function SetValueIntern (newvalue As Double) As Boolean
+//		If (newvalue >= Minimum And newvalue <= Maximum) Or (newvalue <= Minimum And newvalue >= Maximum) Then
+//		If (newvalue <= Minimum And newvalue > LastValue And Minimum < Maximum) Or (newvalue <= Maximum And newvalue > LastValue And Maximum < Minimum) Or (newvalue >= Maximum And newvalue < LastValue And Minimum < Maximum) Or (newvalue >= Minimum And newvalue < LastValue And Maximum < Minimum) Or (newvalue >= Minimum And newvalue <= Maximum) Or (newvalue <= Minimum And newvalue >= Maximum) Then
+		LockRedraw()
+		If (newvalue >= Minimum And newvalue <= Maximum) Or (newvalue <= Minimum And newvalue >= Maximum) Then 
+			LastValue := GetValueByStepValue(newvalue)
+		ElseIf (newvalue <= Minimum And newvalue > LastValue And Minimum < Maximum) Or (newvalue >= Minimum And newvalue < LastValue And Maximum < Minimum) Then						
+			LastValue := Minimum
+		ElseIf (newvalue <= Maximum And newvalue > LastValue And Maximum < Minimum) Or (newvalue >= Maximum And newvalue < LastValue And Minimum < Maximum) Then
+			LastValue := Maximum
+		End If
+		UnlockRedraw()
+		Redraw()
+		If (newvalue >= Minimum And newvalue <= Maximum) Or (newvalue <= Minimum And newvalue >= Maximum) Then
+			Return Value True
+		End If
+		Return Value False	
+	End Function
+	
+//	Public Function SetAutoSetValue(newautosetvalue As Boolean) As Boolean
+//		AutoSetValue := newautosetvalue
+//		Return Value True
+//	End Function
+//	
+//	Public Function GetAutoSetValue() As Boolean
+//		Return Value AutoSetValue
+//	End Function
+	
+	Public Function SetEventDelay(neweventdelay As Time) As Boolean	
+		If neweventdelay > :0 Then
+			EventDelay := neweventdelay
+			Return Value True
+		Else
+			Return Value False
+		End If	
+	End Function
+		
+	Public Function GetEventDelay() As Time	
+		Return Value EventDelay
+	End Function
+		
+	Public Function SetRepeatInterval(newrepeatinterval As Time) As Boolean	
+		If newrepeatinterval > :0 Then
+			RepeatInterval := newrepeatinterval
+			SetObjectParams()
+			Return Value True
+		Else
+			Return Value False
+		End If	
+	End Function
+		
+	Public Function GetRepeatInterval() As Time	
+		Return Value RepeatInterval
+	End Function
+
+	Public Function SetMaximum(newmaximum As Double) As Boolean
+		Maximum := newmaximum
+	//	SetObjectParams()
+	
+		If Maximum > Minimum Then
+			Return Value True
+		Else
+			Return Value False
+		End If	
+	End Function
+	
+	Public Function GetMaximum() As Double
+		Return Value Maximum	
+	End Function
+
+	Public Function SetMinimum(newminimum As Double) As Boolean	
+		Minimum := newminimum
+	
+	//	SetObjectParams()
+	
+		If Minimum < Maximum Then
+			Return Value True
+		Else
+			Return Value False
+		End If		
+	End Function
+	
+	
+	Public Function GetMinimum() As Double
+		Return Value Minimum	
+	End Function
+	
+	Public Function SetControlEnabled(newcontrolenabled As Boolean) As Boolean
+	
+		ControlEnabled := newcontrolenabled
+		SetPointDown.SetEnabled(ControlEnabled)
+		SetPointUp.SetEnabled(ControlEnabled)
+		Return Value True
+	
+	End Function
+	
+	
+	Public Function GetControlEnabled() As Boolean
+	
+		Return Value ControlEnabled
+	
+	End Function		
+//	Protected Function GetButtonFont(DisplayWidth As Long,DisplayHeight As Long) As AddressOf _Font
+////	 přednastavený font podle rozlišení
+//		If DisplayWidth >= 1500 And DisplayHeight >= 900 Then
+//			Return Value fntSegoeUI50
+//		Else
+//			Return Value fntSegoeUI23 
+//		End If
+//	End Function
+
+	Public Function SetSetpointTemperature (newsetpointtemperature As Double) As Boolean
+		If Not NowAdjust Then	
+			LockRedraw()		
+////		LastValue := GetValueByStepValue(newvalue)
+			LastValue := newsetpointtemperature
+			UnlockRedraw()
+			Redraw()
+		If (newsetpointtemperature >= Minimum And newsetpointtemperature <= Maximum) Or (newsetpointtemperature <= Minimum And newsetpointtemperature >= Maximum) Then
+			Return Value True
+		End If
+		End If
+		Return Value False	
+	End Function
+	
+	Public Function GetSetpointTemperature () As Double
+		Return Value GetValueByStepValue(LastValue)	
+	End Function
+
+//	Public Function SetOpacity(newopacity As Byte) As Boolean
+//		Opacity := newopacity
+//		Redraw()
+//		Return Value True	
+//	End Function
+//	
+//	Public Function GetOpacity() As Byte
+//		Return Value Opacity	
+//	End Function 
+
+	
+	Public Function SetSetpointValueFormat(newsetpointvalueformat As Text)As Boolean
+		If GetMemorySegment(newsetpointvalueformat) = _MSEG_RESOURCEDATA Then
+			SetpointValueFormat := newsetpointvalueformat
+		Else
+			TextValueBuffer := newsetpointvalueformat
+			SetpointValueFormat := TextValueBuffer
+		End If	
+		Return Value True
+	End Function
+
+	Public Function GetSetpointValueFormat()As AddressOf Text
+		Return Value SetpointValueFormat
+	End Function
+	
+	Public Function SetDownButtonIcon(newdownbuttonicon As AddressOf _Picture) As Boolean
+		SetPointDown.SetUpIcon(newdownbuttonicon)
+		SetPointDown.SetDownIcon(newdownbuttonicon)
+		Return Value True	
+	End Function
+	
+	Public Function GetDownButtonIcon() As AddressOf _Picture
+		Return Value SetPointDown.GetUpIcon()	
+	End Function
+
+	Public Function SetUpButtonIcon(newupbuttonicon As AddressOf _Picture) As Boolean
+		SetPointUp.SetUpIcon(newupbuttonicon)
+		SetPointUp.SetDownIcon(newupbuttonicon)
+		Return Value True	
+	End Function
+	
+	Public Function GetUpButtonIcon() As AddressOf _Picture
+		Return Value SetPointUp.GetUpIcon()	
+	End Function
+		
+	Public Function SetDownColor(newdowncolor As Long) As Boolean	
+		Return Value SetPointUp.SetDownColor(newdowncolor) And SetPointDown.SetDownColor(newdowncolor)
+	End Function
+	
+	Public Function SetUpColor(newupcolor As Long) As Boolean
+		Return Value SetPointUp.SetUpColor(newupcolor) And SetPointDown.SetUpColor(newupcolor)
+	End Function
+		
+	Public Function GetDownColor() As Long
+		Return Value SetPointUp.GetDownColor()	
+	End Function
+	
+	Public Function GetUpColor() As Long
+		Return Value SetPointUp.GetUpColor()
+	End Function
+	
+	Public Function SetObjectDimensions(newwidth As Long, newheight As Long) As Boolean
+		Var Response As Boolean
+			Response := SetSize(newwidth, newheight)
+        	SetObjectParams()
+        	Redraw()
+			Return Value Response
+	End Function
+	
+	Public Function GetObjectDimensions(ByRef currentwidth As Long, ByRef currentheight As Long)
+		GetSize(currentwidth, currentheight)
+	End Function
+	
+	Public Function SetObjectPosition(newx As Long, newy As Long) As Boolean
+		Var Response As Boolean	
+		Response := SetPosition(newx, newy)
+		Redraw()
+		Return Value Response	
+	End Function
+
+	Public Function GetObjectPosition(ByRef currentx As Long, ByRef currenty As Long)
+		GetPosition(currentx, currenty)
+	End Function
+	
+	Public Function ShowObject()
+		Show()
+	End Function
+	
+	Public Function HideObject()
+		Hide()
+	End Function
+	
+	Public Function IsObjectVisible() As Boolean
+		Return Value GetVisible()
+	End Function
+	
+	Global Function BringToFrontZOrder()
+		BringToFront()
+	End Function
+	
+	Global Function RestoreZOrder()
+		SendToDefault()
+	End Function
+	
+End GraphicClass
+
+GraphicClass BaseSetingBox Inherits BaseGraphicClass
+	Protected Var SetPointDown As RepeatButton
+	Protected Var SetPointUp As RepeatButton
+	
+//	Protected Var		ButtonFont						As AddressOf _Font := GetButtonFont(GetPrimaryDisplay().GetWidth(),GetPrimaryDisplay().GetHeight()) 
+
+	Protected Property RepeatInterval 					As Time := :.2 WithAttributes {PropertyGroup := "Behavior", EditMode := "TimeInterval"}
+	Protected Property ControlEnabled 					As Boolean := True WithAttributes {PropertyGroup := "Behavior", EditMode := "Boolean; 'Yes' := True, 'No' := False"}
+	Protected Property EventDelay						As Time := :.4 WithAttributes {PropertyGroup := "Behavior", EditMode := "TimeInterval"}
+	Protected Property DefaultValue 					As Double := 22.5 WithAttributes {PropertyGroup := "Behavior"}
+
+
+//	Protected Property Opacity As Byte := 255 WithAttributes {PropertyGroup := "Appearance", EditMode := "opacity"}
+	Protected Property BackgroundColor As Long := &HFF808080 WithAttributes {PropertyGroup := "Appearance", EditMode := "color"}
+	Protected Property ValueFont As AddressOf _Font := fntVerdana23 WithAttributes {PropertyGroup := "Appearance", EditMode := "font"}
+	Protected Property ValueFontColor As Long := _COLOR_WHITE WithAttributes {PropertyGroup := "Appearance", EditMode := "color"}	
+	Protected Property ValueOffsetX As Long := 0 WithAttributes{PropertyGroup := "Appearance"}
+	Protected Property ValueOffsetY As Long := 0 WithAttributes{PropertyGroup := "Appearance"}
+	
+	Protected Property UpButtonIcon As AddressOf _Picture := Namespace "CUE.GraphicCollection.CueIcons1White32.1".picCueIcons1White32_ArrowUp WithAttributes {PropertyGroup := "Appearance"}	
+	Protected Property DownButtonIcon As AddressOf _Picture := Namespace "CUE.GraphicCollection.CueIcons1White32.1".picCueIcons1White32_ArrowDown WithAttributes {PropertyGroup := "Appearance"}
+	
+	Protected Property UpColor As Long := &hffff4444 WithAttributes {PropertyGroup := "Up", EditMode := "color"}	
+	Protected Property DownColor As Long := &hff999999 WithAttributes {PropertyGroup := "Down", EditMode := "color"}	
+	
+	Protected Property Maximum As Double := 30 WithAttributes {PropertyGroup := "Scale"}
+	Protected Property Minimum As Double := 0 WithAttributes {PropertyGroup := "Scale"}
+	Protected Property StepValue As Double := 0.1 WithAttributes {PropertyGroup := "Scale"}
+	Protected Property ValueFormat As Text[30] := txtteplota  WithAttributes{PropertyGroup := "Scale"}
+
+	Protected Var NowAdjust As Boolean := False
+	
+	Protected Var ObjectWidth As Long
+	Protected Var ObjectHeight As Long
+	
+	Protected Var BackgroundOffset As Long := 2
+	Protected Var TextValueBuffer As Text[30] := ""	
+		
+	Protected Var RealStepValue			As Double := 0
+	Protected Var LastValue				As Double := 0
+	Public Event OnValueChange 			As Process (newvalue As Double)
+
+	Protected Process SetPointDownRepeat()Link SetPointDown.OnRepeat
+		NowAdjust := True
+		SPDown ()
+		StopTimer(1)
+	End Process
+	
+	Protected Process SetPointUpRepeat()Link SetPointUp.OnRepeat
+		NowAdjust := True
+		SPUp ()
+		StopTimer(1)
+	End Process
+
+	Protected Process SetPointDownOnUp()Link SetPointDown.EndOnUp
+		StartTimer(1,EventDelay)
+	End Process
+	
+	Protected Process SetPointUpOnUp()Link SetPointUp.EndOnUp
+		StartTimer(1,EventDelay)
+	End Process
+	
+	Protected Function OnTimer(timerId As Long)
+		RaiseEvent OnValueChange(LastValue)	
+		NowAdjust := False
+	End Function
+	
+	
+	Protected Function Init()
+		LastValue := DefaultValue
+		SetObjectParams()
+	End Function
+	
+	Protected Function SetObjectParams()
+	
+		If GetPrimaryDisplay().GetWidth() >= 1500 And GetPrimaryDisplay().GetHeight() >= 900 Then
+			BackgroundOffset := 3
+		Else
+			BackgroundOffset := 2
+		End If
+		
+		GetSize(ObjectWidth,ObjectHeight)
+		SetPointDown.SetObjectPosition(0,0)
+		SetPointDown.SetObjectDimensions(ObjectWidth/3,ObjectHeight)
+		SetPointDown.SetButtonStyle(SetPointDown.BUTTON_STYLE_SHARP_CORNER)
+		SetPointDown.SetUpColor(UpColor)
+		SetPointDown.SetDownColor(DownColor)
+		SetPointDown.SetUpIcon(DownButtonIcon)
+		SetPointDown.SetDownIcon(DownButtonIcon)
+		SetPointDown.SetUpText(Nothing)
+		SetPointDown.SetDownText(Nothing)
+		
+		SetPointUp.SetObjectPosition(ObjectWidth*2/3,0)
+		SetPointUp.SetObjectDimensions(ObjectWidth/3,ObjectHeight)
+		SetPointUp.SetButtonStyle(SetPointUp.BUTTON_STYLE_SHARP_CORNER)
+		SetPointUp.SetUpColor(UpColor)
+		SetPointUp.SetDownColor(DownColor)
+		SetPointUp.SetUpIcon(UpButtonIcon)
+		SetPointUp.SetDownIcon(UpButtonIcon)
+		SetPointUp.SetUpText(Nothing)
+		SetPointUp.SetDownText(Nothing)
+	
+			
+		RealStepValue := Abs (StepValue)
+		If Minimum > Maximum Then
+			LastValue := Min (Minimum, LastValue) 
+			LastValue := Max (Maximum, LastValue)
+		Else
+			LastValue := Max (Minimum, LastValue) 
+			LastValue := Min(Maximum, LastValue)
+		End If				
+
+		LastValue := GetValueByStepValue(LastValue)
+
+		Redraw()
+	End Function
+	
+	Protected Function OnDraw()
+		Var txt As Text[30]
+
+//		DrawRectangle(SetColorComponentOpacity(BackgroundColor,GetColorComponentOpacity(BackgroundColor)*Opacity/255),ObjectWidth/3 - BackgroundOffset,BackgroundOffset,ObjectWidth/3 + 2*BackgroundOffset,ObjectHeight - 2*BackgroundOffset)
+		DrawRectangle(BackgroundColor,ObjectWidth/3 - BackgroundOffset,BackgroundOffset,ObjectWidth/3 + 2*BackgroundOffset,ObjectHeight - 2*BackgroundOffset)		
+		FormatText(txt,ValueFormat,LastValue)	
+		DrawText(ValueFont,txt,ValueFontColor,ObjectWidth/3 + ValueOffsetX,BackgroundOffset + ValueOffsetY,ObjectWidth/3,ObjectHeight - 2*BackgroundOffset,_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER)
+
+	End Function
+
+
+	Protected Function SPDown() 
+		Var oldvalue As Double := LastValue
+		
+		If Minimum > Maximum Then
+			If RealStepValue <> 0 Then 
+				SetValueIntern(LastValue+RealStepValue)
+			Else
+				If LastValue+1 > Minimum Then
+					SetValueIntern(Minimum)
+				Else
+					SetValueIntern(LastValue+1)
+				End If
+			End If
+		Else
+			If RealStepValue <> 0 Then
+				SetValueIntern(LastValue-RealStepValue)
+			Else			
+				If LastValue-1 < Minimum Then
+					SetValueIntern(Minimum)
+				Else
+					SetValueIntern(LastValue-1)
+				End If		
+			End If
+		End If
+		
+//		If LastValue <> oldvalue Then
+//			RaiseEvent OnValueChange(LastValue)			
+//		End If
+	End Function
+
+	Protected Function SPUp()
+		Var oldvalue As Double := LastValue
+		
+		If Minimum > Maximum Then
+			If RealStepValue <> 0 Then
+				SetValueIntern(LastValue-RealStepValue)
+			Else
+				If LastValue-1 < Maximum Then
+					SetValueIntern(Maximum)
+				Else
+					SetValueIntern(LastValue-1)
+				End If	
+			End If
+		Else
+			If RealStepValue <> 0 Then
+				SetValueIntern(LastValue+RealStepValue)
+			Else
+				If LastValue+1 > Maximum Then
+					SetValueIntern(Maximum)
+				Else
+					SetValueIntern(LastValue+1)
+				End If
+			End If
+		End If
+		
+//		If LastValue <> oldvalue Then
+//			RaiseEvent OnValueChange(LastValue)			
+//		End If
+	End Function
+
+	Protected Function GetValueByStepValue (newvalue As Double) As Double
+		Var N As Double := newvalue - Minimum	
+		If RealStepValue = 0 Then
+			Return Value newvalue
+		Else
+			If N >= 0 Then
+				Return Value RealStepValue * CLong (((N + (RealStepValue / 2)) / RealStepValue)) + Minimum
+			Else
+				Return Value RealStepValue * CLong (((N - (RealStepValue / 2)) / RealStepValue)) + Minimum
+			End If
+		End If
+	End Function
+
+	Protected Function SetValueIntern (newvalue As Double) As Boolean
+//		If (newvalue >= Minimum And newvalue <= Maximum) Or (newvalue <= Minimum And newvalue >= Maximum) Then
+//		If (newvalue <= Minimum And newvalue > LastValue And Minimum < Maximum) Or (newvalue <= Maximum And newvalue > LastValue And Maximum < Minimum) Or (newvalue >= Maximum And newvalue < LastValue And Minimum < Maximum) Or (newvalue >= Minimum And newvalue < LastValue And Maximum < Minimum) Or (newvalue >= Minimum And newvalue <= Maximum) Or (newvalue <= Minimum And newvalue >= Maximum) Then
+		LockRedraw()
+		If (newvalue >= Minimum And newvalue <= Maximum) Or (newvalue <= Minimum And newvalue >= Maximum) Then 
+			LastValue := GetValueByStepValue(newvalue)
+		ElseIf (newvalue <= Minimum And newvalue > LastValue And Minimum < Maximum) Or (newvalue >= Minimum And newvalue < LastValue And Maximum < Minimum) Then						
+			LastValue := Minimum
+		ElseIf (newvalue <= Maximum And newvalue > LastValue And Maximum < Minimum) Or (newvalue >= Maximum And newvalue < LastValue And Minimum < Maximum) Then
+			LastValue := Maximum
+		End If
+		UnlockRedraw()
+		Redraw()
+		If (newvalue >= Minimum And newvalue <= Maximum) Or (newvalue <= Minimum And newvalue >= Maximum) Then
+			Return Value True
+		End If
+		Return Value False	
+	End Function
+		
+
+	Public Function SetRepeatInterval(newrepeatinterval As Time) As Boolean	
+		If newrepeatinterval > :0 Then
+			RepeatInterval := newrepeatinterval
+			SetObjectParams()
+			Return Value True
+		Else
+			Return Value False
+		End If	
+	End Function
+		
+	Public Function GetRepeatInterval() As Time	
+		Return Value RepeatInterval
+	End Function
+	
+	Public Function SetMaximum(newmaximum As Double) As Boolean
+		Maximum := newmaximum
+		SetObjectParams()
+	
+		If Maximum > Minimum Then
+			Return Value True
+		Else
+			Return Value False
+		End If	
+	End Function
+	
+	Public Function GetMaximum() As Double
+		Return Value Maximum	
+	End Function
+
+	Public Function SetMinimum(newminimum As Double) As Boolean	
+		Minimum := newminimum
+	
+		SetObjectParams()
+	
+		If Minimum < Maximum Then
+			Return Value True
+		Else
+			Return Value False
+		End If		
+	End Function
+	
+	
+	Public Function GetMinimum() As Double
+		Return Value Minimum	
+	End Function
+			
+//	Protected Function GetButtonFont(DisplayWidth As Long,DisplayHeight As Long) As AddressOf _Font
+////	 přednastavený font podle rozlišení
+//		If DisplayWidth >= 1500 And DisplayHeight >= 900 Then
+//			Return Value fntSegoeUI50
+//		Else
+//			Return Value fntSegoeUI23 
+//		End If
+//	End Function
+
+	Public Function SetValue (newvalue As Double) As Boolean
+		If Not NowAdjust Then	
+			LockRedraw()		
+////		LastValue := GetValueByStepValue(newvalue)
+			LastValue := newvalue
+			UnlockRedraw()
+			Redraw()
+		If (newvalue >= Minimum And newvalue <= Maximum) Or (newvalue <= Minimum And newvalue >= Maximum) Then
+			Return Value True
+		End If
+		End If
+		Return Value False	
+	End Function
+	
+	Public Function GetValue () As Double
+		Return Value GetValueByStepValue(LastValue)	
+	End Function
+
+//	Public Function SetOpacity(newopacity As Byte) As Boolean
+//		Opacity := newopacity
+//		Redraw()
+//		Return Value True	
+//	End Function
+//	
+//	Public Function GetOpacity() As Byte
+//		Return Value Opacity	
+//	End Function 
+
+	
+	Public Function SetValueFormat(newvalueformat As Text)As Boolean
+		If GetMemorySegment(newvalueformat) = _MSEG_RESOURCEDATA Then
+			ValueFormat := newvalueformat
+		Else
+			TextValueBuffer := newvalueformat
+			ValueFormat := TextValueBuffer
+		End If	
+		Return Value True
+	End Function
+
+	Public Function GetValueFormat()As AddressOf Text
+		Return Value ValueFormat
+	End Function
+	
+	Public Function SetLeftButtonIcon(newleftbuttonicon As AddressOf _Picture) As Boolean
+		SetPointDown.SetUpIcon(newleftbuttonicon)
+		SetPointDown.SetDownIcon(newleftbuttonicon)
+		Return Value True	
+	End Function
+	
+	Public Function GetLeftButtonIcon() As AddressOf _Picture
+		Return Value SetPointDown.GetUpIcon()	
+	End Function
+
+	Public Function SetRightButtonIcon(newrightbuttonicon As AddressOf _Picture) As Boolean
+		SetPointUp.SetUpIcon(newrightbuttonicon)
+		SetPointUp.SetDownIcon(newrightbuttonicon)
+		Return Value True	
+	End Function
+	
+	Public Function GetRightButtonIcon() As AddressOf _Picture
+		Return Value SetPointUp.GetUpIcon()	
+	End Function
+		
+	Public Function SetDownColor(newdowncolor As Long) As Boolean	
+		Return Value SetPointUp.SetDownColor(newdowncolor) And SetPointDown.SetDownColor(newdowncolor)
+	End Function
+	
+	Public Function SetUpColor(newupcolor As Long) As Boolean
+		Return Value SetPointUp.SetUpColor(newupcolor) And SetPointDown.SetUpColor(newupcolor)
+	End Function
+		
+	Public Function GetDownColor() As Long
+		Return Value SetPointUp.GetDownColor()	
+	End Function
+	
+	Public Function GetUpColor() As Long
+		Return Value SetPointUp.GetUpColor()
+	End Function
+	
+	Public Function SetObjectDimensions(newwidth As Long, newheight As Long) As Boolean
+		Var Response As Boolean
+			Response := SetSize(newwidth, newheight)
+        	SetObjectParams()
+        	Redraw()
+			Return Value Response
+	End Function
+	
+	Public Function GetObjectDimensions(ByRef currentwidth As Long, ByRef currentheight As Long)
+		GetSize(currentwidth, currentheight)
+	End Function
+	
+	Public Function SetObjectPosition(newx As Long, newy As Long) As Boolean
+		Var Response As Boolean	
+		Response := SetPosition(newx, newy)
+		Redraw()
+		Return Value Response	
+	End Function
+
+	Public Function GetObjectPosition(ByRef currentx As Long, ByRef currenty As Long)
+		GetPosition(currentx, currenty)
+	End Function
+	
+	Public Function ShowObject()
+		Show()
+	End Function
+	
+	Public Function HideObject()
+		Hide()
+	End Function
+	
+	Public Function IsObjectVisible() As Boolean
+		Return Value GetVisible()
+	End Function
+	
+	Global Function BringToFrontZOrder()
+		BringToFront()
+	End Function
+	
+	Global Function RestoreZOrder()
+		SendToDefault()
+	End Function
+
+End GraphicClass
+
+
+GraphicClass BaseSetingBox2 Inherits BaseGraphicClass
+	Protected Var SetPointDown As RepeatButton2
+	Protected Var SetPointUp As RepeatButton2
+	
+//	Protected Var		ButtonFont						As AddressOf _Font := GetButtonFont(GetPrimaryDisplay().GetWidth(),GetPrimaryDisplay().GetHeight()) 
+
+	Protected Property RepeatInterval 					As Time := :.2 WithAttributes {PropertyGroup := "Behavior", EditMode := "TimeInterval"}
+	Protected Property ControlEnabled 					As Boolean := True WithAttributes {PropertyGroup := "Behavior", EditMode := "Boolean; 'Yes' := True, 'No' := False"}
+	Protected Property EventDelay						As Time := :.4 WithAttributes {PropertyGroup := "Behavior", EditMode := "TimeInterval"}
+	Protected Property DefaultValue 					As Double := 22.5 WithAttributes {PropertyGroup := "Behavior"}
+
+
+//	Protected Property Opacity As Byte := 255 WithAttributes {PropertyGroup := "Appearance", EditMode := "opacity"}
+	Protected Property BackgroundColor As Long := &HFF808080 WithAttributes {PropertyGroup := "Appearance", EditMode := "color"}
+	Protected Property ValueFont As AddressOf _Font := fntVerdana23 WithAttributes {PropertyGroup := "Appearance", EditMode := "font"}
+	Protected Property ValueFontColor As Long := _COLOR_WHITE WithAttributes {PropertyGroup := "Appearance", EditMode := "color"}	
+	Protected Property ValueOffsetX As Long := 0 WithAttributes{PropertyGroup := "Appearance"}
+	Protected Property ValueOffsetY As Long := 0 WithAttributes{PropertyGroup := "Appearance"}
+	
+	Protected Property UpButtonIconUp As AddressOf _Picture := Namespace "CUE.GraphicCollection.CueIcons1White32.1".picCueIcons1White32_ArrowUp WithAttributes {PropertyGroup := "Up"}		
+	Protected Property UpButtonIconDown As AddressOf _Picture := Namespace "CUE.GraphicCollection.CueIcons1White32.1".picCueIcons1White32_ArrowUp WithAttributes {PropertyGroup := "Down"}	
+
+	Protected Property DownButtonIconUp As AddressOf _Picture := Namespace "CUE.GraphicCollection.CueIcons1White32.1".picCueIcons1White32_ArrowDown WithAttributes {PropertyGroup := "Up"}
+	Protected Property DownButtonIconDown As AddressOf _Picture := Namespace "CUE.GraphicCollection.CueIcons1White32.1".picCueIcons1White32_ArrowDown WithAttributes {PropertyGroup := "Down"}
+	
+	Protected Property UpColor As Long := &hffff4444 WithAttributes {PropertyGroup := "Up", EditMode := "color"}	
+	Protected Property DownColor As Long := &hff999999 WithAttributes {PropertyGroup := "Down", EditMode := "color"}	
+	
+	Protected Property Maximum As Double := 30 WithAttributes {PropertyGroup := "Scale"}
+	Protected Property Minimum As Double := 0 WithAttributes {PropertyGroup := "Scale"}
+	Protected Property StepValue As Double := 0.1 WithAttributes {PropertyGroup := "Scale"}
+	Protected Property ValueFormat As Text[30] := txtteplota  WithAttributes{PropertyGroup := "Scale"}
+
+	Protected Var NowAdjust As Boolean := False
+	
+	Protected Var ObjectWidth As Long
+	Protected Var ObjectHeight As Long
+	
+	Protected Var BackgroundOffset As Long := 2
+	Protected Var TextValueBuffer As Text[30] := ""	
+		
+	Protected Var RealStepValue			As Double := 0
+	Protected Var LastValue				As Double := 0
+	Public Event OnValueChange 			As Process (newvalue As Double)
+
+	Protected Process SetPointDownRepeat()Link SetPointDown.OnRepeat
+		NowAdjust := True
+		SPDown ()
+		StopTimer(1)
+	End Process
+	
+	Protected Process SetPointUpRepeat()Link SetPointUp.OnRepeat
+		NowAdjust := True
+		SPUp ()
+		StopTimer(1)
+	End Process
+
+	Protected Process SetPointDownOnUp()Link SetPointDown.EndOnUp
+		StartTimer(1,EventDelay)
+	End Process
+	
+	Protected Process SetPointUpOnUp()Link SetPointUp.EndOnUp
+		StartTimer(1,EventDelay)
+	End Process
+	
+	Protected Function OnTimer(timerId As Long)
+		RaiseEvent OnValueChange(LastValue)	
+		NowAdjust := False
+	End Function
+	
+	
+	Protected Function Init()
+		LastValue := DefaultValue
+		SetObjectParams()
+	End Function
+	
+	Protected Function SetObjectParams()
+	
+		If GetPrimaryDisplay().GetWidth() >= 1500 And GetPrimaryDisplay().GetHeight() >= 900 Then
+			BackgroundOffset := 3
+		Else
+			BackgroundOffset := 2
+		End If
+		
+		GetSize(ObjectWidth,ObjectHeight)
+		SetPointDown.SetObjectPosition(0,0)
+		SetPointDown.SetObjectDimensions(ObjectWidth/3,ObjectHeight)
+//		SetPointDown.SetButtonStyle(SetPointDown.BUTTON_STYLE_SHARP_CORNER)
+		SetPointDown.SetBevelWidth(0)
+		SetPointDown.SetUpColor(UpColor)
+		SetPointDown.SetDownColor(DownColor)
+		SetPointDown.SetUpIcon(DownButtonIconUp)
+		SetPointDown.SetDownIcon(DownButtonIconDown)
+		SetPointDown.SetUpText(Nothing)
+		SetPointDown.SetDownText(Nothing)
+		
+		SetPointUp.SetObjectPosition(ObjectWidth*2/3,0)
+		SetPointUp.SetObjectDimensions(ObjectWidth/3,ObjectHeight)
+//		SetPointUp.SetButtonStyle(SetPointUp.BUTTON_STYLE_SHARP_CORNER)
+		SetPointUp.SetBevelWidth(0)
+		SetPointUp.SetUpColor(UpColor)
+		SetPointUp.SetDownColor(DownColor)
+		SetPointUp.SetUpIcon(UpButtonIconUp)
+		SetPointUp.SetDownIcon(UpButtonIconDown)
+		SetPointUp.SetUpText(Nothing)
+		SetPointUp.SetDownText(Nothing)
+	
+			
+		RealStepValue := Abs (StepValue)
+		If Minimum > Maximum Then
+			LastValue := Min (Minimum, LastValue) 
+			LastValue := Max (Maximum, LastValue)
+		Else
+			LastValue := Max (Minimum, LastValue) 
+			LastValue := Min(Maximum, LastValue)
+		End If				
+
+		LastValue := GetValueByStepValue(LastValue)
+
+		Redraw()
+	End Function
+	
+	Protected Function OnDraw()
+		Var txt As Text[30]
+
+//		DrawRectangle(SetColorComponentOpacity(BackgroundColor,GetColorComponentOpacity(BackgroundColor)*Opacity/255),ObjectWidth/3 - BackgroundOffset,BackgroundOffset,ObjectWidth/3 + 2*BackgroundOffset,ObjectHeight - 2*BackgroundOffset)
+		DrawRectangle(BackgroundColor,ObjectWidth/3 - BackgroundOffset,BackgroundOffset,ObjectWidth/3 + 2*BackgroundOffset,ObjectHeight - 2*BackgroundOffset)		
+		FormatText(txt,ValueFormat,LastValue)	
+		DrawText(ValueFont,txt,ValueFontColor,ObjectWidth/3 + ValueOffsetX,BackgroundOffset + ValueOffsetY,ObjectWidth/3,ObjectHeight - 2*BackgroundOffset,_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER)
+
+	End Function
+
+
+	Protected Function SPDown() 
+		Var oldvalue As Double := LastValue
+		
+		If Minimum > Maximum Then
+			If RealStepValue <> 0 Then 
+				SetValueIntern(LastValue+RealStepValue)
+			Else
+				If LastValue+1 > Minimum Then
+					SetValueIntern(Minimum)
+				Else
+					SetValueIntern(LastValue+1)
+				End If
+			End If
+		Else
+			If RealStepValue <> 0 Then
+				SetValueIntern(LastValue-RealStepValue)
+			Else			
+				If LastValue-1 < Minimum Then
+					SetValueIntern(Minimum)
+				Else
+					SetValueIntern(LastValue-1)
+				End If		
+			End If
+		End If
+		
+//		If LastValue <> oldvalue Then
+//			RaiseEvent OnValueChange(LastValue)			
+//		End If
+	End Function
+
+	Protected Function SPUp()
+		Var oldvalue As Double := LastValue
+		
+		If Minimum > Maximum Then
+			If RealStepValue <> 0 Then
+				SetValueIntern(LastValue-RealStepValue)
+			Else
+				If LastValue-1 < Maximum Then
+					SetValueIntern(Maximum)
+				Else
+					SetValueIntern(LastValue-1)
+				End If	
+			End If
+		Else
+			If RealStepValue <> 0 Then
+				SetValueIntern(LastValue+RealStepValue)
+			Else
+				If LastValue+1 > Maximum Then
+					SetValueIntern(Maximum)
+				Else
+					SetValueIntern(LastValue+1)
+				End If
+			End If
+		End If
+		
+//		If LastValue <> oldvalue Then
+//			RaiseEvent OnValueChange(LastValue)			
+//		End If
+	End Function
+
+	Protected Function GetValueByStepValue (newvalue As Double) As Double
+		Var N As Double := newvalue - Minimum	
+		If RealStepValue = 0 Then
+			Return Value newvalue
+		Else
+			If N >= 0 Then
+				Return Value RealStepValue * CLong (((N + (RealStepValue / 2)) / RealStepValue)) + Minimum
+			Else
+				Return Value RealStepValue * CLong (((N - (RealStepValue / 2)) / RealStepValue)) + Minimum
+			End If
+		End If
+	End Function
+
+	Protected Function SetValueIntern (newvalue As Double) As Boolean
+//		If (newvalue >= Minimum And newvalue <= Maximum) Or (newvalue <= Minimum And newvalue >= Maximum) Then
+//		If (newvalue <= Minimum And newvalue > LastValue And Minimum < Maximum) Or (newvalue <= Maximum And newvalue > LastValue And Maximum < Minimum) Or (newvalue >= Maximum And newvalue < LastValue And Minimum < Maximum) Or (newvalue >= Minimum And newvalue < LastValue And Maximum < Minimum) Or (newvalue >= Minimum And newvalue <= Maximum) Or (newvalue <= Minimum And newvalue >= Maximum) Then
+		LockRedraw()
+		If (newvalue >= Minimum And newvalue <= Maximum) Or (newvalue <= Minimum And newvalue >= Maximum) Then 
+			LastValue := GetValueByStepValue(newvalue)
+		ElseIf (newvalue <= Minimum And newvalue > LastValue And Minimum < Maximum) Or (newvalue >= Minimum And newvalue < LastValue And Maximum < Minimum) Then						
+			LastValue := Minimum
+		ElseIf (newvalue <= Maximum And newvalue > LastValue And Maximum < Minimum) Or (newvalue >= Maximum And newvalue < LastValue And Minimum < Maximum) Then
+			LastValue := Maximum
+		End If
+		UnlockRedraw()
+		Redraw()
+		If (newvalue >= Minimum And newvalue <= Maximum) Or (newvalue <= Minimum And newvalue >= Maximum) Then
+			Return Value True
+		End If
+		Return Value False	
+	End Function
+		
+
+	Public Function SetRepeatInterval(newrepeatinterval As Time) As Boolean	
+		If newrepeatinterval > :0 Then
+			RepeatInterval := newrepeatinterval
+			SetObjectParams()
+			Return Value True
+		Else
+			Return Value False
+		End If	
+	End Function
+		
+	Public Function GetRepeatInterval() As Time	
+		Return Value RepeatInterval
+	End Function
+	
+	Public Function SetMaximum(newmaximum As Double) As Boolean
+		Maximum := newmaximum
+		SetObjectParams()
+	
+		If Maximum > Minimum Then
+			Return Value True
+		Else
+			Return Value False
+		End If	
+	End Function
+	
+	Public Function GetMaximum() As Double
+		Return Value Maximum	
+	End Function
+
+	Public Function SetMinimum(newminimum As Double) As Boolean	
+		Minimum := newminimum
+	
+		SetObjectParams()
+	
+		If Minimum < Maximum Then
+			Return Value True
+		Else
+			Return Value False
+		End If		
+	End Function
+	
+	
+	Public Function GetMinimum() As Double
+		Return Value Minimum	
+	End Function
+			
+//	Protected Function GetButtonFont(DisplayWidth As Long,DisplayHeight As Long) As AddressOf _Font
+////	 přednastavený font podle rozlišení
+//		If DisplayWidth >= 1500 And DisplayHeight >= 900 Then
+//			Return Value fntSegoeUI50
+//		Else
+//			Return Value fntSegoeUI23 
+//		End If
+//	End Function
+
+	Public Function SetValue (newvalue As Double) As Boolean
+		If Not NowAdjust Then	
+			LockRedraw()		
+////		LastValue := GetValueByStepValue(newvalue)
+			LastValue := newvalue
+			UnlockRedraw()
+			Redraw()
+		If (newvalue >= Minimum And newvalue <= Maximum) Or (newvalue <= Minimum And newvalue >= Maximum) Then
+			Return Value True
+		End If
+		End If
+		Return Value False	
+	End Function
+	
+	Public Function GetValue () As Double
+		Return Value GetValueByStepValue(LastValue)	
+	End Function
+
+//	Public Function SetOpacity(newopacity As Byte) As Boolean
+//		Opacity := newopacity
+//		Redraw()
+//		Return Value True	
+//	End Function
+//	
+//	Public Function GetOpacity() As Byte
+//		Return Value Opacity	
+//	End Function 
+
+	
+	Public Function SetValueFormat(newvalueformat As Text)As Boolean
+		If GetMemorySegment(newvalueformat) = _MSEG_RESOURCEDATA Then
+			ValueFormat := newvalueformat
+		Else
+			TextValueBuffer := newvalueformat
+			ValueFormat := TextValueBuffer
+		End If	
+		Return Value True
+	End Function
+
+	Public Function GetValueFormat()As AddressOf Text
+		Return Value ValueFormat
+	End Function
+	
+	Public Function SetLeftButtonIcon(newleftbuttonicon As AddressOf _Picture) As Boolean
+		SetPointDown.SetUpIcon(newleftbuttonicon)
+		SetPointDown.SetDownIcon(newleftbuttonicon)
+		Return Value True	
+	End Function
+	
+	Public Function GetLeftButtonIcon() As AddressOf _Picture
+		Return Value SetPointDown.GetUpIcon()	
+	End Function
+
+	Public Function SetRightButtonIcon(newrightbuttonicon As AddressOf _Picture) As Boolean
+		SetPointUp.SetUpIcon(newrightbuttonicon)
+		SetPointUp.SetDownIcon(newrightbuttonicon)
+		Return Value True	
+	End Function
+	
+	Public Function GetRightButtonIcon() As AddressOf _Picture
+		Return Value SetPointUp.GetUpIcon()	
+	End Function
+		
+	Public Function SetDownColor(newdowncolor As Long) As Boolean	
+		Return Value SetPointUp.SetDownColor(newdowncolor) And SetPointDown.SetDownColor(newdowncolor)
+	End Function
+	
+	Public Function SetUpColor(newupcolor As Long) As Boolean
+		Return Value SetPointUp.SetUpColor(newupcolor) And SetPointDown.SetUpColor(newupcolor)
+	End Function
+		
+	Public Function GetDownColor() As Long
+		Return Value SetPointUp.GetDownColor()	
+	End Function
+	
+	Public Function GetUpColor() As Long
+		Return Value SetPointUp.GetUpColor()
+	End Function
+	
+	Public Function SetObjectDimensions(newwidth As Long, newheight As Long) As Boolean
+		Var Response As Boolean
+			Response := SetSize(newwidth, newheight)
+        	SetObjectParams()
+        	Redraw()
+			Return Value Response
+	End Function
+	
+	Public Function GetObjectDimensions(ByRef currentwidth As Long, ByRef currentheight As Long)
+		GetSize(currentwidth, currentheight)
+	End Function
+	
+	Public Function SetObjectPosition(newx As Long, newy As Long) As Boolean
+		Var Response As Boolean	
+		Response := SetPosition(newx, newy)
+		Redraw()
+		Return Value Response	
+	End Function
+
+	Public Function GetObjectPosition(ByRef currentx As Long, ByRef currenty As Long)
+		GetPosition(currentx, currenty)
+	End Function
+	
+	Public Function ShowObject()
+		Show()
+	End Function
+	
+	Public Function HideObject()
+		Hide()
+	End Function
+	
+	Public Function IsObjectVisible() As Boolean
+		Return Value GetVisible()
+	End Function
+	
+	Global Function BringToFrontZOrder()
+		BringToFront()
+	End Function
+	
+	Global Function RestoreZOrder()
+		SendToDefault()
+	End Function
+
+End GraphicClass
+

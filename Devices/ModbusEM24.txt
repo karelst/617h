@@ -1,0 +1,994 @@
+Global DeviceClass ModbusNodeEM24 Inherits Namespace "CUE.MDB.Base.1".MDB_NodeObject
+Connector ModbusConnector
+
+//Protected Property Address As Long := 1 WithAttributes
+//{
+//	PropertyGroup := "Connection",
+//	DisplayName := "Register"
+//}
+Private Var	Address As Long := 1
+
+Protected Property SlaveAddress As Long := 255 WithAttributes
+{
+	PropertyGroup := "Connection",
+	DisplayName := "Slave Address"
+}
+
+//Protected Property ByteOrder As Long := 1 WithAttributes
+//{
+//	PropertyGroup := "Connection",
+//	DisplayName := "Byte Order",
+//	EditMode:= "Enum; 'ABCD':=1,'CDAB':=2,'BADC':=3,'DCBA':=4" 
+//}
+Private Var	ByteOrder As Long := 1
+
+Private Var DOUBLEValue As Double
+
+//Global Event OnValueChange As Process (newValue As Double) WithFeedbackRefresh
+
+Private Var DebugDriverEM As Boolean    :=   False//True // 	DEBUG PRINTS enable
+
+//-------------------------------------------------------------------------------------------
+Private Function Init()
+//-------------------------------------------------------------------------------------------
+//	ModbusConnector.MDB.RegisterNodeObject(Me)
+End Function
+
+
+
+//**********************************************************************************************
+// Functions
+//*********************************************************************************************
+
+//Var HoldingRegisters_busy As _Semaphore
+//Var HoldingRegisters_busy2 As _Semaphore
+//Var INT16_busy As _Semaphore
+
+//Volts LN
+Global Function getVoltsL1N( ) As Double
+	Return Value INT32_read_to_double( &H000 )/10
+End Function
+
+Global Function getVoltsL2N( ) As Double
+	Return Value INT32_read_to_double( &H0002 )/10
+End Function
+
+Global Function getVoltsL3N( ) As Double
+	Return Value INT32_read_to_double( &H0004 )/10
+End Function
+
+//Volts LL
+Global Function getVoltsL1L2( ) As Double
+	Return Value INT32_read_to_double( &H0006 )/10
+End Function
+
+Global Function getVoltsL2L3( ) As Double
+	Return Value INT32_read_to_double( &H0008 )/10
+End Function
+
+Global Function getVoltsL3L1( ) As Double
+	Return Value INT32_read_to_double( &H000A )/10
+End Function
+
+Global Function get3phaseVolts( ByRef VoltsL1L2 As Double, ByRef VoltsL2L3 As Double, ByRef VoltsL3L1 As Double ) 
+Var voltArray[3] As Double
+//xxxxxxxxxx
+//	DebugDriver:= True
+	
+	INT32_read_3phase_to_double( &H0006, voltArray)
+//xxxxxxxxxx
+//	DebugDriver:= False
+	voltArray /= 10
+	
+	VoltsL1L2 := voltArray[1]
+	VoltsL2L3 := voltArray[2]
+	VoltsL3L1 := voltArray[3]
+End Function
+
+//Amps 
+
+Global Function getAmpsL1( ) As Double
+	Return Value INT32_read_to_double( &H000C )/1000
+End Function
+
+Global Function getAmpsL2( ) As Double
+	Return Value INT32_read_to_double( &H000E )/1000
+End Function
+
+Global Function getAmpsL3( ) As Double
+	Return Value INT32_read_to_double( &H0010 )/1000
+End Function
+
+Global Function get3phaseAmps( ByRef ampsArray As Array[] As Double ) 
+	INT32_read_3phase_to_double( &H000C,ampsArray )
+
+	ampsArray[1] /= 1000
+	ampsArray[2] /= 1000
+	ampsArray[3] /= 1000
+End Function
+
+
+//Watts
+Global Function getWattsL1( ) As Double
+	Return Value INT32_read_to_double( &H0012 )/10
+End Function
+
+Global Function getWattsL2( ) As Double
+	Return Value INT32_read_to_double( &H0014 )/10
+End Function
+
+Global Function getWattsL3( ) As Double
+	Return Value INT32_read_to_double( &H0016 )/10
+End Function
+
+Global Function get3phaseWatts( ByRef wattsArray As Array[] As Double ) 
+	INT32_read_3phase_to_double( &H0012,wattsArray )
+
+	wattsArray[1] /= 10
+	wattsArray[2] /= 10
+	wattsArray[3] /= 10
+End Function
+
+
+
+Global Function get3phaseEnergy( ByRef wattsArray As Array[] As Double, ByRef vaArray As Array[] As Double, ByRef varArray As Array[] As Double, 
+								ByRef wattsSUM As Double, ByRef vaSUM As Double, ByRef varSUM As Double, ByRef DMDWattsSum As Double, ByRef DMDVASum As Double) 
+
+	INT32_read_3phaseEnergy_to_double( &H0012, wattsArray, vaArray, varArray, wattsSUM, vaSUM, varSUM, DMDWattsSum, DMDVASum)
+
+	wattsArray[1] /= 10
+	wattsArray[2] /= 10
+	wattsArray[3] /= 10
+	
+	vaArray[1] /= 10
+	vaArray[2] /= 10
+	vaArray[3] /= 10
+	
+	varArray[1] /= 10
+	varArray[2] /= 10
+	varArray[3] /= 10
+	
+	wattsSUM /= 10
+	vaSUM /= 10
+	varSUM /= 10
+	
+	DMDWattsSum /= 10
+	DMDVASum /= 10
+	
+End Function
+
+
+
+//VA
+Global Function getVA1( ) As Double
+	Return Value INT32_read_to_double( &H0018 )/10
+End Function
+
+Global Function getVA2( ) As Double
+	Return Value INT32_read_to_double( &H001A )/10
+End Function
+
+Global Function getVA3( ) As Double
+	Return Value INT32_read_to_double( &H001C )/10
+End Function
+
+
+
+//VAR
+Global Function getVAR1( ) As Double
+	Return Value INT32_read_to_double( &H001E )/10
+End Function
+
+Global Function getVAR2( ) As Double
+	Return Value INT32_read_to_double( &H0020 )/10
+End Function
+
+Global Function getVAR3( ) As Double
+	Return Value INT32_read_to_double( &H0022 )/10
+End Function
+
+//SUM
+Global Function getVLNsum( ) As Double
+	Return Value INT32_read_to_double( &H0024 )/10
+End Function
+
+Global Function getVLLsum( ) As Double
+	Return Value INT32_read_to_double( &H0026 )/10
+End Function
+
+Global Function getWattsSum( ) As Double
+	Return Value INT32_read_to_double( &H0028 )/10
+End Function
+
+Global Function getVASum( ) As Double
+	Return Value INT32_read_to_double( &H002A )/10
+End Function
+
+
+Global Function getVARSum( ) As Double
+	Return Value INT32_read_to_double( &H002C )/10
+End Function
+
+Global Function getDMDWattsSum( ) As Double
+	Return Value INT32_read_to_double( &H002E )/10
+End Function
+
+Global Function getDMDVASum( ) As Double
+	Return Value INT32_read_to_double( &H0030 )/10
+End Function
+
+
+//PF  load type negative ...C , positive ..L
+Global Function getPF1( ) As Double
+	Return Value INT16_read_to_double( &H0032 )/1000
+End Function
+
+Global Function getPF2( ) As Double
+	Return Value INT16_read_to_double( &H0033 )/1000
+End Function
+
+Global Function getPF3( ) As Double
+	Return Value INT16_read_to_double( &H0034 )/1000
+End Function
+
+Global Function getPFsum( ) As Double
+	Return Value INT16_read_to_double( &H0035 )/1000
+End Function
+
+Global Function getAll_PF(ByRef PF1 As Double, ByRef PF2 As Double, ByRef PF3 As Double, ByRef PFsum As Double)
+
+	Read_All_Pf( &H0032, PF1, PF2, PF3, PFsum)
+	
+		PF1 /= 1000
+		PF2 /= 1000
+		PF3 /= 1000
+		PFsum /= 1000
+
+End Function
+
+
+//PhaseSequence
+Global Function getPhaseSequence( ) As Long //-1 ...L1-L3-L2,0 ...L1-L2-L3
+	Return Value INT16_read( &H0036 )
+End Function
+//Hz
+Global Function getHz( ) As Double
+	Return Value INT16_read_to_double( &H0037 )/10
+End Function
+
+//DMD max
+Global Function getDMDWattsMax( ) As Double
+	Return Value INT32_read_to_double( &H0038 )/10
+End Function
+Global Function getDMDVAMax( ) As Double
+	Return Value INT32_read_to_double( &H003A )/10
+End Function
+Global Function getDMDAmpsMax( ) As Double
+	Return Value INT32_read_to_double( &H003C )/1000
+End Function
+
+//
+Global Function getPowerSystemInfo(ByRef PFsum As Double, ByRef PhaseSequence As Long, ByRef Hz As Double,
+ 								ByRef DMDWattsMax As Double, ByRef DMDVAMax As Double, ByRef DMDAmax As Double)
+
+	Read_PowerSystemInfo( &H0035, PFsum, PhaseSequence, Hz, DMDWattsMax, DMDVAMax, DMDAmax)
+	
+		PFsum /= 1000
+		Hz /= 10	
+		DMDWattsMax /= 10
+		DMDVAMax /= 10
+		DMDAmax /= 1000
+
+End Function
+
+
+
+/////
+
+//energy
+Global Function getTotalKWHsink( ) As Double
+	Return Value INT32_read_to_double( &H003E )/10
+End Function
+
+Global Function getTotalKVARsink( ) As Double
+	Return Value INT32_read_to_double( &H0040 )/10
+End Function
+
+
+Global Function getPartialKWHsink( ) As Double
+	Return Value INT32_read_to_double( &H0042 )/10
+End Function
+
+Global Function getPartialKVARsink( ) As Double
+	Return Value INT32_read_to_double( &H0044 )/1000
+End Function
+
+//kWh
+Global Function getKWHL1( ) As Double
+	Return Value INT32_read_to_double( &H0046 )/10
+End Function
+
+Global Function getKWHL2( ) As Double
+	Return Value INT32_read_to_double( &H0048 )/10
+End Function
+
+Global Function getKWHL3( ) As Double
+	Return Value INT32_read_to_double( &H004A )/10
+End Function
+
+//KWH in tariffs
+Global Function getKWHT1( ) As Double
+	Return Value INT32_read_to_double( &H004C )/10
+End Function
+
+Global Function getKWHT2( ) As Double
+	Return Value INT32_read_to_double( &H004E )/10
+End Function
+
+Global Function getKWHT3( ) As Double
+	Return Value INT32_read_to_double( &H0050 )/10
+End Function
+Global Function getKWHT4( ) As Double
+	Return Value INT32_read_to_double( &H0052 )/10
+End Function
+
+//KVARH i tariffs
+Global Function getKVARHT1( ) As Double
+	Return Value INT32_read_to_double( &H0054 )/10
+End Function
+
+Global Function getKVARHT2( ) As Double
+	Return Value INT32_read_to_double( &H0056 )/10
+End Function
+
+Global Function getKVARHT3( ) As Double
+	Return Value INT32_read_to_double( &H0058 )/10
+End Function
+Global Function getKVARHT4( ) As Double
+	Return Value INT32_read_to_double( &H005A )/10
+End Function
+
+// POWER source
+Global Function getTotalKWHsource( ) As Double
+	Return Value INT32_read_to_double( &H005C )/10
+End Function
+
+Global Function getTotalKVARsource( ) As Double
+	Return Value INT32_read_to_double( &H005E )/10
+End Function
+
+
+
+//HoursCounter
+Global Function getHoursCounter( ) As Double
+	Return Value INT32_read_to_double( &H0060 )/100
+End Function
+
+//Counters
+Global Function getCounter1( ) As Double
+	Return Value INT32_read_to_double( &H0062 )/10
+End Function
+Global Function getCounter2( ) As Double
+	Return Value INT32_read_to_double( &H0064 )/10
+End Function
+Global Function getCounter3( ) As Double
+	Return Value INT32_read_to_double( &H0066 )/10
+End Function
+
+//Input Status bits 0,1,2 - inputs 1,2,3
+Global Function getInputStatus( ) As Long
+	Return Value UINT16_read( &H0300 )
+End Function
+
+//Current Tariff 0,1,2,3  means  T1,T2,T3,T4
+Global Function getTariff( ) As Long
+	Return Value UINT16_read( &H0301 )
+End Function
+
+//FrontSelector Status 
+//retun values 0,1,2,3 - where 0,1,2 - unlocked, 3-locked
+Global Function getFrontSelectorStatus( ) As Long
+	Return Value UINT16_read( &H0304 )
+End Function
+
+//Settings
+//Application  : 0-7 means A-H
+Global Function getApplication( ) As Long
+	Return Value UINT16_read( &H1101 )
+End Function
+
+//System  : 0-4 means 3Pn,3P1,2P,1P,3P
+Global Function getSystem( ) As Long
+	Return Value UINT16_read( &H1102 )
+End Function
+
+
+//DMD IntervalTimeInMinutes  : 1-30
+Global Function getDMDIntervalTimeInMinutes( ) As Long
+	Return Value UINT16_read( &H1103 )
+End Function
+
+
+//////////////////////////////////////////////
+//SetTariff param 0-3 for tariffs 1-4
+// available only if Inputs are configured NOT for Tariff sellection!
+//////////////////////////////////////////////
+Global Function setTariff(newtariff As Byte) As Boolean
+	If newtariff < 4 Then 
+		UINT16_write (&H1127,&H005A+(newtariff<<8) )
+		Return Value True
+	End If
+	Return Value False	
+End Function
+
+/////////////////////////////////////////////////////////////////////////////////
+// P R O G R A M M I N G  f u n c t i o n s
+// available ONLY if EM24_Modbus is  NOT LOCKED by selector on front panel
+/////////////////////////////////////////////////////////////////////////////////
+
+//Application  : 0-7 means A-H
+Global Function programming_setApplication(newvalue As Byte) 
+	UINT16_write( &H1101 ,newvalue )
+End Function
+
+
+//System  : 0-4 means 3Pn,3P1,2P,1P,3P
+Global Function programming_setSystem(newvalue As Byte) 
+	UINT16_write( &H1102 ,newvalue )
+End Function
+
+
+//DMD IntervalTimeInMinutes  : 1-30
+Global Function programming_setDMDIntervalTimeInMinutes(newvalue As Byte) 
+	UINT16_write( &H1103 ,newvalue )
+End Function
+
+
+Global Function programming_resetDMDMax( )  
+	UINT16_write( &H3005 , 1 )
+End Function
+
+Global Function programming_resetCounters123( ) 
+	UINT16_write( &H3004 , 1 )
+End Function
+
+Global Function programming_resetHoursCounter( ) 
+	UINT16_write( &H3003 , 1 )
+End Function
+
+Global Function programming_resetPartialMeters( ) 
+	UINT16_write( &H3002 , 1 )
+End Function
+
+Global Function programming_resetTotalMeters( ) 
+	UINT16_write( &H3001 , 1 )
+End Function
+
+Global Function programming_resetAllMeters( ) 
+	UINT16_write( &H3000 , 1 )
+End Function
+
+
+
+
+//**********************************************************************************************
+// Data Access Functions
+//**********************************************************************************************
+ Function  INT32_read_3phase_to_double( addr As Long /*,SlaveAddress  As Byte*/ ,ByRef retArray As Array[] As Double )
+	Var result[6] 	As Long := [ 0,0,0,0,0,0]
+	Var dat 		As Long := 0		
+	//Var datdbl 		As Long := 0		
+
+		ModbusConnector.MDB.ReadHoldingRegisters(addr,6,result,SlaveAddress )
+	
+		If ModbusConnector.MDB.LastError() = 0 Then 	
+			//debugprintformat("{n} ,{n} ,{n} ,{n} ,{n} ,{n} ,{n} ",result[1],result[2],result[3],result[4],result[5],result[6])
+			//If result[2] < &H8000 Then
+				retArray[1] := result[1] + (result[2]<<16) 
+			//Else
+			//End If
+
+				retArray[2] := result[3] + (result[4]<<16) 
+
+				retArray[3] := result[5] + (result[6]<<16) 
+//				DebugPrintFormat("INT32read_3phase_to_double({nH04}h): {n},{n},{n}",addr,retArray[1],retArray[2],retArray[3] )
+
+			If DebugDriverEM Then  
+				DebugPrintFormat("INT32({nH04}h): {n},{n},{n}",addr,retArray[1],retArray[2],retArray[3] )
+			End If		
+		End If		
+End Function
+
+Function  INT32_read_3phaseEnergy_to_double( addr As Long /*,SlaveAddress  As Byte*/ ,ByRef retArray1 As Array[] As Double, ByRef retArray2 As Array[] As Double, 
+											ByRef retArray3 As Array[] As Double, ByRef wattsSUM As Double, ByRef vaSUM As Double, ByRef varSUM As Double, 
+											ByRef DMDWattsSum As Double, ByRef DMDVASum As Double)
+
+	Var result[10] 	As Long
+	Var dat 		As Long := 0
+
+		ModbusConnector.MDB.ReadHoldingRegisters(addr,10,result,SlaveAddress )
+		If ModbusConnector.MDB.LastError() = 0 Then 
+			
+				retArray1[1] := result[1] + (result[2]<<16) 
+
+				retArray1[2] := result[3] + (result[4]<<16) 
+
+				retArray1[3] := result[5] + (result[6]<<16)
+				 
+
+				retArray2[1] := result[7] + (result[8]<<16) 
+
+				retArray2[2] := result[9] + (result[10]<<16)
+				 
+			If DebugDriverEM Then  
+				DebugPrintFormat("INT32({nH04}h): retArray1:{n},{n},{n}  retArray2:{n},{n}",addr,retArray1[1],retArray1[2],retArray1[3],retArray2[1],retArray2[2])
+			End If
+			
+				result:=0
+				addr += &hA //1C
+				ModbusConnector.MDB.ReadHoldingRegisters(addr,8,result,SlaveAddress )
+				
+				retArray2[3] := result[1] + (result[2]<<16) 
+			
+				retArray3[1] := result[3] + (result[4]<<16) 
+
+				retArray3[2] := result[5] + (result[6]<<16) 
+
+				retArray3[3] := result[7] + (result[8]<<16) 
+
+			If DebugDriverEM Then  
+				DebugPrintFormat("INT32({nH04}h): retArray2:{n} retArray3:{n},{n},{n}",addr,retArray2[3],retArray3[1],retArray3[2],retArray3[3] )
+			End If	
+			
+			
+				result:=0
+				addr += &hC // 28h
+				ModbusConnector.MDB.ReadHoldingRegisters(addr,10,result,SlaveAddress )
+				
+				wattsSUM := result[1] + (result[2]<<16)
+			
+				vaSUM := result[3] + (result[4]<<16) 
+
+				varSUM := result[5] + (result[6]<<16) 
+				
+				DMDWattsSum := result[7] + (result[8]<<16)
+				
+				DMDVASum := result[9] + (result[10]<<16)
+
+			If DebugDriverEM Then  
+				DebugPrintFormat("INT32({nH04}h): wattsSUM:{n}, vaSUM:{n}, varSUM:{n}, wattsDMDsum:{n}, vaDMDsum:{n}",addr,wattsSUM,vaSUM,varSUM,DMDWattsSum,DMDVASum)
+			End If
+		End If
+		
+End Function
+
+Function  Read_PowerSystemInfo( addr As Long /*,SlaveAddress  As Byte*/, ByRef PFsum As Double, ByRef PhaseSequence As Long, ByRef Hz As Double,
+ 								ByRef DMDWattsMax As Double, ByRef DMDVAMax As Double, ByRef DMDAmax As Double)
+	Var result[9] 	As Long
+	//Var temp1000 	As Double
+
+		ModbusConnector.MDB.ReadHoldingRegisters(addr,9,result,SlaveAddress )
+		If ModbusConnector.MDB.LastError() = 0 Then 
+		
+			PFsum := INT16_read_to_double(1,result[1], False)
+			PhaseSequence := INT16_read_to_double(1,result[2], False)
+			Hz := INT16_read_to_double(1,result[3], False) 
+			
+			DMDWattsMax := (result[4] + (result[5]<<16))
+			DMDVAMax := (result[6] + (result[7]<<16))
+			DMDAmax := (result[8] + (result[9]<<16))
+	
+			If DebugDriverEM Then  
+				DebugPrintFormat("ReadPowerSystemInfo({nH04}h): pfSUM:{n}, PhaseSequence:{n}, Hz:{n}, DMDWattsMax:{n}, DMDVAMax:{n}, DMDAmax:{n}",
+									addr,PFsum,PhaseSequence,Hz,DMDWattsMax,DMDVAMax,DMDAmax)
+			End If
+		End If
+End Function
+
+Function  Read_All_Pf( addr As Long /*,SlaveAddress  As Byte*/, ByRef PF1 As Double, ByRef PF2 As Double, ByRef PF3 As Double, ByRef PFsum As Double)
+	Var result[4] 	As Long
+	//Var temp1000 	As Double
+
+		ModbusConnector.MDB.ReadHoldingRegisters(addr,4,result,SlaveAddress )
+		If ModbusConnector.MDB.LastError() = 0 Then 
+//=*= =*=		
+			PF1 := INT16_read_to_double(1,result[1], False)
+//			DebugPrintFormat("Pf1_OnConvert: {n}",PF1)
+			PF2 := INT16_read_to_double(1,result[2], False)
+//			DebugPrintFormat("Pf2_OnConvert: {n}",PF2)
+			PF3 := INT16_read_to_double(1,result[3], False)
+//			DebugPrintFormat("Pf3_OnConvert: {n}",PF3)
+			PFsum := INT16_read_to_double(1,result[4], False)
+//			DebugPrintFormat("Pf_Sum_OnConvert: {n}",PFsum)
+//=*= =*=		
+				
+				
+			If DebugDriverEM Then  
+				DebugPrintFormat("ReadAll_Pf({nH04}h): pf1:{n}, pf2:{n}, pf3:{n}, pfSUM:{n}",addr,PF1,PF2,PF3,PFsum)
+			End If
+		End If
+End Function
+
+
+
+Function INT32_read_to_double( addr As Long /*,SlaveAddress  As Byte*/ ) As Double
+ 	Var dat As Double
+ 	dat:= INT32_read( addr )
+ 	Return Value dat
+End Function 
+
+Function INT16_read_to_double( addr As Long /*,SlaveAddress  As Byte*/, Optional convertValue As Long := 0, Optional ReadNewValue As Boolean := True ) As Double
+ 	Var dat As Double
+ 	dat:= INT16_read( addr , convertValue, ReadNewValue)
+ 	Return Value dat
+End Function 
+ 	
+
+//**********************************************************************************************
+// Data Access - General Purpose Functions 
+//**********************************************************************************************
+
+/*Global*/ Private Function INT32_read( addr As Long /*,SlaveAddress  As Byte*/ ) As Long
+	Var result[2] 	As Long
+	Var dat 		As Long := 0		
+	//Var datdbl 		As Long := 0		
+
+		ModbusConnector.MDB.ReadHoldingRegisters(addr,2,result,SlaveAddress )
+		If ModbusConnector.MDB.LastError() = 0 Then 	
+			//debugprintformat("{n} ,{n} ,{n} ,{n} ",result[1],result[2],result[3],result[4])
+			//If result[2] < &H8000 Then
+				dat:=result[1] + (result[2]<<16) 
+			//Else
+			//End If
+			//datdbl:=result[1] + (result[2]<<16) 
+			If DebugDriverEM Then  
+				DebugPrintFormat("INT32({nH04}h):   {n}",addr,dat /*,datdbl*/)
+			End If		
+		End If		
+		Return Value dat
+End Function
+
+
+/*Global*/ Private Function INT16_read( addr As Long /*,SlaveAddress  As Byte*/, Optional convertValue As Long := 0, Optional ReadValue As Boolean := True  ) As Long
+	Var result[2] 	As Long
+	Var dat 		As Long := 0		
+	//a
+		If ReadValue And ModbusConnector.MDB.LastError() = 0 Then 
+			ModbusConnector.MDB.ReadHoldingRegisters(addr,1,result,SlaveAddress ) 	
+			If result[1] < &H8000 Then
+				dat:=result[1]
+			Else
+				dat:= result[1] BitOr &hffff0000
+			End If 
+				If DebugDriverEM Then  
+				DebugPrintFormat("INT16({nH04}h):  {n}({nH04}h)",addr,dat,dat)
+				End If	
+			
+		ElseIf Not ReadValue And ModbusConnector.MDB.LastError() = 0 Then
+			If convertValue < &H8000 Then
+				dat:=convertValue
+			Else
+				dat:= convertValue BitOr &hffff0000
+			End If 	
+				If DebugDriverEM Then  
+				DebugPrintFormat("INT16 Convert: convertValue: {n} Dat:{n}",convertValue,dat)
+				End If
+		End If	
+		
+		
+		Return Value dat
+End Function
+
+/*Global*/ Private Function UINT64_read( addr As Long /*,SlaveAddress  As Byte*/ ) As Double
+	Var result[4] 	As Long
+	Var dat 		As Long := 0		
+	Var datdbl 		As Long := 0		
+	//a
+		ModbusConnector.MDB.ReadHoldingRegisters(addr,4,result,SlaveAddress )
+		If ModbusConnector.MDB.LastError() = 0 Then 	
+			//debugprintformat("{n} ,{n} ,{n} ,{n} ",result[1],result[2],result[3],result[4])
+			dat:=result[1] + (result[2]<<16) + (result[3]<<32)+ (result[4]<<48)
+			datdbl:=result[1] + (result[2]<<16) + (result[3]<<32)+ (result[4]<<48)
+			If DebugDriverEM Then  
+				DebugPrintFormat("UINT64({nH04}h):   {n}",addr, datdbl)
+			End If	
+		End If		
+		Return Value datdbl
+End Function
+
+
+/*Global*/ Private Function UINT64_write( addr As Long , Val As Long/*,SlaveAddress  As Byte*/ ) 
+	Var result[4] 	As Long
+		
+	result[1] := (Val>>00) Mod &h10000 
+	result[2] := (Val>>16) Mod &h10000 
+	result[3] := (Val>>32) Mod &h10000 
+	result[4] := (Val>>48) Mod &h10000  
+	
+	ModbusConnector.MDB.WriteSingleRegister(addr,result[1],SlaveAddress )
+	ModbusConnector.MDB.WriteSingleRegister(addr+1,result[2],SlaveAddress )
+	ModbusConnector.MDB.WriteSingleRegister(addr+2,result[3],SlaveAddress )
+	ModbusConnector.MDB.WriteSingleRegister(addr+3,result[4],SlaveAddress )
+End Function
+
+
+/*Global*/ Private Function UINT32_read( addr As Long /*,SlaveAddress  As Byte*/ ) As Long
+	Var result[2] 	As Long
+	Var dat 		As Long := 0		
+	//Var datdbl 		As Long := 0		
+
+		ModbusConnector.MDB.ReadHoldingRegisters(addr,2,result,SlaveAddress )
+		If ModbusConnector.MDB.LastError() = 0 Then 	
+			//debugprintformat("{n} ,{n} ,{n} ,{n} ",result[1],result[2],result[3],result[4])
+			dat:=result[1] + (result[2]<<16) 
+			//datdbl:=result[1] + (result[2]<<16) 
+			If DebugDriverEM Then  
+				DebugPrintFormat("UINT32({nH04}h):   {n}",addr,dat /*,datdbl*/)
+			End If		
+		End If		
+		Return Value dat
+End Function
+
+
+/*Global*/ Private Function UINT32_write( addr As Long , Val As Long /*,SlaveAddress  As Byte*/ ) 
+	Var result[2] 	As Long
+		
+	result[1] := Val Mod &h10000 
+	result[2] := Val >> 16
+	
+	ModbusConnector.MDB.WriteSingleRegister(addr,result[1],SlaveAddress )
+	ModbusConnector.MDB.WriteSingleRegister(addr+1,result[2],SlaveAddress )
+End Function
+
+
+/*Global*/ Private Function UINT16_read( addr As Long /*,SlaveAddress  As Byte*/ ) As Long
+	Var result[2] 	As Long
+	Var dat 		As Long := 0		
+	//a
+		ModbusConnector.MDB.ReadHoldingRegisters(addr,1,result,SlaveAddress )
+		If ModbusConnector.MDB.LastError() = 0 Then 	
+			dat:=result[1]
+			If DebugDriverEM Then  
+				DebugPrintFormat("UINT16({nH04}h):  {n}({nH04}h)",addr,dat,dat)
+			End If		
+		End If		
+		Return Value dat
+End Function
+
+/*Global*/ Private Function UINT16_write( addr As Long , Val As Long /*,SlaveAddress  As Byte*/ ) 
+	Var result[2] 	As Long
+		
+	result[1] := Val
+	ModbusConnector.MDB.WriteSingleRegister(addr,result[1],SlaveAddress )
+End Function
+
+
+/*Global*/ Private Function IEEE754_Read( addr As Long /*,SlaveAddress  As Byte*/ ) As Double
+	Var result[2] 	As Long
+	Var dat 		As Double := 0		
+	//addr:=VL1
+		ModbusConnector.MDB.ReadHoldingRegisters(addr,2,result,SlaveAddress )
+		If ModbusConnector.MDB.LastError() = 0 Then 	
+			dat:=IEEE754toDouble(result[1],result[2])
+			If DebugDriverEM Then  
+				DebugPrintFormat("IEEE754({nH04}h):  {n}, {n}",addr,dat)
+			End If		
+		End If		
+		Return Value dat
+End Function
+
+
+
+
+Function IEEE754toDouble( res1 As Long, res2 As Long /*,SlaveAddress  As Byte*/ ) As Double
+//IEEE754toDouble - coding Example:
+//14:46:46.747 Controller1 res1 (5422h) ,res2 (4360h) , 
+//
+//  43605422hex  = 224.32864379882812
+//s  0
+//e 10000110
+//M 1 .11000000101010000100010
+//  = 224.32864379882812 Volt
+
+	Var d 	As Double := 0
+	Var dbl	As Double
+
+	Var i 	As Long	
+	Var s 	As Long
+	//Var e 	As Long
+	Var m 	As Long
+	Var exp As Long
+	
+	s	:= res2>>15
+	//e	:= (res2 BitAnd &H7FFF) >> 7
+	exp	:=  (((res2 BitAnd &H7FFF) >> 7)-127)
+	m	:= (res1 + (res2 BitAnd &H007F)*&H10000 )
+	//debugprintformat("res12: {nH04}{nH04}) , s: {nB01}, e: {nB08}, m: {nB023}", res1,res2,s,e,m)
+	
+	For i:= 0 To 22
+		d:= d+((m) BitAnd &h001)*2^(-23+i)
+	    m := m>>1
+	End For
+	dbl:= (-1)^s  * 2^exp  *  (d+1)
+	//debugprintformat(" sign: {n} , exp: {n} , M: {n} , dbl: {n}",s, exp, 1+d,dbl )
+	
+	Return Value  dbl
+End Function
+
+//=*=
+///*Global*/ Private Function  isEnergyMeterConnected() As Boolean 
+// 	Return Value ReturnQueryData(&S"AB",SlaveAddress )
+//End Function
+
+
+
+
+
+
+
+////-------------------------------------------------------------------------------------------
+//Global Function GetAddress() As Long
+////-------------------------------------------------------------------------------------------
+//	Return Value (Address)
+//End Function
+
+
+//-------------------------------------------------------------------------------------------
+//Global
+Private  Function ReadValue(Optional UpdateImmediately As Boolean:=True) As Double
+//-------------------------------------------------------------------------------------------
+Private Var WORDval[2] As Long
+Private Var STRINGval As ByteString[4]:=&s"    "
+Private Var DOUBLEval As Double
+
+	If (UpdateImmediately) Or (Not PoolRead) Then
+		If ModbusConnector.MDB.ReadHoldingRegisters(Address,2,WORDval,SlaveAddress ) Then
+	
+			Select ByteOrder
+				Case 1 //'ABCD'
+					STRINGval[1]:=WORDval[1] BitAnd &h00FF
+					STRINGval[2]:=(WORDval[1] / &H100) BitAnd &h00FF
+					STRINGval[3]:=WORDval[2] BitAnd &h00FF
+					STRINGval[4]:=(WORDval[2] / &H100) BitAnd &h00FF
+				Case 2 //'CDAB'
+					STRINGval[3]:=WORDval[1] BitAnd &h00FF
+					STRINGval[4]:=(WORDval[1] / &H100) BitAnd &h00FF
+					STRINGval[1]:=WORDval[2] BitAnd &h00FF
+					STRINGval[2]:=(WORDval[2] / &H100) BitAnd &h00FF
+				Case 3 //'BADC'
+					STRINGval[2]:=WORDval[1] BitAnd &h00FF
+					STRINGval[1]:=(WORDval[1] / &H100) BitAnd &h00FF
+					STRINGval[4]:=WORDval[2] BitAnd &h00FF
+					STRINGval[3]:=(WORDval[2] / &H100) BitAnd &h00FF
+				Case 4 //'DCBA'
+					STRINGval[4]:=WORDval[1] BitAnd &h00FF
+					STRINGval[3]:=(WORDval[1] / &H100) BitAnd &h00FF
+					STRINGval[2]:=WORDval[2] BitAnd &h00FF
+					STRINGval[1]:=(WORDval[2] / &H100) BitAnd &h00FF
+			End Select
+			PopBinDouble(STRINGval,DOUBLEval,_IEE754_32BITS)
+			ValueChange(DOUBLEval)
+			Return Value DOUBLEval
+		Else
+			SetLastError(ModbusConnector.MDB.LastError())
+			Return Value 0
+		End If
+	Else
+		Return Value DOUBLEValue
+	End If
+End Function
+
+//--------------------------------------------------------------------------
+//Global 
+Private Function CheckValue()
+//--------------------------------------------------------------------------
+Private Var WORDval[2] As Long
+Private Var STRINGval As ByteString[4]:=&s"    "
+Private Var DOUBLEval As Double
+
+	If ModbusConnector.MDB.ReadHoldingRegisters(Address,2,WORDval,SlaveAddress ) Then
+		Select ByteOrder
+			Case 1 //'ABCD'
+				STRINGval[1]:=WORDval[1] BitAnd &h00FF
+				STRINGval[2]:=(WORDval[1] / &H100) BitAnd &h00FF
+				STRINGval[3]:=WORDval[2] BitAnd &h00FF
+				STRINGval[4]:=(WORDval[2] / &H100) BitAnd &h00FF
+			Case 2 //'CDAB'
+				STRINGval[3]:=WORDval[1] BitAnd &h00FF
+				STRINGval[4]:=(WORDval[1] / &H100) BitAnd &h00FF
+				STRINGval[1]:=WORDval[2] BitAnd &h00FF
+				STRINGval[2]:=(WORDval[2] / &H100) BitAnd &h00FF
+			Case 3 //'BADC'
+				STRINGval[2]:=WORDval[1] BitAnd &h00FF
+				STRINGval[1]:=(WORDval[1] / &H100) BitAnd &h00FF
+				STRINGval[4]:=WORDval[2] BitAnd &h00FF
+				STRINGval[3]:=(WORDval[2] / &H100) BitAnd &h00FF
+			Case 4 //'DCBA'
+				STRINGval[4]:=WORDval[1] BitAnd &h00FF
+				STRINGval[3]:=(WORDval[1] / &H100) BitAnd &h00FF
+				STRINGval[2]:=WORDval[2] BitAnd &h00FF
+				STRINGval[1]:=(WORDval[2] / &H100) BitAnd &h00FF
+		End Select
+		PopBinDouble(STRINGval,DOUBLEval,_IEE754_32BITS)
+		ValueChange(DOUBLEval)
+	End If
+
+End Function
+
+//-------------------------------------------------------------------------------------------
+//Global 
+Private Function WriteValue(newValue As Double, Optional UpdateImmediately As Boolean:=True)
+//-------------------------------------------------------------------------------------------
+Private Var WORDval[2] As Long
+Private Var STRINGval As ByteString[4]
+
+	If (UpdateImmediately) Or (Not PoolRead) Then
+		
+		PushBinDouble(STRINGval,newValue,_IEE754_32BITS)
+		Select ByteOrder
+			Case 1 //'ABCD'
+				WORDval[1]:=STRINGval[1] + (STRINGval[2] * &H100)
+				WORDval[2]:=STRINGval[3] + (STRINGval[4] * &H100)
+			Case 2 //'CDAB'
+				WORDval[1]:=STRINGval[3] + (STRINGval[4] * &H100)
+				WORDval[2]:=STRINGval[1] + (STRINGval[2] * &H100)
+			Case 3 //'BADC'
+				WORDval[1]:=STRINGval[2] + (STRINGval[1] * &H100)
+				WORDval[2]:=STRINGval[4] + (STRINGval[3] * &H100)
+			Case 4 //'DCBA'
+				WORDval[1]:=STRINGval[4] + (STRINGval[3] * &H100)
+				WORDval[2]:=STRINGval[2] + (STRINGval[1] * &H100)
+		End Select
+		
+		If ModbusConnector.MDB.WriteMultipleRegisters(Address,2,WORDval,SlaveAddress ) Then
+			ValueChange(newValue)
+		Else
+			SetLastError(ModbusConnector.MDB.LastError())		
+		End If
+	Else
+		ValueChange(newValue)
+	End If
+End Function
+
+//-------------------------------------------------------------------------------------------
+Private Function ReWrite()
+//-------------------------------------------------------------------------------------------
+Private Var WORDval[2] As Long
+Private Var STRINGval As ByteString[4]
+
+	
+	PushBinDouble(STRINGval,DOUBLEValue,_IEE754_32BITS)
+	Select ByteOrder
+		Case 1 //'ABCD'
+			WORDval[1]:=STRINGval[1] + (STRINGval[2] * &H100)
+			WORDval[2]:=STRINGval[3] + (STRINGval[4] * &H100)
+		Case 2 //'CDAB'
+			WORDval[1]:=STRINGval[3] + (STRINGval[4] * &H100)
+			WORDval[2]:=STRINGval[1] + (STRINGval[2] * &H100)
+		Case 3 //'BADC'
+			WORDval[1]:=STRINGval[2] + (STRINGval[1] * &H100)
+			WORDval[2]:=STRINGval[4] + (STRINGval[3] * &H100)
+		Case 4 //'DCBA'
+			WORDval[1]:=STRINGval[4] + (STRINGval[3] * &H100)
+			WORDval[2]:=STRINGval[2] + (STRINGval[1] * &H100)
+	End Select
+
+	ModbusConnector.MDB.WriteMultipleRegisters(Address,2,WORDval,SlaveAddress )
+End Function
+
+//-------------------------------------------------------------------------------------------
+Private Function ReRead()
+//-------------------------------------------------------------------------------------------
+	CheckValue()
+End Function
+
+//-------------------------------------------------------------------------------------------
+Private Function ValueChange(newValue As Double)
+//-------------------------------------------------------------------------------------------
+	If DOUBLEValue<>newValue Then
+		DOUBLEValue:=newValue
+//		RaiseEvent OnValueChange(newValue)
+	End If
+End Function
+
+End DeviceClass

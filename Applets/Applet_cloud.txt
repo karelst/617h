@@ -1,0 +1,172 @@
+Public Class ClassCloudInterface
+	
+	Public Function Main_PushButtonFVEEnable()
+		Var mp As MyParamStructure
+		CallControllerOrCloud( MyFce.Main_PushButtonFVEEnable, mp)
+	End Function
+	
+	Public Function KNX_Zenio_OnOff(index As Long, onoff As Boolean)	
+		Var mp As MyParamStructure
+		mp.index1 := index
+		mp.boolean1 := onoff
+		CallControllerOrCloud( MyFce.SetZenioOnOff, mp)
+	End Function
+		
+	Public Function KNX_Zenio_SetTempsetpoint(index As Long, newvalue As Double)
+		Var mp As MyParamStructure
+		mp.index1 := index
+		mp.double1 := newvalue
+		CallControllerOrCloud( MyFce.KNX_Zenio_SetTempsetpoint, mp)
+	End Function
+	
+	Public Function KNX_Zenio_SetFanmode(index As Long, newvalue As Long)
+		Var mp As MyParamStructure
+		mp.index1 := index
+		mp.long1 := newvalue
+		CallControllerOrCloud( MyFce.KNX_Zenio_SetFanMode, mp)
+	End Function
+	
+	Public Function KNX_Zenio_Setmode(index As Long, newvalue As Long)
+		Var mp As MyParamStructure
+		mp.index1 := index
+		mp.long1 := newvalue
+		CallControllerOrCloud( MyFce.KNX_Zenio_SetMode, mp)
+	End Function
+	
+	Public Function KNX_Thermostat_SetThermostatPresetTemperature (index As Long, newvalue As Double)
+		Var mp As MyParamStructure
+		mp.index1 := index
+		mp.double1 := newvalue
+		CallControllerOrCloud( MyFce.KNX_Thermostat_SetThermostatPresetTemperature , mp)
+	End Function
+	
+	Public Function KNX_Thermostat_SetThermostatComfortTemperature (index As Long, newvalue As Double)
+		Var mp As MyParamStructure
+		mp.index1 := index
+		mp.double1 := newvalue
+		CallControllerOrCloud( MyFce.KNX_Thermostat_SetThermostatComfortTemperature , mp)
+	End Function
+	
+//	Public Function KNX_Thermostat_SetThermostatStandardTemperature (index As Long, newvalue As Double)
+//		Var mp As MyParamStructure
+//		mp.index1 := index
+//		mp.double1 := newvalue
+//		CallControllerOrCloud( MyFce.KNX_Thermostat_SetThermostatStandardTemperature , mp)
+//	End Function
+	
+	Public Function KNX_Thermostat_SetThermostatEcoTemperature (index As Long, newvalue As Double)
+		Var mp As MyParamStructure
+		mp.index1 := index
+		mp.double1 := newvalue
+		CallControllerOrCloud( MyFce.KNX_Thermostat_SetThermostatEcoTemperature , mp)
+	End Function
+	
+	Public Function KNX_Thermostat_SetThermostatPresetMode(index As Long, newvalue As Long)
+		Var mp As MyParamStructure
+		mp.index1 := index
+		mp.long1 := newvalue
+		CallControllerOrCloud( MyFce.KNX_Thermostat_SetThermostatPresetMode, mp)
+	End Function
+	
+	Public Function KNX_Thermostat_SetThermostatAll_PresetMode(presetnumber As Long)
+		Var mp As MyParamStructure
+		mp.long1 := presetnumber
+		CallControllerOrCloud( MyFce.KNX_Thermostat_SetThermostatAll_PresetMode, mp)
+	End Function
+	
+	Public Function KNX_Switch_LightsOnOff(index As Long, onoff As Boolean)
+		Var mp As MyParamStructure
+		mp.index1 := index
+		mp.boolean1 := onoff
+		CallControllerOrCloud( MyFce.KNX_Switch_LightsOnOff, mp)
+	End Function
+	
+	Public Function KNX_Switch_LightsOnOffAll(onoff As Boolean)
+		Var mp As MyParamStructure
+		mp.boolean1 := onoff
+		CallControllerOrCloud( MyFce.KNX_Switch_LightsOnOffAll, mp)
+	End Function
+	
+	Public Function KNX_Meteo_SetWindLimit10(limit As Double)
+		Var mp As MyParamStructure
+		mp.double1 := limit
+		CallControllerOrCloud( MyFce.KNX_Meteo_SetWindLimit10, mp)
+	End Function
+	
+	Public Function KNX_Meteo_SetTwilightLimitDouble(limit As Double)
+		Var mp As MyParamStructure
+		mp.double1 := limit
+		CallControllerOrCloud( MyFce.KNX_Meteo_SetTwilightLimitDouble, mp)
+	End Function
+	
+	Public Function KNX_VenetianStopSlatsOpenClose(venetianindex As Long, close As Boolean)
+		Var mp As MyParamStructure
+		mp.index1 := venetianindex
+		mp.boolean1 := close
+		CallControllerOrCloud( MyFce.KNX_VenetianStopSlatsOpenClose, mp)
+	End Function
+	
+	Public Function KNX_VenetianUpDown(venetianindex As Long, down As Boolean)
+		Var mp As MyParamStructure
+		mp.index1 := venetianindex
+		mp.boolean1 := down
+		CallControllerOrCloud( MyFce.KNX_VenetianUpDown, mp)
+	End Function
+	
+	Public Function KNX_VenetianValue(venetianindex As Long, newvalue As Double)
+		Var mp As MyParamStructure
+		mp.index1 := venetianindex
+		mp.double1 := newvalue
+		CallControllerOrCloud( MyFce.KNX_VenetianValue, mp)
+	End Function
+	
+	Public Function Main_DrapesUPDOWN_All(dolu As Boolean)	
+		Var mp As MyParamStructure
+		mp.boolean1 := dolu
+		CallControllerOrCloud( MyFce.Main_DrapesUPDOWN_All, mp)
+	End Function
+	
+	Public Function Main_DrapesPERCENTAGE_All( val As Long)
+		Var mp As MyParamStructure
+		mp.long1 := val
+		CallControllerOrCloud( MyFce.Main_DrapesPERCENTAGE_All, mp)
+	End Function
+	
+	Public Function KNX_Common_ToggleRegimeSummer1()
+		Var mp As MyParamStructure
+		CallControllerOrCloud( MyFce.ToggleRegimeSummer, mp)
+	End Function
+//
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+Public Function CallControllerOrCloud( fce As MyFce, mp As MyParamStructure, Optional WaitForAnswer As Boolean := False)
+Var TextCmd As Text[10]
+Var TextData As Text[1024]
+Var Answer As Text[10]
+Var B As Boolean
+
+
+	If Controller1.IsAlive() Then
+		Controller1.CLOUD.CallControllerCommand( fce, mp)
+	Else
+		NumberToText(TextCmd,fce)
+		FormatJSON(mp,TextData)
+		
+		DebugPrint("--------", TextCmd, TextData)
+		B := cloud.SendCommandToCloudAndWaitForAnswer(
+			C_SYSTEMONE_PROTOCOL,
+			TextCmd,
+			TextData,
+			C_KNXCONTROLLER_MAGICNAME,
+			:10,
+			Answer,
+			WaitForAnswer)
+				
+//		FormatText (TextData, "Error: {l} {n}", B, GetLastError())
+//		FullscreenWindow1.DebugText2.SetText(Answer)
+//		FullscreenWindow1.DebugText1.SetText(TextData)
+	End If
+
+End Function
+
+End Class

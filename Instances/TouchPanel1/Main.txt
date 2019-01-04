@@ -1,0 +1,48 @@
+//Rooms
+//	Kitchen
+//	SleepingRoom
+//	Bathroom
+//	ChildEast
+//	ChildWest
+//	Bathroom2
+
+//	LivingRoom
+
+//	Stairs
+
+////////////////////////////////////////////////////////////////////////////////
+Public Var PageSelectSemaphore As _Semaphore
+
+//Public Var InstanceClassModuleSplit As Namespace "SystemONESPlit".ClassModuleSplit
+Public Var InstanceClassModuleThermostat As Namespace "SystemONEThermostat".ClassModuleThermostat
+//Public Var InstanceClassModuleMeteo As Namespace "SystemONEMeteo".ClassModuleMeteo
+//Public Var InstanceClassModuleVenetian As Namespace "SystemONEVenetian".ClassModuleVenetian
+////Public Var InstanceClassModuleLight As Namespace "SystemONELight".ClassModuleLight
+//Public Var CloudInterface As Namespace "SystemONECloud".ClassCloudInterface
+
+ 
+
+
+Private Process Autoexec()
+
+	Heating.SetScrollListBox()
+//	Main.InstanceClassModuleMeteo.InitInAutoexec()
+//	Main.InstanceClassModuleThermostat.InitInAutoexec()
+//	Main.InstanceClassModuleVenetian.InitInAutoexec()	
+	
+	Background.ShowObject()
+	StatusBar.ShowObject()
+//	Weather.ShowObject()
+	NavigationBarMain.ShowObject()
+	WinHome.ShowObject()
+	MainMenu.NavigationBarMainSelect(1)
+//	Controller1.Lights.IniLights()
+	StartProcess Lights.watchLightState()
+End Process
+
+Public Var s As SingleRoomStructure
+
+Public Function GetRoomStructurePtr(indx As Long ) As AddressOf Controller1.MyCommon.SingleRoomStructure
+//	s:= Controller1.Dat.Room[indx]
+	Return Value AddressOf Controller1.Dat.Room[indx]
+End Function

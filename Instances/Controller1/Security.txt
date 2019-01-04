@@ -1,0 +1,87 @@
+
+Global Enum State
+	Disarm 	:= 00,
+	Armed	:= 01,
+	Arming	:= 02,
+	Alarm	:= 03
+End Enum
+
+
+Global Var currentSecurity 	As State
+Global Event OnSecurityStateChange As Process (newSecurityState As State) 
+Public Var eventCounter As Long := 0
+//Public Var eventCounter As Long
+
+Const ALARMING_WINDOW_TIME As Time 		:= 0:30.0 // .5 MINUTES
+Const ALARM_EVENT_WINDOW_TIME As Time 	:= 2:00.0 // 2 MINUTES
+Const ALARM_EVENT_COUNT		As Long 	:= 2
+
+
+
+Function exeSensor (sensorId As Byte)
+	If currentSecurity 	= State.Armed Then		
+		eventCounter += 1	
+		StartProcess eventWindow(ALARM_EVENT_WINDOW_TIME )
+		If eventCounter >= ALARM_EVENT_COUNT Then
+			AlarmStart()
+		End If
+	End If
+End Function
+
+
+Process eventWindow(mWindowTime As Time )
+	Wait (mWindowTime )
+	eventCounter := 0
+End Process 
+
+
+Private Process PIR1_OnOpen( unitID As Long ) Link PIR1.OnOpen
+	exeSensor(1)
+End Process
+
+
+
+
+Global Function Arming()
+	currentSecurity 	:= State.Arming
+	DebugPrintFormat ("Arm Start")
+	RaiseEvent  OnSecurityStateChange (currentSecurity)
+	StartProcess WaitToArm	
+End Function
+
+
+
+
+Private Process WaitToArm( )
+	Wait ( ALARMING_WINDOW_TIME )
+	Arm()
+End Process
+
+
+
+Global Function Arm()
+	currentSecurity 	:= State.Armed
+	DebugPrintFormat ("Arm Start")
+	RaiseEvent  OnSecurityStateChange (currentSecurity)
+
+End Function
+
+Global Function AlarmStart()
+	StopProcess WaitToArm	
+	currentSecurity 	:= State.Alarm
+	DebugPrintFormat ("Alarm Start")
+	RaiseEvent  OnSecurityStateChange (currentSecurity)
+End Function
+
+Global Function AlarmStop()
+	StopProcess WaitToArm	
+
+End Function
+
+
+Global Function DisArm()
+	StopProcess WaitToArm	
+	currentSecurity 	:= State.Disarm
+	DebugPrintFormat ("Disarm Start")
+	RaiseEvent  OnSecurityStateChange (currentSecurity)
+End Function

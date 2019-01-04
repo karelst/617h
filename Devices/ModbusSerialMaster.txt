@@ -1,0 +1,995 @@
+//**********************************************************************************************
+// MODBUS RTU - Master serial Device  driver 1.10
+// Modified: 26.06.2018
+// Author:  K.Steidl, J.Jares
+//**********************************************************************************************
+//change in EM24
+
+//-------------------------------------------------------------------------------------------
+//------ Channels Class ---------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------
+Global Class Modbus Inherits Namespace "CUE.MDB.Base.1".MDB_NodeConnector
+//-------------------------------------------------------------------------------------------
+End Class
+
+//-------------------------------------------------------------------------------------------
+//------------------  Error constants -------------------------------------------------------
+//-------------------------------------------------------------------------------------------
+Global Const MODBUSERROR_NO_RESPONSE 			As Long := 110500
+Global Const MODBUSERROR_CRC_LENGTH 			As Long := 110501
+Global Const MODBUSERROR_WRONG_RESPONSE			As Long := 110502
+Global Const MODBUSERROR_NEGATIVE_RESPONSE 		As Long := 110000 // + MODBUS Exception code
+
+//-------------------------------------------------------------------------------------------
+//------ Device Class -----------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------
+Global DeviceClass ModbusSerial Inherits Namespace "CUE.MDB.Base.1".MDB_BaseDevice
+Connector SerialConnector
+
+Public Channel MDBConnector As Modbus
+
+Friend Namespace "CUE.MDB.Base.1".MDB_NodeConnector
+Friend Namespace "CUE.MDB.Base.1".MDB_NodeObject
+
+
+//**********************************************************************************************
+// Variables and Constants
+//**********************************************************************************************
+
+//to enable Debug functions  - for driver debugging:
+Private Var DebugDriver As Boolean    := False // True // 	DEBUG PRINTS enable
+Private Var DebugRS232Mode As Boolean := False // True // 	DEBUG Modbus Analyser - RS232 mode 
+
+//For any other comm baudrates change also this constant(variable)!! 
+Private Const ByteTime As Time := (:10/9600)	//:= (:1/9600)*10
+//Private Var ByteTime As Time := (:10/9600)	//:= (:1/9600)*10
+Private Const RESPONSE_TIMEOUT As Time := :0.1
+
+
+//variables for error handling
+Private Var LastErr As Long := 0	
+Private Var LastResp As ByteString [256] := &S""
+
+//Response indexes
+Private Const RESP_ECOD As Long := 3	
+
+Private Const RESP_PDU As Long := 2	
+Private Const RESP_DLEN As Long := 3	
+Private Const RESP_DATA As Long := 4	
+
+Private Var modbus_busy As _Semaphore
+
+//**********************************************************************************************
+// Properties
+//**********************************************************************************************
+Protected Property Baudrate As Long := 9600 WithAttributes
+{
+	PropertyGroup := "Communication"
+//	EditMode := "Long"
+}
+
+
+Protected Property Parity As Byte := _SERIAL_PARITY_NO WithAttributes   //
+{
+	PropertyGroup := "Communication",
+	DisplayName := "Parity",
+	EditMode := "ENUM;  'None' := _SERIAL_PARITY_NO,'Even' := _SERIAL_PARITY_EVEN, 'Odd' := _SERIAL_PARITY_ODD"
+}
+
+
+Protected Property StopBits As Byte := _SERIAL_STOPBITS_ONE WithAttributes   //
+{
+	PropertyGroup := "Communication",
+	DisplayName := "StopBits",
+	EditMode := "ENUM; '1' := _SERIAL_STOPBITS_ONE, '2' := _SERIAL_STOPBITS_TWO"
+}
+
+
+Protected Property Timeout As Time := :0.1 WithAttributes   //
+{
+	PropertyGroup := "Settings",
+	DisplayName := "ResponseTimeout",
+	EditMode := "time"
+}
+
+Protected Property pool_Timeout As Time := :0.10 WithAttributes
+{
+	PropertyGroup := "Settings",
+	DisplayName := "Pool delay",
+	EditMode := "TimeInterval"
+}
+
+
+
+
+//**********************************************************************************************
+// Events
+//**********************************************************************************************
+//Global Event OnResponse As Process (newvalue As Byte)
+//Global Event OnNoResponse As Process (newvalue As Byte)
+
+
+
+
+//**********************************************************************************************
+// Init
+//**********************************************************************************************
+
+Private Function Init ()
+	MDBConnector.MDB:=Me
+	If Not DebugRS232Mode Then
+		SerialConnector.SetSerialParameters(_SERIAL_MODE_RS485, Baudrate, 8, Parity, StopBits ,_SERIAL_FLOWCONTROL_NONE )
+	Else
+		SerialConnector.SetSerialParameters(_SERIAL_MODE_RS232, Baudrate, 8, Parity, StopBits ,_SERIAL_FLOWCONTROL_NONE )
+	End If
+	StartProcess NodesPool()
+End Function
+
+Private Process NodesPool()
+Var k As Long
+
+	Do While True
+		If RegisteredNodeCount>0 Then
+			For k:=1 To RegisteredNodeCount
+				If RegisteredNodeObjects[k].PoolWrite Then
+					RegisteredNodeObjects[k].ReWrite()
+					Wait(pool_Timeout)
+				End If
+				If RegisteredNodeObjects[k].PoolRead Then
+					RegisteredNodeObjects[k].ReRead()
+					Wait(pool_Timeout)
+				End If
+			End For
+		End If
+	End Do	
+
+
+End Process
+
+//no need EM24 end
+
+//**********************************************************************************************
+// Functions
+//**********************************************************************************************
+
+
+//-----------------------------------------
+// STANDARD DATA FUNCTIONS
+
+//03 (0x03) Read Holding Registers
+//This Function code is used To read the contents of a contiguous block of holding registers in a
+//remote device. The Request PDU specifies the starting register address And the number of
+//registers. In the PDU Registers are addressed starting at zero. Therefore registers numbered
+//1-16 are addressed As 0-15.
+//
+//Function code 1 Byte 0x03
+//Starting Address 2 Bytes 0x0000 To 0xFFFF
+//Quantity of Registers 2 Bytes 1 To 125 (0x7D)
+//Response
+//Function code 1 Byte 0x03
+//Byte count 1 Byte 2 x N*
+//Register Value N* x 2 Bytes
+//*N = Quantity of Registers
+//Response length = 3+2*N+2 
+
+//
+//Error code 1 Byte 0x83
+//Exception code 1 Byte 01 Or 02 Or 03 Or 04
+//change in EM24
+Global Function ReadHoldingRegisters ( FromRegister As Long , NumberOfRegisters As Long , ByRef ResultField As Array[] As Long, Optional ModbusSlaveAddress As Byte :=&hff) As Boolean
+	Private Var Response As ByteString [512] := &S""
+	Private Var Message As ByteString [256] := &S"\03\00\00\00\00"
+	Private Var i As Long := 0
+	Private Var j As Long := 0
+	Private Var count As Long := 0
+	
+	count := Min(NumberOfRegisters,125)
+	Message[2]:= (FromRegister) / 256
+	Message[3]:= (FromRegister) Mod 256
+	Message[4]:= count / 256
+	Message[5]:= count Mod 256
+	SendCommand (ModbusSlaveAddress, Message , Response , Timeout, 5+2*count)
+//	SendCommand (ModbusSlaveAddress, Message , Response , Timeout, 0)
+	If LastErr = 0 Then
+		j:=4
+		For i:=1 To Min( Response[3]/2 , SizeOfDim(ResultField, 1) )
+		 	ResultField[i] := Response[j]*256 + Response[j+1]
+			j+=2
+		End For
+		Return Value True
+	End If
+	Return Value False
+End Function
+
+
+//06 (0x06) Write Single Register
+//This Function code is used To write a single holding register in a remote device.
+//The Request PDU specifies the address of the register To be written. Registers are addressed
+//starting at zero. Therefore register numbered 1 is addressed As 0.
+//The normal response is an echo of the request, returned after the register contents have
+//been written.
+//Request
+//Function code 1 Byte 0x06
+//Register Address 2 Bytes 0x0000 To 0xFFFF
+//Register Value 2 Bytes 0x0000 To 0xFFFF
+//Response
+//Function code 1 Byte 0x06
+//Register Address 2 Bytes 0x0000 To 0xFFFF
+//Register Value 2 Bytes 0x0000 To 0xFFFF
+//Response length = 1+1+2+2+2 
+
+//Error
+//Error code 1 Byte 0x86
+//Exception code 1 Byte 01 Or 02 Or 03 Or 04
+
+//change in EM24
+Global Function WriteSingleRegister ( Register As Long, NewValue As Long, Optional ModbusSlaveAddress As Byte :=0) As Boolean
+	Private Var Response As ByteString [512] := &S""
+	Private Var Message As ByteString [256] := &S"\06\00\00\00\00"
+	Private Var i As Long := 0
+	Private Var j As Long := 0
+	
+	Message[2]:= (Register) / 256
+	Message[3]:= (Register) Mod 256
+	Message[4]:= NewValue / 256
+	Message[5]:= NewValue Mod 256
+	
+	Return Value SendCommand (ModbusSlaveAddress, Message , Response , Timeout, 8)
+End Function
+
+//no need for EM24
+//----------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------
+
+//16 (0x10) Write Multiple registers
+//This Function code is used To write a block of contiguous registers (1 To 123 registers) in aremote device.
+//The requested written values are specified in the request data field. Data is packed As two bytes per register.
+//The normal response returns the Function code, starting address, And quantity of registers written.
+//Request
+//Function code 1 Byte 0x10
+//Starting Address 2 Bytes 0x0000 To 0xFFFF
+//Quantity of Registers 2 Bytes 0x0001 To 0x007B
+//Byte Count 1 Byte 2 x N*
+//Registers Value N* x 2 Bytes Value
+//December 28, 2006 http://www.Modbus-IDA.org 31/51
+//*N = Quantity of Registers
+//Response
+//Function code 1 Byte 0x10
+//Starting Address 2 Bytes 0x0000 To 0xFFFF
+//Quantity of Registers 2 Bytes 1 To 123 (0x7B)
+//Response length = 1+1+2+2+2 
+
+//Error
+//Error code 1 Byte 0x90
+//Exception code 1 Byte 01 Or 02 Or 03 Or 04
+
+Global Function WriteMultipleRegisters ( FromRegister As Long , NumberOfRegisters As Long , ByRef NewValueField As Array[] As Long, Optional ModbusSlaveAddress As Byte :=0) As Boolean
+	Private Var Response As ByteString [512] := &S""
+	Private Var Message As ByteString [256] := &S"\10\00\00\00\00\00"
+	Private Var count As Long := 0
+	Private Var i As Long := 0
+	Private Var j As Long := 0
+	
+	
+	count := Min(NumberOfRegisters, SizeOfDim(NewValueField, 1) , 120)
+	Message[2]:= (FromRegister) / 256
+	Message[3]:= (FromRegister) Mod 256
+	Message[4]:= count / 256
+	Message[5]:= count Mod 256
+	Message[6]:= 2*count
+	SetByteStringActualLength(Message, 6+2*count) 
+	j:=7
+	For i:=1 To count
+		 	Message[j] := NewValueField[i]/256 
+		 	Message[j+1] := NewValueField[i] Mod 256 
+			j+=2
+	End For
+	Return Value SendCommand (ModbusSlaveAddress, Message , Response , Timeout, 8)
+End Function
+
+
+
+//01 (0x01) Read Coils
+//This Function code is used To read from 1 To 2000 contiguous status of coils in a remote
+//device. The Request PDU specifies the starting address, i.e. the address of the first coil
+//specified, And the number of coils. In the PDU Coils are addressed starting at zero. Therefore
+//coils numbered 1-16 are addressed As 0-15.
+//The coils in the response message are packed As one coil per bit of the data field. Status is
+//indicated As 1= ON And 0= OFF. The LSB of the first data Byte contains the output addressed
+//in the query. The other coils follow toward the high order End of this Byte, And from low order
+//To high order in subsequent bytes.
+//If the returned output quantity is Not a multiple of eight, the remaining bits in the final data
+//Byte will be padded with zeros (toward the high order End of the Byte). The Byte Count field
+//specifies the quantity of complete bytes of data.
+//Request
+//Function code 1 Byte 0x01
+//Starting Address 2 Bytes 0x0000 To 0xFFFF
+//Quantity of coils 2 Bytes 1 To 2000 (0x7D0)
+//Response
+//Function code 1 Byte 0x01
+//Byte count 1 Byte N*
+//Coil Status n Byte n = N Or N+1
+//*N = Quantity of Outputs / 8, If the remainder is different of 0 ⇒ N = N+1
+//Response length = 1+1+1+N+2 
+
+//Error
+//Function code 1 Byte Function code + 0x80
+//Exception code 1 Byte 01 Or 02 Or 03 Or 04
+
+Global Function ReadCoils ( FromCoil As Long , NumberOfCoils As Long , ByRef ResultField As Array[] As Byte, Optional ModbusSlaveAddress As Byte :=0) As Boolean
+	Private Var Response As ByteString [512] := &S""
+	Private Var Message As ByteString [256] := &S"\01\00\00\00\00"
+	Private Var i As Long := 0
+	Private Var count As Long 
+	count := Min(NumberOfCoils,2000)
+	Message[2]:= (FromCoil) / 256
+	Message[3]:= (FromCoil) Mod 256
+	Message[4]:= count / 256
+	Message[5]:= count Mod 256
+	
+	If count Mod 8 <> 0 Then count := count/8 + 1 Else count := count/8 End If
+	SendCommand (ModbusSlaveAddress, Message , Response , Timeout,5 + count )
+	If LastErr = 0 Then
+		For i:=1 To Min( Response[RESP_DLEN] , SizeOfDim(ResultField, 1) )
+		 	ResultField[i] := Response[i+RESP_DATA-1]
+		End For
+		Return Value True
+	End If
+	Return Value False
+End Function
+
+
+//02 (0x02) Read Discrete Inputs
+//This Function code is used To read from 1 To 2000 contiguous status of discrete inputs in a
+//remote device. The Request PDU specifies the starting address, i.e. the address of the first
+//input specified, And the number of inputs. In the PDU Discrete Inputs are addressed starting
+//at zero. Therefore Discrete inputs numbered 1-16 are addressed As 0-15.
+//The discrete inputs in the response message are packed As one input per bit of the data field.
+//Status is indicated As 1= ON; 0= OFF. The LSB of the first data Byte contains the input
+//addressed in the query. The other inputs follow toward the high order End of this Byte, And
+//from low order To high order in subsequent bytes.
+//If the returned input quantity is Not a multiple of eight, the remaining bits in the final data Byte
+//will be padded with zeros (toward the high order End of the Byte). The Byte Count field
+//specifies the quantity of complete bytes of data.
+//Request
+//Function code 1 Byte 0x02
+//Starting Address 2 Bytes 0x0000 To 0xFFFF
+//Quantity of Inputs 2 Bytes 1 To 2000 (0x7D0)
+//Response
+//Function code 1 Byte 0x02
+//Byte count 1 Byte N*
+//Input Status N* x 1 Byte
+//*N = Quantity of Inputs / 8 If the remainder is different of 0 ⇒ N = N+1
+//Response length = 1+1+1+N+2 
+
+//Error
+//Error code 1 Byte 0x82
+
+Global Function ReadDiscreteInputs ( FromInput As Long , NumberOfInputs As Long , ByRef ResultField As Array[] As Byte, Optional ModbusSlaveAddress As Byte :=0) As Boolean
+	Private Var Response As ByteString [512] := &S""
+	Private Var Message As ByteString [256] := &S"\02\00\00\00\00"
+	Private Var i As Long := 0
+	Private Var count As Long 
+
+	count := Min(NumberOfInputs,2000)
+	
+	Message[2]:= (FromInput) / 256
+	Message[3]:= (FromInput) Mod 256
+	Message[4]:= count / 256
+	Message[5]:= count Mod 256
+	
+	If count Mod 8 <> 0 Then count := count/8 + 1 Else count := count/8 End If
+	SendCommand (ModbusSlaveAddress, Message , Response , Timeout,5 + count )
+	
+	If LastErr = 0 Then
+		For i:=1 To Min( Response[RESP_DLEN] , SizeOfDim(ResultField, 1) )
+		 	ResultField[i] := Response[i+RESP_DATA-1]
+		End For
+		Return Value True
+	End If
+	Return Value False
+End Function
+
+
+
+//05 (0x05) Write Single Coil
+//This Function code is used To write a single output To either ON Or OFF in a remote device.
+//The requested ON/OFF state is specified by a constant in the request data field. A Value of
+//FF 00 hex requests the output To be ON. A Value of 00 00 requests it To be OFF. All other
+//values are illegal And will Not affect the output.
+//The Request PDU specifies the address of the coil To be forced. Coils are addressed starting
+//at zero. Therefore coil numbered 1 is addressed As 0. The requested ON/OFF state is
+//specified by a constant in the Coil Value field. A Value of 0XFF00 requests the coil To be ON.
+//A Value of 0X0000 requests the coil To be off. All other values are illegal And will Not affect
+//the coil.
+//The normal response is an echo of the request, returned after the coil state has been written.
+//Request
+//Function code 1 Byte 0x05
+//Output Address 2 Bytes 0x0000 To 0xFFFF
+//Output Value 2 Bytes 0x0000 Or 0xFF00
+//Response
+//Function code 1 Byte 0x05
+//Output Address 2 Bytes 0x0000 To 0xFFFF
+//Output Value 2 Bytes 0x0000 Or 0xFF00
+//Response length = 1+1+2+2+2 
+//Error
+//Error code 1 Byte 0x85
+//Exception code 1 Byte 01 Or 02 Or 03 Or 04
+
+Global Function WriteSingleCoil ( Coil As Long , NewValue As Boolean , Optional ModbusSlaveAddress As Byte :=0) As Boolean
+	Private Var Response As ByteString [512] := &S""
+	Private Var Message As ByteString [256] := &S"\05\00\00\00\00"
+	Private Var i As Long := 0
+	
+	Message[2]:= (Coil) / 256
+	Message[3]:= (Coil) Mod 256
+	If NewValue Then	
+		Message[4]:= &HFF
+	End If
+	Return Value SendCommand (ModbusSlaveAddress, Message , Response , Timeout, 8)
+End Function
+
+
+
+//15 (0x0F) Write Multiple Coils
+//This Function code is used To force each coil in a sequence of coils To either ON Or OFF in a
+//remote device. The Request PDU specifies the coil references To be forced. Coils are
+//addressed starting at zero. Therefore coil numbered 1 is addressed As 0.
+//The requested ON/OFF states are specified by contents of the request data field. A logical '1'
+//in a bit position of the field requests the corresponding output To be ON. A logical '0' requests
+//it To be OFF.
+//The normal response returns the Function code, starting address, And quantity of coils forced.
+//Request PDU
+//Function code 1 Byte 0x0F
+//Starting Address 2 Bytes 0x0000 To 0xFFFF
+//Quantity of Outputs 2 Bytes 0x0001 To 0x07B0
+//Byte Count 1 Byte N*
+//Outputs Value N* x 1 Byte
+//*N = Quantity of Outputs / 8, If the remainder is different of 0 ⇒ N = N+1
+//Response PDU
+//Function code 1 Byte 0x0F
+//Starting Address 2 Bytes 0x0000 To 0xFFFF
+//Quantity of Outputs 2 Bytes 0x0001 To 0x07B0
+//Response length = 1+1+2+2+2 
+
+
+//Error
+//Error code 1 Byte 0x8F
+//Exception code 1 Byte 01 Or 02 Or 03 Or 04
+
+Global Function WriteMultipleCoils ( FromCoil As Long , NumberOfCoils As Long , ByRef NewValueField As Array[] As Byte, Optional ModbusSlaveAddress As Byte :=0) As Boolean
+	Private Var Response As ByteString [512] := &S""
+	Private Var Message As ByteString [256] := &S"\0F\00\00\00\00\00"
+	Private Var count As Long 
+	Private Var i As Long := 0
+		
+	count := Min(NumberOfCoils, 8*SizeOfDim(NewValueField, 1) , 1968)
+	
+	Message[2]:= (FromCoil) / 256
+	Message[3]:= (FromCoil) Mod 256
+	Message[4]:= count / 256
+	Message[5]:= count Mod 256
+	
+	If (count Mod 8)<>0 Then count:= count/8+1 Else count:= count/8 End If
+	Message[6]:= count
+	SetByteStringActualLength(Message, 6+count) 
+	For i:=1 To count
+		 	Message[i+6] := NewValueField[i] 
+	End For
+	Return Value SendCommand (ModbusSlaveAddress, Message , Response , Timeout , 8)
+End Function
+
+
+
+//04 (0x04) Read Input Registers
+//This Function code is used To read from 1 To 125 contiguous input registers in a remote
+//device. The Request PDU specifies the starting register address And the number of registers.
+//In the PDU Registers are addressed starting at zero. Therefore input registers numbered 1-16
+//are addressed As 0-15.
+//The register data in the response message are packed As two bytes per register, with the
+//binary contents right justified within each Byte. For each register, the first Byte contains the
+//high order bits And the second contains the low order bits.
+//Request
+//Function code 1 Byte 0x04
+//Starting Address 2 Bytes 0x0000 To 0xFFFF
+//Quantity of Input Registers 2 Bytes 0x0001 To 0x007D
+//Response
+//Function code 1 Byte 0x04
+//Byte count 1 Byte 2 x N*
+//Input Registers N* x 2 Bytes
+//*N = Quantity of Input Registers
+//Response length = 1+1+1+2*N+2 
+//Error
+//Error code 1 Byte 0x84
+//Exception code 1 Byte 01 Or 02 Or 03 Or 04
+
+Global Function ReadInputRegisters ( FromInput As Long , NumberOfInputs As Long , ByRef ResultField As Array[] As Long, Optional ModbusSlaveAddress As Byte :=0) As Boolean
+	Private Var Response As ByteString [512] := &S""
+	Private Var Message As ByteString [256] := &S"\04\00\00\00\00"
+	Private Var j As Long := 0
+	Private Var count As Long 
+	Private Var i As Long := 0
+		
+	count := Min(NumberOfInputs,125)
+	
+	
+	Message[2]:= (FromInput) / 256
+	Message[3]:= (FromInput) Mod 256
+	Message[4]:= count / 256
+	Message[5]:= count Mod 256
+	
+	SendCommand (ModbusSlaveAddress, Message , Response , Timeout, 5 + 2*count)
+	If LastErr = 0 Then
+		j:= RESP_DATA
+		For i:=1 To Min( Response[RESP_DLEN]/2 , SizeOfDim(ResultField, 1) )
+		 	ResultField[i] := Response[j]*256 + Response[j+1]
+			j+=2
+		End For
+		Return Value True
+	End If
+	Return Value False
+End Function
+
+//-----------------------------------------
+// GENERAL PDU 
+// Send user defined PDU and receive response
+// This function sends any user defined PDU 
+// The slave device responce is stored in Response ByteString it consists of Slave address + Responsed PDU 
+
+Global Function SendPDUandReceiveResponse (PDU As ByteString , ByRef Response As ByteString  , Optional Timeout As Time :=RESPONSE_TIMEOUT , Optional ModbusSlaveAddress As Byte :=0) As Boolean
+	Return Value SendCommand (ModbusSlaveAddress, PDU , Response , Timeout , 0)
+End Function
+
+//----------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------
+//no need for EM24 end
+
+
+//08 (0x08) Diagnostic
+//This Function code provides a series of tests To check the communication system between a client (Master)
+//0device And a server (Slave), Or To check various internal error conditions within a server.
+//this driver supports only 0000h sub-Function code (Return Query Data). 
+//With this sub-Function the data passed in the request data field is To be returned (looped back) in the response. 
+
+//Request
+//Function code 1 Byte 0x08
+//Sub-Function 2 bytes 0x00 0x00
+//Data
+//
+//Response
+//Function code 1 Byte 0x04
+//Sub-Function 2 bytes 0x00 0x00
+//Data 
+//Response length = 1+1+2+Data length+2 
+//
+//Error
+//Error code 1 Byte 0x88
+//Exception code 1 Byte 01 Or 02 Or 03 Or 04
+
+//change in  EM24 /*Global*/
+Global Function ReturnQueryData ( Optional TestByteString As ByteString :=&S"", Optional ModbusSlaveAddress As Byte :=0) As Boolean
+	Private Var i As Long 
+	Private Var Response As ByteString [512] := &S""
+	Private Var Message As ByteString [256] := &S"AB"
+	If GetByteStringActualLength(TestByteString) <> 0 Then 
+		Message := 	TestByteString
+	End If		
+	i := GetByteStringActualLength(Message)	
+	
+	ConcatenateByteString(Message, &S"\08\00\00" , Message)
+	SendCommand (ModbusSlaveAddress, Message, Response, Timeout, 6+i )
+	If LastErr = 0 Then
+		GetByteStringRight(Response, GetByteStringActualLength(Response) - RESP_PDU + 1, Response)
+		If CompareByteString(Response, Message) =_COMPARE_EQUAL Then 
+			Return Value True 
+		End If		
+	End If
+	Return Value False 
+End Function
+
+//
+// Reset slave communication
+// Restart Slave (080001FF00)
+//<addr><080001FF00H> <CRC>
+
+//change in  EM24 /*Global*/
+Global Function RestartSlave (  Optional ModbusSlaveAddress As Byte :=0)
+	Private Var Response As ByteString [512] := &S""
+	Private Var Message As ByteString [256] := &S"\08\00\01\ff\00"
+	SendCommand (ModbusSlaveAddress, Message, Response, Timeout,0)
+End Function
+
+
+//-----------------------------------------
+// ERROR HANDLING
+//Gets last Modbus communication error	
+//Error code  &H0000 - No Error
+//Error codes &H0001-&H00FF - value of MODBUS defined error codes for negative responses
+//Error codes &H0100-&HFFFF - driver error codes
+//Defined Error codes:
+//	 No Response		&H0100
+//	 CRC or length		&H0200
+//	 Wrong response		&H0300
+//	 NegativeResponse 	&H00xx -negative response OK  xx=MODBUS Exception code
+//	 PositiveResponse 	&H0000 -positive response OK 
+//
+//xx MODBUS  Exception Codes (basic) 
+//-----------------------------------------
+//01   ILLEGAL Function The Function code received in the query is Not an allowable action For the server (Or slave)
+//02   ILLEGAL DATA ADDRESS The data address received in the query is Not an allowable address For the server(Or slave) 
+//03   ILLEGAL DATA Value A Value contained in the query data field is Not an allowable Value For server (Or slave).
+//04   SLAVE DEVICE FAILURE An unrecoverable error occurred in the server(Or slave) 
+//05   ACKNOWLEDGE Specialized use in conjunction with programming commands.
+//06   SLAVE DEVICE BUSY Specialized use in conjunction with programming commands.
+//08   MEMORY PARITY ERROR Specialized use in conjunction with Function codes
+
+
+Global Function LastError() As Long
+	If DebugDriver Then DebugPrintFormat("LastError: {n}", LastErr) End If
+	Return Value LastErr
+End Function
+
+
+// Returns full slave device responce (is stored in Response ByteString) it consists both of Slave address + Responsed PDU 
+Global Function LastResponse(ByRef Response As ByteString) 
+	Response := LastResp
+	If DebugDriver Then DebugPrintFormat("LastResponse: {s}", Response) End If
+End Function
+
+
+
+
+//**********************************************************************************************
+// Utils
+//**********************************************************************************************
+
+Private Function SendCommand (ModbusSlaveAddress As Byte, PDU As ByteString , ByRef Response As ByteString  , Optional RespTimeout As Time := RESPONSE_TIMEOUT ,Optional RespLength As Long := 3 ) As Boolean
+//	 RespLength  = 0 means UNKONOWN response length => Wait For response  "ResponseTimeout" Time (Property)
+
+	Private Var TxBuff As ByteString [256]:= &S"a"
+	Private Var cmdlen As Byte:= 0
+	Private Var SendError As Boolean
+
+//	SetByteStringActualLength(TxBuff) := 1
+	TxBuff[1]:= ModbusSlaveAddress
+	ConcatenateByteString(TxBuff,TxBuff,PDU)
+	AddCRC(TxBuff)
+
+
+	modbus_busy.Lock()
+
+	SerialConnector.ClearReceiveBuffer ()
+	cmdlen := GetByteStringActualLength(TxBuff)
+	If DebugDriver Then DebugPrintFormat("SendCmd:{sh}", TxBuff) End If 
+	SerialConnector.Send (TxBuff)
+
+	If Not ReceiveResponse(ModbusSlaveAddress,cmdlen,Response, RespTimeout, RespLength) Then
+		//If DebugDriver Then DebugPrintFormat("  !Not ReceiveResponse! - RespMsg: {sH}    LastEr:{n}", Response,LastErr) End If
+	End If
+	
+	
+
+	If LastError()= 0 Then 
+		SendError:=False
+		LastResp := Response
+		//GetByteStringRight(LastResp, GetByteStringActualLength(LastResp) - 1,LastResp)  //LastResp = just PDU !!!
+	
+	
+		//Private Var LastErr As Long := 0	
+		// No Response		&H0100
+		// CRC or length	&H0200
+		// Wrong response	&H0300	!set here!
+		// NegativeResponse &H00xx  !set here!
+		// PositiveResponse &H0000	!set here!
+	
+//		If TxBuff[1]=Response[1] And ( TxBuff[2]=Response[2] Or TxBuff[2]=(Response[2] BitAnd &h7F))Then 
+//	  	//Message OK
+//	    	If TxBuff[2]<>Response[2] Then
+//	    		//Negative Response
+//				LastErr := Response[3]	//MODBUS Exception code
+//			Else
+//				LastErr := &H0000
+//				//Positive response OK
+//			End If
+//		Else  
+//			LastErr := &H0300	  
+//		End If
+	Else
+		SendError:=True
+	End If
+	modbus_busy.Unlock()
+	Return Value SendError
+End Function
+	
+	
+	
+Private Function ReceiveResponse(ModbusSlaveAddress As Byte, cmdlen As Byte, ByRef Response As ByteString, Optional RespTimeout As Time :=RESPONSE_TIMEOUT, Optional RespLength As Long := 3) 
+ As Boolean
+//	 RespLength  = 0 means UNKONOWN response length => Wait For response  "ResponseTimeout"(Property)
+	Private Var RxBuff As ByteString [512] := &S""
+	Private Var Message As ByteString [256] := &S""
+	Private Var Header As ByteString [1] := &S"x"
+	Private Var recBytes As Long :=  0
+	Private Var i As Long := 0 
+	Private Var c As Long := 0 
+	
+	Private Var tstart As Time
+	Private Var trespok As Time
+	Private Var tend As Time
+	Private Var twait As Time
+	
+
+	//Private Var LastErr As Long := 0	
+	// No Response		&H0100	!set here!
+	// CRC or length	&H0200	!set here!
+	// Wrong response	&H0300	
+	// NegativeResponse &H00xx
+	// PositiveResponse &H0000
+	//
+	//xx MODBUS  Exception Codes (basic) 
+	//01   ILLEGAL Function The Function code received in the query is Not an allowable action For the server (Or slave)
+	//02   ILLEGAL DATA ADDRESS The data address received in the query is Not an allowable address For the server(Or slave) 
+	//03   ILLEGAL DATA Value A Value contained in the query data field is Not an allowable Value For server (Or slave).
+	//04   SLAVE DEVICE FAILURE An unrecoverable error occurred in the server(Or slave) 
+	//05   ACKNOWLEDGE Specialized use in conjunction with programming commands.
+	//06   SLAVE DEVICE BUSY Specialized use in conjunction with programming commands.
+	//08   MEMORY PARITY ERROR Specialized use in conjunction with Function codes
+
+	Header[1] := ModbusSlaveAddress
+	Response := &S""
+//example
+// Resp:       \01\03\0c\00\00\00\00\09\67\00\00\09\5a\00\00\66\53
+// Resp:       \01\03\0c\00\00\00\00\09\68\00\00\09\5b\00\00\c8\93
+// Resp:       \01\03\0c\00\00\00\00\09\67\00\00\09\59\00\00\96\53
+//	Do 
+	tstart:=GetLocalTime()
+	If RespLength = 0  Then 
+		If DebugDriver Then DebugPrintFormat(  "   ***Unknown length Resp expected ") End If
+		twait := RespTimeout
+		If SerialConnector.Receive (RxBuff,RespTimeout) Then
+			GetByteStringRight(RxBuff,GetByteStringActualLength(RxBuff)-1 ,RxBuff)
+		End If		
+	Else
+		If DebugDriver Then DebugPrintFormat(  "   ***Length {n} Resp expected ", RespLength) End If
+		twait := setTwait (cmdlen , RespLength , RespTimeout )
+		SerialConnector.ReceiveHLPacket (RxBuff,Header,           2 ,twait)
+	End If  
+	trespok:=GetLocalTime()
+
+	i:= GetByteStringActualLength(RxBuff)
+	If i = 0 Then
+		If DebugDriver Then DebugPrintFormat(  "   ***RespFail!!! :       {sh}", RxBuff) End If
+		Response :=&S""
+		LastErr := &H0100
+		ProcessNoResponse()
+		Return Value False		
+	End If 
+	
+	// i > 0
+	If  ( RxBuff[1] BitAnd &b10000000 ) <>  0 Then
+		If DebugDriver Then DebugPrintFormat(  "   ***ModbusExeption!!! :   {sh}", RxBuff) End If
+		If i>1 Then
+			LastErr := RxBuff[2]
+			
+		Else
+			LastErr := &H0100
+		End If
+		Response :=&S""
+		ProcessModbusException()
+		Return	Value False		
+	End If 
+		
+		
+	If RespLength <> 0  Then
+		If  i < RespLength - 1 Then
+			tend := GetLocalTime() + ( (1+1.5) * (RespLength - i) * ByteTime)
+			Do
+				SerialConnector.ReceiveAppend (RxBuff, (RespLength - i) * ByteTime)
+				i:= GetByteStringActualLength(RxBuff)
+				c+=1
+			Loop While i < (RespLength - 1) And	GetLocalTime() < tend
+			trespok:=GetLocalTime()
+			If DebugDriver Then DebugPrintFormat(  "   >>>RespRepeat!!! :     {sh}  count : {n}", RxBuff,c) End If
+		End If 	
+		
+		If  i > RespLength - 1 Then 
+			SetByteStringActualLength(RxBuff ,RespLength - 1) 	  // remove response APDU
+		End If 
+	End If	
+	ConcatenateByteString(Response,Header,RxBuff)
+	recBytes := GetByteStringActualLength(Response)
+	//end receive
+
+	//check response
+	If DebugDriver Then DebugPrintFormat("Resp:       {sh} length {n}", Response, GetByteStringActualLength(Response)) End If
+			
+	If  recBytes >5 And crc_16(Response)=0 	Then
+		LastErr := 0
+		SetByteStringActualLength(Response,GetByteStringActualLength(Response)-2) 	  // remove crc
+		//GetByteStringRight(Response,GetByteStringActualLength(Response)-1,Response) // remove adr
+		Message:=Response
+		ProcessMessage(Message)
+		If DebugDriver Then DebugPrintFormat("                             twait{:}  Actual{:} ",twait, trespok-tstart)End If
+		Return Value True
+	Else
+		LastErr := &H0200
+		If DebugDriver Then DebugPrintFormat("   ***RespFailCRC or length<6!:   twait{:}  Actual{:} ",twait, trespok-tstart)End If
+		Response :=&S""
+		recBytes := 0
+		Return Value False
+	End If
+	Return Value False
+End Function
+
+//**********************************************************************************************
+Function setTwait (cmdlen As Long, respLength  As Long, respTimeout As Time) As Time
+	Var twait As Time
+	//------------------------------------
+	twait:= (1+1.5)*((cmdlen + Max(respLength,5)) * ByteTime) 	//allowable timeouts between bytes in message =1,5 BYTETIME
+		+ (3.5* ByteTime)								//minimal gap between 2 messages =3,5 BYTETIME
+		+ (3* ByteTime)									/*reserve =3 BYTETIME*/
+	
+	//------------------------------------
+	//twait:= (1+1.5)*(cmdlen + Max(RespLength,5) + 3.5) * ByteTime 	//allowable timeouts between bytes in message =1,5 BYTETIME
+	//																//minimal gap between 2 messages =3,5 BYTETIME
+	//twait0:00:00.074170  Actual0:00:00.043748
+	// reserve = 1.5 * 3.5 * ByteTime = 8.75 * ByteTime  - reserve cca 9 ByteTime ?? - longer than valid message (6bytes) 
+	//------------------------------------
+	//twait:= (cmdlen + 3.5) * ByteTime +  (1.5)*(RespLength + 3/*reserve*/) * ByteTime //allowable timeouts between bytes in  =1,5 BYTETIME
+	// twait0:00:00.043201  Actual0:00:00.037063 
+	// NO!! - too close to actual!! - minimal reserve!!
+	//------------------------------------
+	twait:= Max(respTimeout,twait)
+	Return Value  twait
+End Function
+//**********************************************************************************************
+
+Private Function ProcessMessage( ByRef Msg As ByteString )
+	//RaiseEvent OnResponse() 
+	If DebugDriver Then DebugPrintFormat("  !!! OK END !!! - RespMsg: {sH}    LastEr:{n}", Msg,LastErr) End If
+End Function
+
+					
+Private Function ProcessNoResponse( )
+	//RaiseEvent OnNoResponse() 
+	If DebugDriver Then DebugPrintFormat("Error No Response   LastEr:{n}", LastErr) End If
+End Function
+
+					
+Private Function ProcessModbusException ( )
+	//RaiseEvent OnModbusException() 
+	If DebugDriver Then DebugPrintFormat("Error ModbusException   LastEr:{n}", LastErr) End If
+End Function
+
+
+
+//**********************************************************************************************
+// CRC calculation
+//**********************************************************************************************
+
+Private Function AddCRC ( ByRef Msg As ByteString )
+	Var CRCstr	As ByteString[2] 	:=&S"12"
+	Var CRC 		As Long 		:= 0
+	Var i 			As Long 		:= 0
+	
+	//DebugPrintFormat("addcrc IN: {s}", Msg)
+	CRC :=crc_16(Msg)
+	CRCstr[1] := CRC Mod 256
+	CRCstr[2] := CRC  /  256 
+	ConcatenateByteString(Msg,Msg,CRCstr)
+	//DebugPrintFormat("addcrc OUT: {s}", Msg)
+End Function
+
+
+//Reverse CRC-16:   &HA001 for (x16 + x15 + x2 + 1)
+//Modbus CRC type!!
+Private Function  crc_16( ByRef Msg As ByteString ) As Long
+	Var crc 		As Long 		:= &HFFFF //0//
+	Var CRC16POLY 	As Long 		:= &HA001 //CRC-16: 0xA001 //CRC-CCITT: 0x8408 
+	Var i 			As Long 		:= 0
+	Var b 			As Long 		:= 0
+	Var cmpt 		As Byte 		:= 0
+	
+	For i :=1 To GetByteStringActualLength(Msg)
+		b := Msg[i]
+		crc := (crc BitXor (b)) //BitAnd &H0FFFF
+		/* For All bit */
+		For cmpt := 1 To  8
+			If (crc BitAnd &H0001)<>0 Then
+				crc := ((crc / 2) BitXor CRC16POLY)//BitAnd &H00FFFF
+			Else
+				crc := (crc / 2)
+			End If 	
+		End For	
+	End For
+	crc := crc BitAnd &H0FFFF
+	
+//	If DebugDriver Then DebugPrintFormat("CRClength: {n}", GetByteStringActualLength(Msg)) End If
+//	If DebugDriver Then DebugPrintFormat("CRC msg: {s}", Msg) End If
+//	If DebugDriver Then DebugPrintFormat("CRC: {nH}", crc) End If
+	Return Value crc
+	////Ex:&S"123456789"       CRC-16(Modbus):	0x4B37
+	////EX:&S"123456789\37\4b" CRC-16(Modbus):	0x0000 // Msg+crc => CRC=0 <=> O.K.
+End Function
+
+
+//// Normal CRC-16:  &H8005 for (x16 + x15 + x2 + 1)
+//Private Function  Normal_crc_16( ByRef Msg As ByteString ) As Long
+//	Var crc 		As Long 		:= &H0000 //FFFF //0//
+//	Var CRC16POLY 	As Long 		:= &H8005 //CRC-16: 0x8005 //CRC-CCITT: 0x1021 
+//	Var i 			As Long 		:= 0
+//	Var b 			As Long 		:= 0
+//	Var cmpt 		As Byte 		:= 0
+//	
+//	For i :=1 To GetByteStringActualLength(Msg)
+//		b := Msg[i]
+//		crc := (crc BitXor (b*256)) //BitAnd &H0FFFF
+//		/* For All bit */
+//		For cmpt := 1 To  8
+//			If (crc BitAnd &H8000)<>0 Then
+//				crc := ((crc * 2) BitXor CRC16POLY)//BitAnd &H00FFFF
+//			Else
+//				crc := (crc * 2)
+//			End If 	
+//		End For	
+//	End For
+//	crc := crc BitAnd &H0FFFF
+//	
+//	If DebugDriver Then DebugPrintFormat("CRClength: {n}", GetByteStringActualLength(Msg)) End If
+//	If DebugDriver Then DebugPrintFormat("CRC msg: {s}", Msg) End If
+//	If DebugDriver Then DebugPrintFormat("CRC: {nH}", crc) End If
+//	Return Value crc
+//End Function
+
+//Polynomial functions For common CRC's
+//CRC-16	0x8005	x16 + x15 + x2 + 1
+//CRC-CCITT	0x1021	x16 + x12 + x5 + 1
+//CRC-DNP	0x3D65	x16 + x13 + x12 + x11 + x10 + x8 + x6 + x5 + x2 + 1
+//CRC-32	0x04C11DB7	x32 + x26 + x23 + x22 + x16 + x12 + x11 + x10 + x8 + x7 + x5 + x4 + x2 + x1 + 1
+
+
+
+//**********************************************************************************************
+// Testing Dump
+//**********************************************************************************************
+//
+//Read Multiple Holding Registers command To read the integer holding registers from 1201 To 1221
+//  0x01 0x03 0x04 0xB0 0x00 0x15 0x84 0xD2
+//	1st byte device address (01), 
+// the 2nd Byte is the command (03, To read multiple holding registers),
+// the 3rd And 4th bytes are the address of the start register (0x4B0 Or 1200),Mosdbus addr.1200 means register 1201!!! 
+// the 5th And 6th bytes are the number of registers (0x15 Or 21)) And the last two bytes are the CRC
+//
+//Resp:
+// 0x01 0x03 0x2A 0x01 0x40 0x00 0x00 0x01 0x40 0x00 0x00 
+// 0x01 0x40 0x00 0x00 0x01 0x40 0x00 0x00 0x07 0x17 0x02 
+// 0x65 0x02 0x3E 0x02 0x73 0x04 0x9F 0x04 0xBC 0x04 0x6D 
+// 0x04 0xB3 0x08 0x01 0x07 0xEF 0x07 0xE7 0x08 0x2C 0x02 
+// 0x58 0xC3 0xFC
+//	1st byte device address (01), 
+// the 2nd Byte is the command (03, To read multiple holding registers),
+// the 3rd number of bytes 0x2A = 42bytes(21x2) 
+// 42bytes+CRC
+//----------------------------------------------------------
+
+//Read Multiple Holding Registers command To read the integer holding registers from 1301 to 1322 
+// 0x01 0x03 0x05 0x14 0x00 0x16 0x84 0xCC
+// ...
+// the 3rd And 4th bytes are the address of the start register (0x514 Or 1300),Mosdbus addr.1300 means register 1301!!! 
+//----------------------------------------------------------
+
+//Reads 2 holding registers at address 0 (or addresses 40001 and 40002 in Modbus terminology):
+// 4001 ???? 
+// slave address is 127 (7F hex)
+//8 bytes sent: 7F 03 00 00 00 02 CE 15
+//Resp:
+//9 bytes rcvd: 7F 03 04 00 00 00 00 64 34 
+//	1st byte device address (7F), 
+// the 2nd Byte is the command (03, To read multiple holding registers),
+// the 3rd number of bytes: 04bytes(2x2) 
+//----------------------------------------------------------
+
+End DeviceClass
+
+
+

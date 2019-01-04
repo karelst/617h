@@ -1,0 +1,76 @@
+
+
+
+Private Process SimpleScheduler1_OnEvent1(  ) Link SimpleScheduler1.OnEvent1
+	Lights.LightsAllOff()
+End Process
+
+
+Private Process SimpleScheduler1_OnEvent2(  ) Link SimpleScheduler1.OnEvent2
+	Lights.LightsAllOff()
+End Process
+
+
+
+Private Process SunriseSunsetTimer1_OnSunset(  ) Link SunriseSunsetTimer1.OnSunset
+
+	SendPresetEmail(2,"SunsetON","")
+Wait (30:00.0)
+	Lights.LightStairs(LEVEL_ON)
+Wait (30:00.0)
+//	Lights.LightStairs(LEVEL_ON)
+	Lights.LightLiving(LEVEL_ON)
+	Lights.LightChildEast(LEVEL_ON)
+	Lights.LightChildWest(LEVEL_ON)
+Wait (20:00.0)
+	Lights.LightChildWest(LEVEL_OFF)
+	Lights.LightStairs(LEVEL_OFF)
+Wait (20:00.0)
+	Lights.LightChildWest(LEVEL_ON)
+	Lights.LightStairs(LEVEL_ON)
+	Lights.LightLiving(LEVEL_OFF)
+Wait (60:00.0)
+	Lights.LightChildEast(LEVEL_OFF)
+	Lights.LightStairs(LEVEL_OFF)
+Wait (20:00.0)
+	Lights.LightChildWest(LEVEL_OFF)
+	Lights.LightStairs(LEVEL_ON)
+	Lights.LightLiving(LEVEL_OFF)
+Wait (10:00.0)
+	Lights.LightStairs(LEVEL_OFF)
+Wait (10:00.0)
+	Lights.LightStairs(LEVEL_ON)
+Wait (10:00.0)
+	Lights.LightStairs(LEVEL_OFF)
+Wait (10:00.0)
+	Lights.LightStairs(LEVEL_ON)
+Wait (05:00.0)
+	Lights.LightStairs(LEVEL_OFF)
+Wait (10:00.0)
+	Lights.LightStairs(LEVEL_ON)
+Wait (10:00.0)
+	Lights.LightStairs(LEVEL_OFF)
+Wait (2:00.0)
+	Lights.LightStairs(LEVEL_ON)
+Wait (40:00.0)
+	Lights.LightChildEast(LEVEL_OFF)
+	Lights.LightChildWest(LEVEL_OFF)
+	Lights.LightLiving(LEVEL_OFF)
+	Lights.LightStairs(LEVEL_OFF)
+	SendPresetEmail(2,"SunsetOFF","")
+	
+
+End Process
+
+
+Private Process SunriseSunsetTimer1_OnSunrise(  ) Link SunriseSunsetTimer1.OnSunrise
+// On sunrise
+	SendPresetEmail(2,"sunriseOFF","")
+
+	Lights.LightStairs(LEVEL_OFF)
+	Lights.LightLiving(LEVEL_OFF)
+Wait (22:00:00.0) // next morning before sunrise
+	Lights.LightStairs(LEVEL_ON)
+	SendPresetEmail(2,"sunrise StairsON","")
+
+End Process

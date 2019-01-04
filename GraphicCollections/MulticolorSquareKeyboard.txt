@@ -1,0 +1,1413 @@
+Global GraphicClass Keyboard Inherits Namespace "CUE.GraphicCollection.KeyboardBase.1".KeyboardSquareRenderer WithAttributes {ObjectCode := "OB0108-001", DesignName := "Multicolor", GroupName := "Keyboards"}
+		
+	Protected Function Init()
+		LockRedraw()
+		SetPictureByDisplayRelosution()
+		InitObject()
+		MyButtonCell.Create(Me, KeyboardCellIndic, KeyboardNextButtonActive, KeyboardNextButtonNonActive, ButtonCellPosXOffset, ButtonCellPosYOffset,KeyboardCellSymb1,KeyboardCellSymb2,KeyboardCellSymb3,KeyboardCellSymb4,KeyboardCellSymb5,KeyboardCellSymb6To10,IndicMovePosY,CellMovePosY,KeyBoardFont,ButtonTextPosXUp, ButtonTextPosYUp)
+	
+		ButtonCloseActual := ButtonCloseUp
+		ButtonEyeActual := ButtonCloseUp
+
+//		CreateButByGetLanguag()
+		SetIndexByLanguage(GetLanguage())
+		DrawKurzor()	
+		AddPosKeyboard()
+		SetComponentColor()
+		SetUnderlyingButtonPicture()
+		CreateButByGetLanguag()
+		UnlockRedraw()	
+	End Function	
+	
+	Protected Function InitObject()
+
+		Select DisplaySize
+		Case 1			
+			KeyboardBackgroundWidth			:= 800
+			KeyboardBackgroundHeight		:= 295
+			
+			KeyboardButtonUp				:= picKeyboard_button_up1
+			KeyboardButtonDown				:= picKeyboard_button_up1
+			KeyboardButton					:= picKeyboard_button1
+			
+			ButtonCloseUp					:= picKeyboard_button_close_up1
+			ButtonCloseDown					:= picKeyboard_button_close_up1
+			ButtonClose						:= picKeyboard_button_close1
+			
+			KeyboardButtonEnterUp			:= picKeyboard_button_enter_up1
+			KeyboardButtonEnterDown			:= picKeyboard_button_enter_up1
+			KeyboardButtonEnter				:= picKeyboard_button_enter1
+			
+			KeyboardButtonSpaceUp			:= picKeyboard_button_space_up1
+			KeyboardButtonSpaceDown			:= picKeyboard_button_space_up1
+			KeyboardButtonSpace				:= picKeyboard_button_space1
+			
+			KeyboardButtonSwitchUpLeft		:= picKeyboard_button_switch_up1_left
+			KeyboardButtonSwitchDownLeft	:= picKeyboard_button_switch_up1_left
+			KeyboardButtonSwitchLeft		:= picKeyboard_button_switch1_left
+						
+			KeyboardButtonSwitchUp			:= picKeyboard_button_switch_up1
+			KeyboardButtonSwitchDown		:= picKeyboard_button_switch_up1
+			KeyboardButtonSwitch			:= picKeyboard_button_switch1
+			
+			KeyboardNextButtonNonActive		:= picKeyboard_cell_button_nonactive1
+			KeyboardNextButtonActive		:= picKeyboard_cell_button_nonactive1
+			KeyboardNextButton				:= picKeyboard_cell_button1
+			
+			KeyboardCellSymb6To10			:= picKeyboard_cell_610_buttons1
+			KeyboardCellSymb5				:= picKeyboard_cell_5_buttons1
+			KeyboardCellSymb4				:= picKeyboard_cell_4_buttons1
+			KeyboardCellSymb3				:= picKeyboard_cell_3_buttons1
+			KeyboardCellSymb2				:= picKeyboard_cell_2_buttons1
+			KeyboardCellSymb1				:= picKeyboard_cell_1_buttons1
+			KeyboardCellIndic 				:= picKeyboard_cell_spire1
+			DialogWindow					:= picKeyboard_dialog_window1
+			DialogWindowEye					:= picKeyboard_dialog_window_eye1
+			EyeIcon							:= picEye_small
+			
+			KeyboardButtonBackspace			:= picKeyboard_button_backspace1
+			KeyboardButtonShift				:= picKeyboard_button_shift1
+			KeyboardButtonClose				:= picKeyboard_button_cl1
+			KeyboardButtonLanguage			:= picKeyboard_button_Language1
+			
+			KeyboardButtonBackspRShiftDown	:= picKeyboard_button_up1
+			KeyboardButtonBackspRShiftUp	:= picKeyboard_button_up1
+			KeyboardButtonBackspRShift		:= picKeyboard_button1
+			
+			KeyboardButtonBackspRShiftDownRU:= picKeyboardRU_button_backsp_RShift_up1
+			KeyboardButtonBackspRShiftUpRU	:= picKeyboardRU_button_backsp_RShift_up1
+			KeyboardButtonBackspRShiftRU	:= picKeyboardRU_button_backsp_RShift1
+			
+			KeyboardButtonDownRU			:= picKeyboardRU_button_up1
+			KeyboardButtonUpRU				:= picKeyboardRU_button_up1
+			KeyboardButtonRU				:= picKeyboardRU_button1
+			
+			KeyboardButtonEnterDownRU		:= picKeyboardRU_button_enter_up1
+			KeyboardButtonEnterUpRU			:= picKeyboardRU_button_enter_up1
+			KeyboardButtonEnterRU			:= picKeyboardRU_button_enter1
+			
+			KeyBoardFont					:= fntSegoeUI36
+			ShiftFont						:= fntSegoeUI25
+			ButtonTextPosXUp 				:= 0			//posunutí textu tlačítka Up od středu
+			ButtonTextPosYUp 				:= 0			//posunutí textu tlačítka Up od středu  
+			ButtonTextPosXDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ButtonTextPosYDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ShiftButtonTextPosYUp			:= 14			//posunutí textu tlačítka up od středu pro tlačítko shift
+			ShiftButtonTextPosYDown			:= 14			//posunutí textu tlačítka down od středu pro tlačítko shift
+			ShiftButtPosX					:= -12			//posunutí obrázku tlačítka od středu pro tlačítko shift
+			IndicMovePosY					:= 3			// posunutí ukazatele buňky k buňce
+			CellMovePosY					:= 8			// posunutí buňky k tlačítku
+	
+			BClosePosX						:= 729			//pozice close tlačítka
+			BClosePosY						:= 6			//pozice close tlačítka	
+			
+			DialogFont						:= fntSegoeUI42
+			
+			CellShadowSize					:= 2			// velikost stínu buněk (kde nechci aby se vykresloval obdelník v background barvě;šířka, výška obdelníku; velikost buňky - CellShadowSize;)
+		
+			
+			DialogTextPosX					:= 20
+			DialogTextPosY					:= 10
+			DialogTextBoxWidth				:= 695
+		
+		Case 2	
+			KeyboardBackgroundWidth			:= 1024
+			KeyboardBackgroundHeight		:= 318
+			
+			KeyboardButtonUp				:= picKeyboard_button_up2
+			KeyboardButtonDown				:= picKeyboard_button_up2
+			KeyboardButton					:= picKeyboard_button2
+			
+			ButtonCloseUp					:= picKeyboard_button_close_up2
+			ButtonCloseDown					:= picKeyboard_button_close_up2
+			ButtonClose						:= picKeyboard_button_close2
+			
+			KeyboardButtonEnterUp			:= picKeyboard_button_enter_up2
+			KeyboardButtonEnterDown			:= picKeyboard_button_enter_up2
+			KeyboardButtonEnter				:= picKeyboard_button_enter2
+			
+			KeyboardButtonSpaceUp			:= picKeyboard_button_space_up2
+			KeyboardButtonSpaceDown			:= picKeyboard_button_space_up2
+			KeyboardButtonSpace				:= picKeyboard_button_space2
+
+			KeyboardButtonSwitchUpLeft		:= picKeyboard_button_switch_up2_left
+			KeyboardButtonSwitchDownLeft	:= picKeyboard_button_switch_up2_left
+			KeyboardButtonSwitchLeft		:= picKeyboard_button_switch2_left
+						
+			KeyboardButtonSwitchUp			:= picKeyboard_button_switch_up2
+			KeyboardButtonSwitchDown		:= picKeyboard_button_switch_up2
+			KeyboardButtonSwitch			:= picKeyboard_button_switch2
+			
+			KeyboardNextButtonNonActive		:= picKeyboard_cell_button_nonactive1
+			KeyboardNextButtonActive		:= picKeyboard_cell_button_nonactive1
+			KeyboardNextButton				:= picKeyboard_cell_button1
+			
+			KeyboardCellSymb6To10			:= picKeyboard_cell_610_buttons1
+			KeyboardCellSymb5				:= picKeyboard_cell_5_buttons1
+			KeyboardCellSymb4				:= picKeyboard_cell_4_buttons1
+			KeyboardCellSymb3				:= picKeyboard_cell_3_buttons1
+			KeyboardCellSymb2				:= picKeyboard_cell_2_buttons1
+			KeyboardCellSymb1				:= picKeyboard_cell_1_buttons1
+			KeyboardCellIndic 				:= picKeyboard_cell_spire1
+			DialogWindow					:= picKeyboard_dialog_window2
+			DialogWindowEye					:= picKeyboard_dialog_window_eye2
+			EyeIcon							:= picEye_small
+			
+			KeyboardButtonBackspace			:= picKeyboard_button_backspace1
+			KeyboardButtonShift				:= picKeyboard_button_shift2
+			KeyboardButtonClose				:= picKeyboard_button_cl1
+			KeyboardButtonLanguage			:= picKeyboard_button_Language2
+			
+			KeyboardButtonBackspRShiftDown	:= picKeyboard_button_up2
+			KeyboardButtonBackspRShiftUp	:= picKeyboard_button_up2
+			KeyboardButtonBackspRShift		:= picKeyboard_button2
+			
+			KeyboardButtonBackspRShiftDownRU:= picKeyboardRU_button_backsp_RShift_up2
+			KeyboardButtonBackspRShiftUpRU	:= picKeyboardRU_button_backsp_RShift_up2
+			KeyboardButtonBackspRShiftRU	:= picKeyboardRU_button_backsp_RShift2
+			
+			KeyboardButtonDownRU			:= picKeyboardRU_button_up2
+			KeyboardButtonUpRU				:= picKeyboardRU_button_up2
+			KeyboardButtonRU				:= picKeyboardRU_button2
+			
+			KeyboardButtonEnterDownRU		:= picKeyboardRU_button_enter_up2
+			KeyboardButtonEnterUpRU			:= picKeyboardRU_button_enter_up2
+			KeyboardButtonEnterRU			:= picKeyboardRU_button_enter2
+			
+			KeyBoardFont					:= fntSegoeUI36
+			ShiftFont						:= fntSegoeUI25
+			ButtonTextPosXUp 				:= 0			//posunutí textu tlačítka Up od středu
+			ButtonTextPosYUp 				:= 0			//posunutí textu tlačítka Up od středu  
+			ButtonTextPosXDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ButtonTextPosYDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ShiftButtonTextPosYUp			:= 14		//posunutí textu tlačítka up od středu pro tlačítko shift
+			ShiftButtonTextPosYDown			:= 14			//posunutí textu tlačítka down od středu pro tlačítko shift
+			ShiftButtPosX					:= -12			//posunutí obrázku tlačítka od středu pro tlačítko shift
+			IndicMovePosY					:= 3			// posunutí ukazatele buňky k buňce
+			CellMovePosY					:= 8			// posunutí buňky k tlačítku
+	
+			BClosePosX						:= 930			//pozice close tlačítka
+			BClosePosY						:= 6			//pozice close tlačítka	
+			
+			DialogFont						:= fntSegoeUI42
+
+			CellShadowSize					:= 2			// velikost stínu buněk (kde nechci aby se vykresloval obdelník v background barvě;šířka, výška obdelníku; velikost buňky - CellShadowSize;)
+			
+			DialogTextPosX					:= 20
+			DialogTextPosY					:= 10
+			DialogTextBoxWidth				:= 890
+		
+		Case 3	
+			KeyboardBackgroundWidth			:= 1080
+			KeyboardBackgroundHeight		:= 318
+			
+			KeyboardButtonUp				:= picKeyboard_button_up2
+			KeyboardButtonDown				:= picKeyboard_button_up2
+			KeyboardButton					:= picKeyboard_button2
+			
+			ButtonCloseUp					:= picKeyboard_button_close_up2
+			ButtonCloseDown					:= picKeyboard_button_close_up2
+			ButtonClose						:= picKeyboard_button_close2
+			
+			KeyboardButtonEnterUp			:= picKeyboard_button_enter_up2
+			KeyboardButtonEnterDown			:= picKeyboard_button_enter_up2
+			KeyboardButtonEnter				:= picKeyboard_button_enter2
+			
+			KeyboardButtonSpaceUp			:= picKeyboard_button_space_up_1080
+			KeyboardButtonSpaceDown			:= picKeyboard_button_space_up_1080
+			KeyboardButtonSpace				:= picKeyboard_button_space_1080
+
+			KeyboardButtonSwitchUpLeft		:= picKeyboard_button_switch_up2_left
+			KeyboardButtonSwitchDownLeft	:= picKeyboard_button_switch_up2_left
+			KeyboardButtonSwitchLeft		:= picKeyboard_button_switch2_left
+						
+			KeyboardButtonSwitchUp			:= picKeyboard_button_switch_up2
+			KeyboardButtonSwitchDown		:= picKeyboard_button_switch_up2
+			KeyboardButtonSwitch			:= picKeyboard_button_switch2
+			
+			KeyboardNextButtonNonActive		:= picKeyboard_cell_button_nonactive1
+			KeyboardNextButtonActive		:= picKeyboard_cell_button_nonactive1
+			KeyboardNextButton				:= picKeyboard_cell_button1
+			
+			KeyboardCellSymb6To10			:= picKeyboard_cell_610_buttons1
+			KeyboardCellSymb5				:= picKeyboard_cell_5_buttons1
+			KeyboardCellSymb4				:= picKeyboard_cell_4_buttons1
+			KeyboardCellSymb3				:= picKeyboard_cell_3_buttons1
+			KeyboardCellSymb2				:= picKeyboard_cell_2_buttons1
+			KeyboardCellSymb1				:= picKeyboard_cell_1_buttons1
+			KeyboardCellIndic 				:= picKeyboard_cell_spire1
+			DialogWindow					:= picKeyboard_dialog_window_1080
+			DialogWindowEye					:= picKeyboard_dialog_window_1080_eye
+			EyeIcon							:= picEye_small
+						
+			KeyboardButtonBackspace			:= picKeyboard_button_backspace1
+			KeyboardButtonShift				:= picKeyboard_button_shift2
+			KeyboardButtonClose				:= picKeyboard_button_cl1
+			KeyboardButtonLanguage			:= picKeyboard_button_Language2
+			
+			KeyboardButtonBackspRShiftDown	:= picKeyboard_button_up2
+			KeyboardButtonBackspRShiftUp	:= picKeyboard_button_up2
+			KeyboardButtonBackspRShift		:= picKeyboard_button2
+			
+			KeyboardButtonBackspRShiftDownRU:= picKeyboardRU_button_backsp_RShift_up2
+			KeyboardButtonBackspRShiftUpRU	:= picKeyboardRU_button_backsp_RShift_up2
+			KeyboardButtonBackspRShiftRU	:= picKeyboardRU_button_backsp_RShift2
+			
+			KeyboardButtonDownRU			:= picKeyboardRU_button_up2
+			KeyboardButtonUpRU				:= picKeyboardRU_button_up2
+			KeyboardButtonRU				:= picKeyboardRU_button2
+			
+			KeyboardButtonEnterDownRU		:= picKeyboardRU_button_enter_up2
+			KeyboardButtonEnterUpRU			:= picKeyboardRU_button_enter_up2
+			KeyboardButtonEnterRU			:= picKeyboardRU_button_enter2
+			
+			KeyBoardFont					:= fntSegoeUI36
+			ShiftFont						:= fntSegoeUI25
+			ButtonTextPosXUp 				:= 0			//posunutí textu tlačítka Up od středu
+			ButtonTextPosYUp 				:= 0			//posunutí textu tlačítka Up od středu  
+			ButtonTextPosXDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ButtonTextPosYDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ShiftButtonTextPosYUp			:= 14			//posunutí textu tlačítka up od středu pro tlačítko shift
+			ShiftButtonTextPosYDown			:= 14			//posunutí textu tlačítka down od středu pro tlačítko shift
+			ShiftButtPosX					:= -12			//posunutí obrázku tlačítka od středu pro tlačítko shift
+			IndicMovePosY					:= 3			// posunutí ukazatele buňky k buňce
+			CellMovePosY					:= 8			// posunutí buňky k tlačítku
+	
+			BClosePosX						:= 974			//pozice close tlačítka
+			BClosePosY						:= 6			//pozice close tlačítka	
+			
+			DialogFont						:= fntSegoeUI42
+
+			CellShadowSize					:= 2			// velikost stínu buněk (kde nechci aby se vykresloval obdelník v background barvě;šířka, výška obdelníku; velikost buňky - CellShadowSize;)
+			
+			DialogTextPosX					:= 20
+			DialogTextPosY					:= 10
+			DialogTextBoxWidth				:= 930
+			
+		Case 4
+			KeyboardBackgroundWidth			:= 1136
+			KeyboardBackgroundHeight		:= 320
+			
+			KeyboardButtonUp				:= picKeyboard_button_up3
+			KeyboardButtonDown				:= picKeyboard_button_up3
+			KeyboardButton					:= picKeyboard_button3
+			
+			ButtonCloseUp					:= picKeyboard_button_close_up2
+			ButtonCloseDown					:= picKeyboard_button_close_up2
+			ButtonClose						:= picKeyboard_button_close2
+			
+			KeyboardButtonEnterUp			:= picKeyboard_button_enter_up3
+			KeyboardButtonEnterDown			:= picKeyboard_button_enter_up3
+			KeyboardButtonEnter				:= picKeyboard_button_enter3
+			
+			KeyboardButtonSpaceUp			:= picKeyboard_button_space_up3
+			KeyboardButtonSpaceDown			:= picKeyboard_button_space_up3
+			KeyboardButtonSpace				:= picKeyboard_button_space3
+			
+			KeyboardButtonSwitchUpLeft		:= picKeyboard_button_switch_up3_left
+			KeyboardButtonSwitchDownLeft	:= picKeyboard_button_switch_up3_left
+			KeyboardButtonSwitchLeft		:= picKeyboard_button_switch3_left
+			
+			KeyboardButtonSwitchUp			:= picKeyboard_button_switch_up3
+			KeyboardButtonSwitchDown		:= picKeyboard_button_switch_up3
+			KeyboardButtonSwitch			:= picKeyboard_button_switch3
+			
+			KeyboardNextButtonNonActive		:= picKeyboard_cell_button_nonactive1
+			KeyboardNextButtonActive		:= picKeyboard_cell_button_nonactive1
+			KeyboardNextButton				:= picKeyboard_cell_button1
+			
+			KeyboardCellSymb6To10			:= picKeyboard_cell_610_buttons1
+			KeyboardCellSymb5				:= picKeyboard_cell_5_buttons1
+			KeyboardCellSymb4				:= picKeyboard_cell_4_buttons1
+			KeyboardCellSymb3				:= picKeyboard_cell_3_buttons1
+			KeyboardCellSymb2				:= picKeyboard_cell_2_buttons1
+			KeyboardCellSymb1				:= picKeyboard_cell_1_buttons1
+			KeyboardCellIndic 				:= picKeyboard_cell_spire1
+			DialogWindow					:= picKeyboard_dialog_window3
+			DialogWindowEye					:= picKeyboard_dialog_window_eye3
+			EyeIcon							:= picEye_small
+			
+			KeyboardButtonBackspace			:= picKeyboard_button_backspace1
+			KeyboardButtonShift				:= picKeyboard_button_shift2
+			KeyboardButtonClose				:= picKeyboard_button_cl1
+			KeyboardButtonLanguage			:= picKeyboard_button_Language2
+			
+			KeyboardButtonBackspRShiftDown	:= picKeyboard_button_up3
+			KeyboardButtonBackspRShiftUp	:= picKeyboard_button_up3
+			KeyboardButtonBackspRShift		:= picKeyboard_button3
+			
+			KeyboardButtonBackspRShiftDownRU:= picKeyboardRU_button_backsp_RShift_up3
+			KeyboardButtonBackspRShiftUpRU	:= picKeyboardRU_button_backsp_RShift_up3
+			KeyboardButtonBackspRShiftRU	:= picKeyboardRU_button_backsp_RShift3
+			
+			KeyboardButtonDownRU			:= picKeyboardRU_button_up3
+			KeyboardButtonUpRU				:= picKeyboardRU_button_up3
+			KeyboardButtonRU				:= picKeyboardRU_button3
+			
+			KeyboardButtonEnterDownRU		:= picKeyboardRU_button_enter_up3
+			KeyboardButtonEnterUpRU			:= picKeyboardRU_button_enter_up3
+			KeyboardButtonEnterRU			:= picKeyboardRU_button_enter3
+			
+			KeyBoardFont					:= fntSegoeUI36
+			ShiftFont						:= fntSegoeUI25
+			ButtonTextPosXUp 				:= 0			//posunutí textu tlačítka Up od středu
+			ButtonTextPosYUp 				:= 0			//posunutí textu tlačítka Up od středu  
+			ButtonTextPosXDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ButtonTextPosYDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ShiftButtonTextPosYUp			:= 14			//posunutí textu tlačítka up od středu pro tlačítko shift
+			ShiftButtonTextPosYDown			:= 14			//posunutí textu tlačítka down od středu pro tlačítko shift
+			ShiftButtPosX					:= -12			//posunutí obrázku tlačítka od středu pro tlačítko shift
+			IndicMovePosY					:= 3			// posunutí ukazatele buňky k buňce
+			CellMovePosY					:= 8			// posunutí buňky k tlačítku
+	
+			BClosePosX						:= 1045			//pozice close tlačítka
+			BClosePosY						:= 5			//pozice close tlačítka	
+			
+			DialogFont						:= fntSegoeUI42
+		
+			CellShadowSize					:= 2			// velikost stínu buněk (kde nechci aby se vykresloval obdelník v background barvě;šířka, výška obdelníku; velikost buňky - CellShadowSize;)
+			
+			DialogTextPosX					:= 20
+			DialogTextPosY					:= 10
+			DialogTextBoxWidth				:= 1002//695
+
+		Case 5
+			KeyboardBackgroundWidth			:= 1280
+			KeyboardBackgroundHeight		:= 395
+			
+			KeyboardButtonUp				:= picKeyboard_button_up4
+			KeyboardButtonDown				:= picKeyboard_button_up4
+			KeyboardButton					:= picKeyboard_button4
+			
+			ButtonCloseUp					:= picKeyboard_button_close_up4
+			ButtonCloseDown					:= picKeyboard_button_close_up4
+			ButtonClose						:= picKeyboard_button_close4
+			
+			KeyboardButtonEnterUp			:= picKeyboard_button_enter_up4
+			KeyboardButtonEnterDown			:= picKeyboard_button_enter_up4
+			KeyboardButtonEnter				:= picKeyboard_button_enter4
+			
+			KeyboardButtonSpaceUp			:= picKeyboard_button_space_up4
+			KeyboardButtonSpaceDown			:= picKeyboard_button_space_up4
+			KeyboardButtonSpace				:= picKeyboard_button_space4
+
+			KeyboardButtonSwitchUpLeft		:= picKeyboard_button_switch_up4_left
+			KeyboardButtonSwitchDownLeft	:= picKeyboard_button_switch_up4_left
+			KeyboardButtonSwitchLeft		:= picKeyboard_button_switch4_left
+						
+			KeyboardButtonSwitchUp			:= picKeyboard_button_switch_up4
+			KeyboardButtonSwitchDown		:= picKeyboard_button_switch_up4
+			KeyboardButtonSwitch			:= picKeyboard_button_switch4
+			
+			KeyboardNextButtonNonActive		:= picKeyboard_cell_button_nonactive4
+			KeyboardNextButtonActive		:= picKeyboard_cell_button_nonactive4
+			KeyboardNextButton				:= picKeyboard_cell_button4
+			
+			KeyboardCellSymb6To10			:= picKeyboard_cell_610_buttons4
+			KeyboardCellSymb5				:= picKeyboard_cell_5_buttons4
+			KeyboardCellSymb4				:= picKeyboard_cell_4_buttons4
+			KeyboardCellSymb3				:= picKeyboard_cell_3_buttons4
+			KeyboardCellSymb2				:= picKeyboard_cell_2_buttons4
+			KeyboardCellSymb1				:= picKeyboard_cell_1_buttons4
+			KeyboardCellIndic 				:= picKeyboard_cell_spire4
+			DialogWindow					:= picKeyboard_dialog_window4
+			DialogWindowEye					:= picKeyboard_dialog_window_eye4
+			EyeIcon							:= picEye_medium
+						
+			KeyboardButtonBackspace			:= picKeyboard_button_backspace4
+			KeyboardButtonShift				:= picKeyboard_button_shift4
+			KeyboardButtonClose				:= picKeyboard_button_cl4
+			KeyboardButtonLanguage			:= picKeyboard_button_Language4
+			
+			KeyboardButtonBackspRShiftDown	:= picKeyboard_button_up4
+			KeyboardButtonBackspRShiftUp	:= picKeyboard_button_up4
+			KeyboardButtonBackspRShift		:= picKeyboard_button4
+			
+			KeyboardButtonBackspRShiftDownRU:= picKeyboardRU_button_backsp_RShift_up4
+			KeyboardButtonBackspRShiftUpRU	:= picKeyboardRU_button_backsp_RShift_up4
+			KeyboardButtonBackspRShiftRU	:= picKeyboardRU_button_backsp_RShift4
+			
+			KeyboardButtonDownRU			:= picKeyboardRU_button_up4
+			KeyboardButtonUpRU				:= picKeyboardRU_button_up4
+			KeyboardButtonRU				:= picKeyboardRU_button4
+			
+			KeyboardButtonEnterDownRU		:= picKeyboardRU_button_enter_up4
+			KeyboardButtonEnterUpRU			:= picKeyboardRU_button_enter_up4
+			KeyboardButtonEnterRU			:= picKeyboardRU_button_enter4
+			
+			KeyBoardFont					:= fntSegoeUI42
+			ShiftFont						:= fntSegoeUI30
+			ButtonTextPosXUp 				:= 0			//posunutí textu tlačítka Up od středu
+			ButtonTextPosYUp 				:= 0			//posunutí textu tlačítka Up od středu  
+			ButtonTextPosXDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ButtonTextPosYDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ShiftButtonTextPosYUp			:= 18			//posunutí textu tlačítka up od středu pro tlačítko shift
+			ShiftButtonTextPosYDown			:= 18			//posunutí textu tlačítka down od středu pro tlačítko shift
+			ShiftButtPosX					:= -15			//posunutí obrázku tlačítka od středu pro tlačítko shift
+			IndicMovePosY					:= 6			// posunutí ukazatele buňky k buňce
+			CellMovePosY					:= 12			// posunutí buňky k tlačítku
+	
+			BClosePosX						:= 1165			//pozice close tlačítka
+			BClosePosY						:= 8			//pozice close tlačítka	
+			
+			DialogFont						:= fntSegoeUI54
+			
+			CellShadowSize					:= 3			// velikost stínu buněk (kde nechci aby se vykresloval obdelník v background barvě;šířka, výška obdelníku; velikost buňky - CellShadowSize;)
+			
+			DialogTextPosX					:= 30
+			DialogTextPosY					:= 12
+			DialogTextBoxWidth				:= 1110
+
+		Case 6
+			KeyboardBackgroundWidth			:= 1366
+			KeyboardBackgroundHeight		:= 385
+			
+			KeyboardButtonUp				:= picKeyboard_button_up5
+			KeyboardButtonDown				:= picKeyboard_button_up5
+			KeyboardButton					:= picKeyboard_button5
+			
+			ButtonCloseUp					:= picKeyboard_button_close_up4
+			ButtonCloseDown					:= picKeyboard_button_close_up4
+			ButtonClose						:= picKeyboard_button_close4
+			
+			KeyboardButtonEnterUp			:= picKeyboard_button_enter_up5
+			KeyboardButtonEnterDown			:= picKeyboard_button_enter_up5
+			KeyboardButtonEnter				:= picKeyboard_button_enter5
+			
+			KeyboardButtonSpaceUp			:= picKeyboard_button_space_up5
+			KeyboardButtonSpaceDown			:= picKeyboard_button_space_up5
+			KeyboardButtonSpace				:= picKeyboard_button_space5
+
+			KeyboardButtonSwitchUpLeft		:= picKeyboard_button_switch_up5_left
+			KeyboardButtonSwitchDownLeft	:= picKeyboard_button_switch_up5_left
+			KeyboardButtonSwitchLeft		:= picKeyboard_button_switch5_left
+						
+			KeyboardButtonSwitchUp			:= picKeyboard_button_switch_up5
+			KeyboardButtonSwitchDown		:= picKeyboard_button_switch_up5
+			KeyboardButtonSwitch			:= picKeyboard_button_switch5
+			
+			KeyboardNextButtonNonActive		:= picKeyboard_cell_button_nonactive4
+			KeyboardNextButtonActive		:= picKeyboard_cell_button_nonactive4
+			KeyboardNextButton				:= picKeyboard_cell_button4
+			
+			KeyboardCellSymb6To10			:= picKeyboard_cell_610_buttons4
+			KeyboardCellSymb5				:= picKeyboard_cell_5_buttons4
+			KeyboardCellSymb4				:= picKeyboard_cell_4_buttons4
+			KeyboardCellSymb3				:= picKeyboard_cell_3_buttons4
+			KeyboardCellSymb2				:= picKeyboard_cell_2_buttons4
+			KeyboardCellSymb1				:= picKeyboard_cell_1_buttons4
+			KeyboardCellIndic 				:= picKeyboard_cell_spire4
+			DialogWindow					:= picKeyboard_dialog_window5
+			DialogWindowEye					:= picKeyboard_dialog_window_eye5
+			EyeIcon							:= picEye_medium
+			
+			KeyboardButtonBackspace			:= picKeyboard_button_backspace4
+			KeyboardButtonShift				:= picKeyboard_button_shift4
+			KeyboardButtonClose				:= picKeyboard_button_cl4
+			KeyboardButtonLanguage			:= picKeyboard_button_Language4
+			
+			KeyboardButtonBackspRShiftDown	:= picKeyboard_button_up5
+			KeyboardButtonBackspRShiftUp	:= picKeyboard_button_up5
+			KeyboardButtonBackspRShift		:= picKeyboard_button5
+			
+			KeyboardButtonBackspRShiftDownRU:= picKeyboardRU_button_backsp_RShift_up5
+			KeyboardButtonBackspRShiftUpRU	:= picKeyboardRU_button_backsp_RShift_up5
+			KeyboardButtonBackspRShiftRU	:= picKeyboardRU_button_backsp_RShift5
+			
+			KeyboardButtonDownRU			:= picKeyboardRU_button_up5
+			KeyboardButtonUpRU				:= picKeyboardRU_button_up5
+			KeyboardButtonRU				:= picKeyboardRU_button5
+			
+			KeyboardButtonEnterDownRU		:= picKeyboardRU_button_enter_up5
+			KeyboardButtonEnterUpRU			:= picKeyboardRU_button_enter_up5
+			KeyboardButtonEnterRU			:= picKeyboardRU_button_enter5
+			
+			KeyBoardFont					:= fntSegoeUI42
+			ShiftFont						:= fntSegoeUI30
+			ButtonTextPosXUp 				:= 0			//posunutí textu tlačítka Up od středu
+			ButtonTextPosYUp 				:= 0			//posunutí textu tlačítka Up od středu  
+			ButtonTextPosXDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ButtonTextPosYDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ShiftButtonTextPosYUp			:= 18			//posunutí textu tlačítka up od středu pro tlačítko shift
+			ShiftButtonTextPosYDown			:= 18			//posunutí textu tlačítka down od středu pro tlačítko shift
+			ShiftButtPosX					:= -15			//posunutí obrázku tlačítka od středu pro tlačítko shift
+			IndicMovePosY					:= 3			// posunutí ukazatele buňky k buňce
+			CellMovePosY					:= 12			// posunutí buňky k tlačítku
+	
+			BClosePosX						:= 1251			//pozice close tlačítka
+			BClosePosY						:= 8			//pozice close tlačítka	
+			
+			DialogFont						:= fntSegoeUI54
+			
+			CellShadowSize					:= 3			// velikost stínu buněk (kde nechci aby se vykresloval obdelník v background barvě;šířka, výška obdelníku; velikost buňky - CellShadowSize;)
+	
+			DialogTextPosX					:= 30
+			DialogTextPosY					:= 12
+			DialogTextBoxWidth				:= 1196//1110
+		
+		Case 7	
+		
+			KeyboardBackgroundWidth			:= 1920
+			KeyboardBackgroundHeight		:= 759
+			
+			KeyboardButtonUp				:= picKeyboard_button_up
+			KeyboardButtonDown				:= picKeyboard_button_up
+			KeyboardButton					:= picKeyboard_button
+			
+			ButtonCloseUp					:= picKeyboard_button_close_up
+			ButtonCloseDown					:= picKeyboard_button_close_up
+			ButtonClose						:= picKeyboard_button_close
+			
+			KeyboardButtonEnterUp			:= picKeyboard_button_enter_up
+			KeyboardButtonEnterDown			:= picKeyboard_button_enter_up
+			KeyboardButtonEnter				:= picKeyboard_button_enter
+			
+			KeyboardButtonSpaceUp			:= picKeyboard_button_space_up_1920
+			KeyboardButtonSpaceDown			:= picKeyboard_button_space_up_1920
+			KeyboardButtonSpace				:= picKeyboard_button_space_1920
+
+			KeyboardButtonSwitchUpLeft		:= picKeyboard_button_switch_up_left
+			KeyboardButtonSwitchDownLeft	:= picKeyboard_button_switch_up_left
+			KeyboardButtonSwitchLeft		:= picKeyboard_button_switch_left
+						
+			KeyboardButtonSwitchUp			:= picKeyboard_button_switch_up
+			KeyboardButtonSwitchDown		:= picKeyboard_button_switch_up
+			KeyboardButtonSwitch			:= picKeyboard_button_switch
+			
+			KeyboardNextButtonNonActive		:= picKeyboard_cell_button_nonActive
+			KeyboardNextButtonActive		:= picKeyboard_cell_button_nonActive
+			KeyboardNextButton				:= picKeyboard_cell_button
+			
+			KeyboardCellSymb6To10			:= picKeyboard_cell_610_buttons
+			KeyboardCellSymb5				:= picKeyboard_cell_5_buttons
+			KeyboardCellSymb4				:= picKeyboard_cell_4_buttons
+			KeyboardCellSymb3				:= picKeyboard_cell_3_buttons
+			KeyboardCellSymb2				:= picKeyboard_cell_2_buttons
+			KeyboardCellSymb1				:= picKeyboard_cell_1_buttons
+			KeyboardCellIndic 				:= picKeyboard_cell_spire
+			DialogWindow					:= picKeyboard_dialog_window_1920
+			DialogWindowEye					:= picKeyboard_dialog_window_1920_eye
+			EyeIcon							:= picEye_large
+			
+			KeyboardButtonBackspace			:= picKeyboard_button_backspace
+			KeyboardButtonShift				:= picKeyboard_button_shift
+			KeyboardButtonClose				:= picKeyboard_button_cl
+			KeyboardButtonLanguage			:= picKeyboard_button_Language
+						
+			KeyboardButtonBackspRShiftDown	:= picKeyboard_button_up
+			KeyboardButtonBackspRShiftUp	:= picKeyboard_button_up
+			KeyboardButtonBackspRShift		:= picKeyboard_button
+						
+			KeyboardButtonBackspRShiftDownRU:= picKeyboardRU_button_backsp_RShift_up
+			KeyboardButtonBackspRShiftUpRU	:= picKeyboardRU_button_backsp_RShift_up
+			KeyboardButtonBackspRShiftRU	:= picKeyboardRU_button_backsp_RShift
+			
+			KeyboardButtonDownRU			:= picKeyboardRU_button_up
+			KeyboardButtonUpRU				:= picKeyboardRU_button_up
+			KeyboardButtonRU				:= picKeyboardRU_button
+			
+			KeyboardButtonEnterDownRU		:= picKeyboardRU_button_enter_up
+			KeyboardButtonEnterUpRU			:= picKeyboardRU_button_enter_up
+			KeyboardButtonEnterRU			:= picKeyboardRU_button_enter
+			
+			KeyBoardFont					:= fntSegoeUI72
+			ShiftFont						:= fntSegoeUI50
+			ButtonTextPosXUp 				:= 0			//posunutí textu tlačítka Up od středu
+			ButtonTextPosYUp 				:= 0			//posunutí textu tlačítka Up od středu  
+			ButtonTextPosXDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ButtonTextPosYDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ShiftButtonTextPosYUp			:= 35			//posunutí textu tlačítka up od středu pro tlačítko shift
+			ShiftButtonTextPosYDown			:= 35			//posunutí textu tlačítka down od středu pro tlačítko shift
+			ShiftButtPosX					:= -35			//posunutí obrázku tlačítka od středu pro tlačítko shift
+			IndicMovePosY					:= 6			// posunutí ukazatele buňky k buňce
+			CellMovePosY					:= 12			// posunutí buňky k tlačítku
+	
+			BClosePosX						:= 1747			//pozice close tlačítka
+			BClosePosY						:= 15			//pozice close tlačítka	
+
+			CellShadowSize					:= 5			// velikost stínu buněk (kde nechci aby se vykresloval obdelník v background barvě;šířka, výška obdelníku; velikost buňky - CellShadowSize;)
+				
+			DialogFont						:= fntSegoeUI90
+			
+			DialogTextPosX					:= 54
+			DialogTextPosY					:= 24
+			DialogTextBoxWidth				:= 1670
+					
+		Case 8	
+			KeyboardBackgroundWidth			:= 2048
+			KeyboardBackgroundHeight		:= 759
+			
+			KeyboardButtonUp				:= picKeyboard_button_up
+			KeyboardButtonDown				:= picKeyboard_button_up
+			KeyboardButton					:= picKeyboard_button
+			
+			ButtonCloseUp					:= picKeyboard_button_close_up
+			ButtonCloseDown					:= picKeyboard_button_close_up
+			ButtonClose						:= picKeyboard_button_close
+			
+			KeyboardButtonEnterUp			:= picKeyboard_button_enter_up
+			KeyboardButtonEnterDown			:= picKeyboard_button_enter_up
+			KeyboardButtonEnter				:= picKeyboard_button_enter
+			
+			KeyboardButtonSpaceUp			:= picKeyboard_button_space_up
+			KeyboardButtonSpaceDown			:= picKeyboard_button_space_up
+			KeyboardButtonSpace				:= picKeyboard_button_space
+			
+			KeyboardButtonSwitchUpLeft		:= picKeyboard_button_switch_up_left
+			KeyboardButtonSwitchDownLeft	:= picKeyboard_button_switch_up_left
+			KeyboardButtonSwitchLeft		:= picKeyboard_button_switch_left
+			
+			KeyboardButtonSwitchUp			:= picKeyboard_button_switch_up
+			KeyboardButtonSwitchDown		:= picKeyboard_button_switch_up
+			KeyboardButtonSwitch			:= picKeyboard_button_switch
+			
+			KeyboardNextButtonNonActive		:= picKeyboard_cell_button_nonActive
+			KeyboardNextButtonActive		:= picKeyboard_cell_button_nonActive
+			KeyboardNextButton				:= picKeyboard_cell_button
+			
+			KeyboardCellSymb6To10			:= picKeyboard_cell_610_buttons
+			KeyboardCellSymb5				:= picKeyboard_cell_5_buttons
+			KeyboardCellSymb4				:= picKeyboard_cell_4_buttons
+			KeyboardCellSymb3				:= picKeyboard_cell_3_buttons
+			KeyboardCellSymb2				:= picKeyboard_cell_2_buttons
+			KeyboardCellSymb1				:= picKeyboard_cell_1_buttons
+			KeyboardCellIndic 				:= picKeyboard_cell_spire
+			DialogWindow					:= picKeyboard_dialog_window
+			DialogWindowEye					:= picKeyboard_dialog_window_eye
+			EyeIcon							:= picEye_large
+			
+			KeyboardButtonBackspace			:= picKeyboard_button_backspace
+			KeyboardButtonShift				:= picKeyboard_button_shift
+			KeyboardButtonClose				:= picKeyboard_button_cl
+			KeyboardButtonLanguage			:= picKeyboard_button_Language
+						
+			KeyboardButtonBackspRShiftDown	:= picKeyboard_button_up
+			KeyboardButtonBackspRShiftUp	:= picKeyboard_button_up
+			KeyboardButtonBackspRShift		:= picKeyboard_button
+						
+			KeyboardButtonBackspRShiftDownRU:= picKeyboardRU_button_backsp_RShift_up
+			KeyboardButtonBackspRShiftUpRU	:= picKeyboardRU_button_backsp_RShift_up
+			KeyboardButtonBackspRShiftRU	:= picKeyboardRU_button_backsp_RShift
+			
+			KeyboardButtonDownRU			:= picKeyboardRU_button_up
+			KeyboardButtonUpRU				:= picKeyboardRU_button_up
+			KeyboardButtonRU				:= picKeyboardRU_button
+			
+			KeyboardButtonEnterDownRU		:= picKeyboardRU_button_enter_up
+			KeyboardButtonEnterUpRU			:= picKeyboardRU_button_enter_up
+			KeyboardButtonEnterRU			:= picKeyboardRU_button_enter
+			
+			KeyBoardFont					:= fntSegoeUI72
+			ShiftFont						:= fntSegoeUI50
+			ButtonTextPosXUp 				:= 0			//posunutí textu tlačítka Up od středu
+			ButtonTextPosYUp 				:= 0			//posunutí textu tlačítka Up od středu  
+			ButtonTextPosXDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ButtonTextPosYDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ShiftButtonTextPosYUp			:= 35			//posunutí textu tlačítka up od středu pro tlačítko shift
+			ShiftButtonTextPosYDown			:= 35			//posunutí textu tlačítka down od středu pro tlačítko shift
+			ShiftButtPosX					:= -35			//posunutí obrázku tlačítka od středu pro tlačítko shift
+			IndicMovePosY					:= 6			// posunutí ukazatele buňky k buňce
+			CellMovePosY					:= 12			// posunutí buňky k tlačítku
+	
+			BClosePosX						:= 1875			//pozice close tlačítka
+			BClosePosY						:= 15			//pozice close tlačítka	
+
+			CellShadowSize					:= 5			// velikost stínu buněk (kde nechci aby se vykresloval obdelník v background barvě;šířka, výška obdelníku; velikost buňky - CellShadowSize;)
+				
+			DialogFont						:= fntSegoeUI90
+			
+			DialogTextPosX					:= 54
+			DialogTextPosY					:= 24
+			DialogTextBoxWidth				:= 1779
+	
+	Case 9	
+			KeyboardBackgroundWidth			:= 2560
+			KeyboardBackgroundHeight		:= 759
+			
+			KeyboardButtonUp				:= picKeyboard_button_up6
+			KeyboardButtonDown				:= picKeyboard_button_up6
+			KeyboardButton					:= picKeyboard_button6
+			
+			ButtonCloseUp					:= picKeyboard_button_close_up6
+			ButtonCloseDown					:= picKeyboard_button_close_up6
+			ButtonClose						:= picKeyboard_button_close6
+			
+			KeyboardButtonEnterUp			:= picKeyboard_button_enter_up6
+			KeyboardButtonEnterDown			:= picKeyboard_button_enter_up6
+			KeyboardButtonEnter				:= picKeyboard_button_enter6
+			
+			KeyboardButtonSpaceUp			:= picKeyboard_button_space_up6
+			KeyboardButtonSpaceDown			:= picKeyboard_button_space_up6
+			KeyboardButtonSpace				:= picKeyboard_button_space6
+			
+			KeyboardButtonSwitchUpLeft		:= picKeyboard_button_switch_up6_left
+			KeyboardButtonSwitchDownLeft	:= picKeyboard_button_switch_up6_left
+			KeyboardButtonSwitchLeft		:= picKeyboard_button_switch6_left
+			
+			KeyboardButtonSwitchUp			:= picKeyboard_button_switch_up6
+			KeyboardButtonSwitchDown		:= picKeyboard_button_switch_up6
+			KeyboardButtonSwitch			:= picKeyboard_button_switch6
+			
+			KeyboardNextButtonNonActive		:= picKeyboard_cell_button_nonActive
+			KeyboardNextButtonActive		:= picKeyboard_cell_button_nonActive
+			KeyboardNextButton				:= picKeyboard_cell_button
+			
+			KeyboardCellSymb6To10			:= picKeyboard_cell_610_buttons
+			KeyboardCellSymb5				:= picKeyboard_cell_5_buttons
+			KeyboardCellSymb4				:= picKeyboard_cell_4_buttons
+			KeyboardCellSymb3				:= picKeyboard_cell_3_buttons
+			KeyboardCellSymb2				:= picKeyboard_cell_2_buttons
+			KeyboardCellSymb1				:= picKeyboard_cell_1_buttons
+			KeyboardCellIndic 				:= picKeyboard_cell_spire
+			DialogWindow					:= picKeyboard_dialog_window6
+			DialogWindowEye					:= picKeyboard_dialog_window_eye6
+			EyeIcon							:= picEye_large
+			
+			KeyboardButtonBackspace			:= picKeyboard_button_backspace
+			KeyboardButtonShift				:= picKeyboard_button_shift
+			KeyboardButtonClose				:= picKeyboard_button_cl
+			KeyboardButtonLanguage			:= picKeyboard_button_Language
+			
+			KeyboardButtonBackspRShiftDown	:= picKeyboard_button_up6
+			KeyboardButtonBackspRShiftUp	:= picKeyboard_button_up6
+			KeyboardButtonBackspRShift		:= picKeyboard_button6
+			
+			KeyboardButtonBackspRShiftDownRU:= picKeyboardRU_button_backsp_RShift_up6
+			KeyboardButtonBackspRShiftUpRU	:= picKeyboardRU_button_backsp_RShift_up6
+			KeyboardButtonBackspRShiftRU	:= picKeyboardRU_button_backsp_RShift6
+			
+			KeyboardButtonDownRU			:= picKeyboardRU_button_up6
+			KeyboardButtonUpRU				:= picKeyboardRU_button_up6
+			KeyboardButtonRU				:= picKeyboardRU_button6
+			
+			KeyboardButtonEnterDownRU		:= picKeyboardRU_button_enter_up6
+			KeyboardButtonEnterUpRU			:= picKeyboardRU_button_enter_up6
+			KeyboardButtonEnterRU			:= picKeyboardRU_button_enter6
+			
+			KeyBoardFont					:= fntSegoeUI72
+			ShiftFont						:= fntSegoeUI50
+			ButtonTextPosXUp 				:= 0			//posunutí textu tlačítka Up od středu
+			ButtonTextPosYUp 				:= 0			//posunutí textu tlačítka Up od středu  
+			ButtonTextPosXDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ButtonTextPosYDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ShiftButtonTextPosYUp			:= 35			//posunutí textu tlačítka up od středu pro tlačítko shift
+			ShiftButtonTextPosYDown			:= 35			//posunutí textu tlačítka down od středu pro tlačítko shift
+			ShiftButtPosX					:= -35			//posunutí obrázku tlačítka od středu pro tlačítko shift
+			IndicMovePosY					:= 6			// posunutí ukazatele buňky k buňce
+			CellMovePosY					:= 12			// posunutí buňky k tlačítku
+	
+			BClosePosX						:= 2324			//pozice close tlačítka
+			BClosePosY						:= 15			//pozice close tlačítka	
+			
+			CellShadowSize					:= 5			// velikost stínu buněk (kde nechci aby se vykresloval obdelník v background barvě;šířka, výška obdelníku; velikost buňky - CellShadowSize;)
+			
+			DialogFont						:= fntSegoeUI90
+			
+			DialogTextPosX					:= 54
+			DialogTextPosY					:= 24
+			DialogTextBoxWidth				:= 2230	
+		End Select
+		
+		ButtonNumberFirstLine 			:= 11 //počet kláves v první řadě
+		ButtonNumberSecondLine			:= 10 // počet kláves v druhé řadě
+		ButtonNumberThLine				:= 11 // počet kláves v třetí řadě	
+		ButtonNumberFourLine			:= 3 // počet kláves v čtvrté řadě
+				
+		ButtonNumberFirstLineRU			:= 12 //počet kláves v první řadě
+		ButtonNumberSecondLineRU		:= 12 // počet kláves v druhé řadě
+		ButtonNumberThLineRU			:= 12 // počet kláves v třetí řadě	
+		ButtonNumberFourLineRU			:= 3 // počet kláves v čtvrté řadě
+					
+		NumberLineButtons				:= 4 // počet řad kláves
+		
+		ButtonDialogTextColor			:= _COLOR_WHITE
+		RectangleColor					:= BackgroundColor
+		KurzorColor						:= 	_COLOR_WHITE
+	End Function
+	
+End GraphicClass
+
+Global GraphicClass Numpad Inherits Namespace "CUE.GraphicCollection.KeyboardBase.1".NumpadSquareRenderer WithAttributes {ObjectCode := "OB0113-001", DesignName := "Multicolor", GroupName := "Keyboards"}
+		
+	Protected Function Init()
+		LockRedraw()
+		SetPictureByDisplayRelosution()
+		InitObject()
+		MyButtonCell.Create(Me, KeyboardCellIndic, KeyboardNextButtonActive, KeyboardNextButtonNonActive, ButtonCellPosXOffset, ButtonCellPosYOffset,KeyboardCellSymb1,KeyboardCellSymb2,KeyboardCellSymb3,KeyboardCellSymb4,KeyboardCellSymb5,KeyboardCellSymb6To10,IndicMovePosY,CellMovePosY,KeyBoardFont,ButtonTextPosXUp, ButtonTextPosYUp)
+		ButtonCloseActual := ButtonCloseUp
+		ButtonEyeActual := ButtonCloseUp
+		
+//		CreateButByGetLanguag()
+		SetIndexByLanguage(GetLanguage())
+		DrawKurzor()	
+		AddPosKeyboard()
+		SetComponentColor()
+		SetUnderlyingButtonPicture()
+		CreateButByGetLanguag()	
+		UnlockRedraw()
+	End Function
+			
+	Protected Function InitObject()
+		Select DisplaySize
+		Case 1			
+			KeyboardBackgroundWidth			:= 800
+			KeyboardBackgroundHeight		:= 295
+			
+			KeyboardButtonUp				:= picKeyboard_button_enter_up1
+			KeyboardButtonDown				:= picKeyboard_button_enter_up1
+			KeyboardButton					:= picKeyboard_button_enter1
+			
+			ButtonCloseUp					:= picKeyboard_button_close_up1
+			ButtonCloseDown					:= picKeyboard_button_close_up1
+			ButtonClose						:= picKeyboard_button_close1
+			
+			KeyboardButtonEnterUp			:= picNumpad_button_enter_up1
+			KeyboardButtonEnterDown			:= picNumpad_button_enter_up1
+			KeyboardButtonEnter				:= picNumpad_button_enter1
+
+			DialogWindow					:= picKeyboard_dialog_window1
+			DialogWindowEye					:= picKeyboard_dialog_window_eye1
+			EyeIcon							:= picEye_small
+						
+			KeyboardButtonBackspace			:= picKeyboard_button_backspace1
+			KeyboardButtonClose				:= picKeyboard_button_cl1
+
+			KeyboardNextButtonNonActive		:= picKeyboard_cell_button_nonactive1
+			KeyboardNextButtonActive		:= picKeyboard_cell_button_nonactive1
+			KeyboardNextButton				:= picKeyboard_cell_button1
+			
+			KeyboardCellSymb6To10			:= picKeyboard_cell_610_buttons1
+			KeyboardCellSymb5				:= picKeyboard_cell_5_buttons1
+			KeyboardCellSymb4				:= picKeyboard_cell_4_buttons1
+			KeyboardCellSymb3				:= picKeyboard_cell_3_buttons1
+			KeyboardCellSymb2				:= picKeyboard_cell_2_buttons1
+			KeyboardCellSymb1				:= picKeyboard_cell_1_buttons1
+			KeyboardCellIndic 				:= picKeyboard_cell_spire1
+			
+			KeyBoardFont					:= fntSegoeUI36
+			ShiftFont						:= fntSegoeUI25
+			ButtonTextPosXUp 				:= 0			//posunutí textu tlačítka Up od středu
+			ButtonTextPosYUp 				:= 0			//posunutí textu tlačítka Up od středu  
+			ButtonTextPosXDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ButtonTextPosYDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ShiftButtonTextPosYUp			:= 14			//posunutí textu tlačítka up od středu pro tlačítko shift
+			ShiftButtonTextPosYDown			:= 14			//posunutí textu tlačítka down od středu pro tlačítko shift
+			ShiftButtPosX					:= -12			//posunutí obrázku tlačítka od středu pro tlačítko shift
+			IndicMovePosY					:= 3			// posunutí ukazatele buňky k buňce
+			CellMovePosY					:= 8			// posunutí buňky k tlačítku
+	
+			BClosePosX						:= 729			//pozice close tlačítka
+			BClosePosY						:= 6			//pozice close tlačítka	
+			
+			DialogFont						:= fntSegoeUI42
+			
+			CellShadowSize					:= 2			// velikost stínu buněk (kde nechci aby se vykresloval obdelník v background barvě;šířka, výška obdelníku; velikost buňky - CellShadowSize;)
+		
+			
+			DialogTextPosX					:= 20
+			DialogTextPosY					:= 10
+			DialogTextBoxWidth				:= 695
+
+			PlusOffsePosX					:= 20
+			PlusOffsePosY					:= 10
+		
+		Case 2	
+			KeyboardBackgroundWidth			:= 1024
+			KeyboardBackgroundHeight		:= 318
+			
+			KeyboardButtonUp				:= picKeyboard_button_enter_up2
+			KeyboardButtonDown				:= picKeyboard_button_enter_up2
+			KeyboardButton					:= picKeyboard_button_enter2
+			
+			ButtonCloseUp					:= picKeyboard_button_close_up2
+			ButtonCloseDown					:= picKeyboard_button_close_up2
+			ButtonClose						:= picKeyboard_button_close2
+			
+			KeyboardButtonEnterUp			:= picNumpad_button_enter_up2
+			KeyboardButtonEnterDown			:= picNumpad_button_enter_up2
+			KeyboardButtonEnter				:= picNumpad_button_enter2
+
+			DialogWindow					:= picKeyboard_dialog_window2
+			DialogWindowEye					:= picKeyboard_dialog_window_eye2
+			EyeIcon							:= picEye_small
+						
+			KeyboardButtonBackspace			:= picKeyboard_button_backspace1
+			KeyboardButtonClose				:= picKeyboard_button_cl1
+			
+			KeyboardNextButtonNonActive		:= picKeyboard_cell_button_nonactive1
+			KeyboardNextButtonActive		:= picKeyboard_cell_button_nonactive1
+			KeyboardNextButton				:= picKeyboard_cell_button1
+			
+			KeyboardCellSymb6To10			:= picKeyboard_cell_610_buttons1
+			KeyboardCellSymb5				:= picKeyboard_cell_5_buttons1
+			KeyboardCellSymb4				:= picKeyboard_cell_4_buttons1
+			KeyboardCellSymb3				:= picKeyboard_cell_3_buttons1
+			KeyboardCellSymb2				:= picKeyboard_cell_2_buttons1
+			KeyboardCellSymb1				:= picKeyboard_cell_1_buttons1
+			KeyboardCellIndic 				:= picKeyboard_cell_spire1
+						
+			KeyBoardFont					:= fntSegoeUI36
+			ShiftFont						:= fntSegoeUI25
+			ButtonTextPosXUp 				:= 0			//posunutí textu tlačítka Up od středu
+			ButtonTextPosYUp 				:= 0			//posunutí textu tlačítka Up od středu  
+			ButtonTextPosXDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ButtonTextPosYDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ShiftButtonTextPosYUp			:= 14		//posunutí textu tlačítka up od středu pro tlačítko shift
+			ShiftButtonTextPosYDown			:= 14			//posunutí textu tlačítka down od středu pro tlačítko shift
+			ShiftButtPosX					:= -12			//posunutí obrázku tlačítka od středu pro tlačítko shift
+			IndicMovePosY					:= 3			// posunutí ukazatele buňky k buňce
+			CellMovePosY					:= 8			// posunutí buňky k tlačítku
+			
+			BClosePosX						:= 930			//pozice close tlačítka
+			BClosePosY						:= 6			//pozice close tlačítka	
+			
+			DialogFont						:= fntSegoeUI42
+
+			CellShadowSize					:= 2			// velikost stínu buněk (kde nechci aby se vykresloval obdelník v background barvě;šířka, výška obdelníku; velikost buňky - CellShadowSize;)
+			
+			DialogTextPosX					:= 20
+			DialogTextPosY					:= 10
+			DialogTextBoxWidth				:= 890
+
+			PlusOffsePosX					:= 20
+			PlusOffsePosY					:= 10		
+					
+		Case 3	
+
+			KeyboardBackgroundWidth			:= 1080
+			KeyboardBackgroundHeight		:= 650
+			
+			KeyboardButtonUp				:= picKeyboard_button_enter_up
+			KeyboardButtonDown				:= picKeyboard_button_enter_up
+			KeyboardButton					:= picKeyboard_button_enter
+			
+			ButtonCloseUp					:= picKeyboard_button_close_up
+			ButtonCloseDown					:= picKeyboard_button_close_up
+			ButtonClose						:= picKeyboard_button_close
+			
+			KeyboardButtonEnterUp			:= picNumpad_button_enter_up_1080
+			KeyboardButtonEnterDown			:= picNumpad_button_enter_up_1080
+			KeyboardButtonEnter				:= picNumpad_button_enter_1080
+
+			DialogWindow					:= picKeyboard_dialog_window_1080_2
+			DialogWindowEye					:= picKeyboard_dialog_window_eye7
+			EyeIcon							:= picEye_large
+						
+			KeyboardButtonBackspace			:= picKeyboard_button_backspace
+			KeyboardButtonClose				:= picKeyboard_button_cl
+			
+			KeyboardNextButtonNonActive		:= picKeyboard_cell_button_nonActive
+			KeyboardNextButtonActive		:= picKeyboard_cell_button_nonActive
+			KeyboardNextButton				:= picKeyboard_cell_button
+			
+			KeyboardCellSymb6To10			:= picKeyboard_cell_610_buttons
+			KeyboardCellSymb5				:= picKeyboard_cell_5_buttons
+			KeyboardCellSymb4				:= picKeyboard_cell_4_buttons
+			KeyboardCellSymb3				:= picKeyboard_cell_3_buttons
+			KeyboardCellSymb2				:= picKeyboard_cell_2_buttons
+			KeyboardCellSymb1				:= picKeyboard_cell_1_buttons
+			KeyboardCellIndic 				:= picKeyboard_cell_spire
+						
+			KeyBoardFont					:= fntSegoeUI72
+			ShiftFont						:= fntSegoeUI50
+			ButtonTextPosXUp 				:= 0			//posunutí textu tlačítka Up od středu
+			ButtonTextPosYUp 				:= 0			//posunutí textu tlačítka Up od středu  
+			ButtonTextPosXDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ButtonTextPosYDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ShiftButtonTextPosYUp			:= 35			//posunutí textu tlačítka up od středu pro tlačítko shift
+			ShiftButtonTextPosYDown			:= 35			//posunutí textu tlačítka down od středu pro tlačítko shift
+			ShiftButtPosX					:= -35			//posunutí obrázku tlačítka od středu pro tlačítko shift
+			IndicMovePosY					:= 6			// posunutí ukazatele buňky k buňce
+			CellMovePosY					:= 12			// posunutí buňky k tlačítku
+	
+			BClosePosX						:= 909			//pozice close tlačítka
+			BClosePosY						:= 15			//pozice close tlačítka	
+
+			CellShadowSize					:= 5			// velikost stínu buněk (kde nechci aby se vykresloval obdelník v background barvě;šířka, výška obdelníku; velikost buňky - CellShadowSize;)
+				
+			DialogFont						:= fntSegoeUI90
+			
+			DialogTextPosX					:= 54
+			DialogTextPosY					:= 24
+			DialogTextBoxWidth				:= 830
+
+			PlusOffsePosX					:= 30
+			PlusOffsePosY					:= 20
+				
+		Case 4
+			KeyboardBackgroundWidth			:= 1136
+			KeyboardBackgroundHeight		:= 320
+			
+			KeyboardButtonUp				:= picKeyboard_button_enter_up3
+			KeyboardButtonDown				:= picKeyboard_button_enter_up3
+			KeyboardButton					:= picKeyboard_button_enter3
+			
+			ButtonCloseUp					:= picKeyboard_button_close_up2
+			ButtonCloseDown					:= picKeyboard_button_close_up2
+			ButtonClose						:= picKeyboard_button_close2
+			
+			KeyboardButtonEnterUp			:= picNumpad_button_enter_up3
+			KeyboardButtonEnterDown			:= picNumpad_button_enter_up3
+			KeyboardButtonEnter				:= picNumpad_button_enter3
+
+			DialogWindow					:= picKeyboard_dialog_window3
+			DialogWindowEye					:= picKeyboard_dialog_window_eye3
+			EyeIcon							:= picEye_small
+						
+			KeyboardButtonBackspace			:= picKeyboard_button_backspace1
+			KeyboardButtonClose				:= picKeyboard_button_cl1
+			
+			KeyboardNextButtonNonActive		:= picKeyboard_cell_button_nonactive1
+			KeyboardNextButtonActive		:= picKeyboard_cell_button_nonactive1
+			KeyboardNextButton				:= picKeyboard_cell_button1
+			
+			KeyboardCellSymb6To10			:= picKeyboard_cell_610_buttons1
+			KeyboardCellSymb5				:= picKeyboard_cell_5_buttons1
+			KeyboardCellSymb4				:= picKeyboard_cell_4_buttons1
+			KeyboardCellSymb3				:= picKeyboard_cell_3_buttons1
+			KeyboardCellSymb2				:= picKeyboard_cell_2_buttons1
+			KeyboardCellSymb1				:= picKeyboard_cell_1_buttons1
+			KeyboardCellIndic 				:= picKeyboard_cell_spire1
+						
+			KeyBoardFont					:= fntSegoeUI36
+			ShiftFont						:= fntSegoeUI25
+			ButtonTextPosXUp 				:= 0			//posunutí textu tlačítka Up od středu
+			ButtonTextPosYUp 				:= 0			//posunutí textu tlačítka Up od středu  
+			ButtonTextPosXDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ButtonTextPosYDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ShiftButtonTextPosYUp			:= 14			//posunutí textu tlačítka up od středu pro tlačítko shift
+			ShiftButtonTextPosYDown			:= 14			//posunutí textu tlačítka down od středu pro tlačítko shift
+			ShiftButtPosX					:= -12			//posunutí obrázku tlačítka od středu pro tlačítko shift
+			IndicMovePosY					:= 3			// posunutí ukazatele buňky k buňce
+			CellMovePosY					:= 8			// posunutí buňky k tlačítku
+			
+			BClosePosX						:= 1045			//pozice close tlačítka
+			BClosePosY						:= 5			//pozice close tlačítka	
+			
+			DialogFont						:= fntSegoeUI42
+		
+			CellShadowSize					:= 2			// velikost stínu buněk (kde nechci aby se vykresloval obdelník v background barvě;šířka, výška obdelníku; velikost buňky - CellShadowSize;)
+			
+			DialogTextPosX					:= 20
+			DialogTextPosY					:= 10
+			DialogTextBoxWidth				:= 1002
+
+			PlusOffsePosX					:= 20
+			PlusOffsePosY					:= 10
+		Case 5
+			KeyboardBackgroundWidth			:= 1280
+			KeyboardBackgroundHeight		:= 395
+			
+			KeyboardButtonUp				:= picKeyboard_button_enter_up4
+			KeyboardButtonDown				:= picKeyboard_button_enter_up4
+			KeyboardButton					:= picKeyboard_button_enter4
+			
+			ButtonCloseUp					:= picKeyboard_button_close_up4
+			ButtonCloseDown					:= picKeyboard_button_close_up4
+			ButtonClose						:= picKeyboard_button_close4
+			
+			KeyboardButtonEnterUp			:= picNumpad_button_enter_up4
+			KeyboardButtonEnterDown			:= picNumpad_button_enter_up4
+			KeyboardButtonEnter				:= picNumpad_button_enter4
+
+			DialogWindow					:= picKeyboard_dialog_window4
+			DialogWindowEye					:= picKeyboard_dialog_window_eye4
+			EyeIcon							:= picEye_medium
+						
+			KeyboardButtonBackspace			:= picKeyboard_button_backspace4
+			KeyboardButtonClose				:= picKeyboard_button_cl4
+
+			KeyboardNextButtonNonActive		:= picKeyboard_cell_button_nonactive4
+			KeyboardNextButtonActive		:= picKeyboard_cell_button_nonactive4
+			KeyboardNextButton				:= picKeyboard_cell_button4
+			
+			KeyboardCellSymb6To10			:= picKeyboard_cell_610_buttons4
+			KeyboardCellSymb5				:= picKeyboard_cell_5_buttons4
+			KeyboardCellSymb4				:= picKeyboard_cell_4_buttons4
+			KeyboardCellSymb3				:= picKeyboard_cell_3_buttons4
+			KeyboardCellSymb2				:= picKeyboard_cell_2_buttons4
+			KeyboardCellSymb1				:= picKeyboard_cell_1_buttons4
+			KeyboardCellIndic 				:= picKeyboard_cell_spire4
+
+			KeyBoardFont					:= fntSegoeUI42
+			ShiftFont						:= fntSegoeUI30
+			ButtonTextPosXUp 				:= 0			//posunutí textu tlačítka Up od středu
+			ButtonTextPosYUp 				:= 0			//posunutí textu tlačítka Up od středu  
+			ButtonTextPosXDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ButtonTextPosYDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ShiftButtonTextPosYUp			:= 18			//posunutí textu tlačítka up od středu pro tlačítko shift
+			ShiftButtonTextPosYDown			:= 18			//posunutí textu tlačítka down od středu pro tlačítko shift
+			ShiftButtPosX					:= -15			//posunutí obrázku tlačítka od středu pro tlačítko shift
+			IndicMovePosY					:= 6			// posunutí ukazatele buňky k buňce
+			CellMovePosY					:= 12			// posunutí buňky k tlačítku
+			
+			BClosePosX						:= 1165			//pozice close tlačítka
+			BClosePosY						:= 8			//pozice close tlačítka	
+			
+			DialogFont						:= fntSegoeUI54
+			
+			CellShadowSize					:= 3			// velikost stínu buněk (kde nechci aby se vykresloval obdelník v background barvě;šířka, výška obdelníku; velikost buňky - CellShadowSize;)
+			
+			DialogTextPosX					:= 30
+			DialogTextPosY					:= 12
+			DialogTextBoxWidth				:= 1110
+
+			PlusOffsePosX					:= 20
+			PlusOffsePosY					:= 10		
+		Case 6
+			KeyboardBackgroundWidth			:= 1366
+			KeyboardBackgroundHeight		:= 385
+			
+			KeyboardButtonUp				:= picKeyboard_button_enter_up5
+			KeyboardButtonDown				:= picKeyboard_button_enter_up5
+			KeyboardButton					:= picKeyboard_button_enter5
+			
+			ButtonCloseUp					:= picKeyboard_button_close_up4
+			ButtonCloseDown					:= picKeyboard_button_close_up4
+			ButtonClose						:= picKeyboard_button_close4
+			
+			KeyboardButtonEnterUp			:= picNumpad_button_enter_up5
+			KeyboardButtonEnterDown			:= picNumpad_button_enter_up5
+			KeyboardButtonEnter				:= picNumpad_button_enter5
+			
+			DialogWindow					:= picKeyboard_dialog_window5
+			DialogWindowEye					:= picKeyboard_dialog_window_eye5
+			EyeIcon							:= picEye_medium
+						
+			KeyboardButtonBackspace			:= picKeyboard_button_backspace4
+			KeyboardButtonClose				:= picKeyboard_button_cl4
+
+			KeyboardNextButtonNonActive		:= picKeyboard_cell_button_nonactive4
+			KeyboardNextButtonActive		:= picKeyboard_cell_button_nonactive4
+			KeyboardNextButton				:= picKeyboard_cell_button4
+			
+			KeyboardCellSymb6To10			:= picKeyboard_cell_610_buttons4
+			KeyboardCellSymb5				:= picKeyboard_cell_5_buttons4
+			KeyboardCellSymb4				:= picKeyboard_cell_4_buttons4
+			KeyboardCellSymb3				:= picKeyboard_cell_3_buttons4
+			KeyboardCellSymb2				:= picKeyboard_cell_2_buttons4
+			KeyboardCellSymb1				:= picKeyboard_cell_1_buttons4
+			KeyboardCellIndic 				:= picKeyboard_cell_spire4
+			
+			KeyBoardFont					:= fntSegoeUI42
+			ShiftFont						:= fntSegoeUI30
+			ButtonTextPosXUp 				:= 0			//posunutí textu tlačítka Up od středu
+			ButtonTextPosYUp 				:= 0			//posunutí textu tlačítka Up od středu  
+			ButtonTextPosXDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ButtonTextPosYDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ShiftButtonTextPosYUp			:= 18			//posunutí textu tlačítka up od středu pro tlačítko shift
+			ShiftButtonTextPosYDown			:= 18			//posunutí textu tlačítka down od středu pro tlačítko shift
+			ShiftButtPosX					:= -15			//posunutí obrázku tlačítka od středu pro tlačítko shift
+			IndicMovePosY					:= 3			// posunutí ukazatele buňky k buňce
+			CellMovePosY					:= 12			// posunutí buňky k tlačítku
+				
+			BClosePosX						:= 1251			//pozice close tlačítka
+			BClosePosY						:= 8			//pozice close tlačítka	
+			
+			DialogFont						:= fntSegoeUI54
+			
+			CellShadowSize					:= 3			// velikost stínu buněk (kde nechci aby se vykresloval obdelník v background barvě;šířka, výška obdelníku; velikost buňky - CellShadowSize;)
+	
+			DialogTextPosX					:= 30
+			DialogTextPosY					:= 12
+			DialogTextBoxWidth				:= 1196
+
+			PlusOffsePosX					:= 20
+			PlusOffsePosY					:= 10			
+		Case 7	
+			KeyboardBackgroundWidth			:= 1920
+			KeyboardBackgroundHeight		:= 759
+			
+			KeyboardButtonUp				:= picKeyboard_button_enter_up
+			KeyboardButtonDown				:= picKeyboard_button_enter_up
+			KeyboardButton					:= picKeyboard_button_enter
+			
+			ButtonCloseUp					:= picKeyboard_button_close_up
+			ButtonCloseDown					:= picKeyboard_button_close_up
+			ButtonClose						:= picKeyboard_button_close
+			
+			KeyboardButtonEnterUp			:= picNumpad_button_enter_up
+			KeyboardButtonEnterDown			:= picNumpad_button_enter_up
+			KeyboardButtonEnter				:= picNumpad_button_enter
+
+			DialogWindow					:= picKeyboard_dialog_window_1920
+			DialogWindowEye					:= picKeyboard_dialog_window_1920_eye
+			EyeIcon							:= picEye_large
+						
+			KeyboardButtonBackspace			:= picKeyboard_button_backspace
+			KeyboardButtonClose				:= picKeyboard_button_cl
+			
+			KeyboardNextButtonNonActive		:= picKeyboard_cell_button_nonActive
+			KeyboardNextButtonActive		:= picKeyboard_cell_button_nonActive
+			KeyboardNextButton				:= picKeyboard_cell_button
+			
+			KeyboardCellSymb6To10			:= picKeyboard_cell_610_buttons
+			KeyboardCellSymb5				:= picKeyboard_cell_5_buttons
+			KeyboardCellSymb4				:= picKeyboard_cell_4_buttons
+			KeyboardCellSymb3				:= picKeyboard_cell_3_buttons
+			KeyboardCellSymb2				:= picKeyboard_cell_2_buttons
+			KeyboardCellSymb1				:= picKeyboard_cell_1_buttons
+			KeyboardCellIndic 				:= picKeyboard_cell_spire
+						
+			KeyBoardFont					:= fntSegoeUI72
+			ShiftFont						:= fntSegoeUI50
+			ButtonTextPosXUp 				:= 0			//posunutí textu tlačítka Up od středu
+			ButtonTextPosYUp 				:= 0			//posunutí textu tlačítka Up od středu  
+			ButtonTextPosXDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ButtonTextPosYDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ShiftButtonTextPosYUp			:= 35			//posunutí textu tlačítka up od středu pro tlačítko shift
+			ShiftButtonTextPosYDown			:= 35			//posunutí textu tlačítka down od středu pro tlačítko shift
+			ShiftButtPosX					:= -35			//posunutí obrázku tlačítka od středu pro tlačítko shift
+			IndicMovePosY					:= 6			// posunutí ukazatele buňky k buňce
+			CellMovePosY					:= 12			// posunutí buňky k tlačítku
+	
+			BClosePosX						:= 1747			//pozice close tlačítka
+			BClosePosY						:= 15			//pozice close tlačítka	
+
+			CellShadowSize					:= 5			// velikost stínu buněk (kde nechci aby se vykresloval obdelník v background barvě;šířka, výška obdelníku; velikost buňky - CellShadowSize;)
+				
+			DialogFont						:= fntSegoeUI90
+			
+			DialogTextPosX					:= 54
+			DialogTextPosY					:= 24
+			DialogTextBoxWidth				:= 1670
+
+			PlusOffsePosX					:= 30
+			PlusOffsePosY					:= 20
+		
+		Case 8	
+			KeyboardBackgroundWidth			:= 2048
+			KeyboardBackgroundHeight		:= 759
+			
+			KeyboardButtonUp				:= picKeyboard_button_enter_up
+			KeyboardButtonDown				:= picKeyboard_button_enter_up
+			KeyboardButton					:= picKeyboard_button_enter
+			
+			ButtonCloseUp					:= picKeyboard_button_close_up
+			ButtonCloseDown					:= picKeyboard_button_close_up
+			ButtonClose						:= picKeyboard_button_close
+			
+			KeyboardButtonEnterUp			:= picNumpad_button_enter_up
+			KeyboardButtonEnterDown			:= picNumpad_button_enter_up
+			KeyboardButtonEnter				:= picNumpad_button_enter
+
+			DialogWindow					:= picKeyboard_dialog_window
+			DialogWindowEye					:= picKeyboard_dialog_window_eye
+			EyeIcon							:= picEye_large
+						
+			KeyboardButtonBackspace			:= picKeyboard_button_backspace
+			KeyboardButtonClose				:= picKeyboard_button_cl
+			
+			KeyboardNextButtonNonActive		:= picKeyboard_cell_button_nonActive
+			KeyboardNextButtonActive		:= picKeyboard_cell_button_nonActive
+			KeyboardNextButton				:= picKeyboard_cell_button
+			
+			KeyboardCellSymb6To10			:= picKeyboard_cell_610_buttons
+			KeyboardCellSymb5				:= picKeyboard_cell_5_buttons
+			KeyboardCellSymb4				:= picKeyboard_cell_4_buttons
+			KeyboardCellSymb3				:= picKeyboard_cell_3_buttons
+			KeyboardCellSymb2				:= picKeyboard_cell_2_buttons
+			KeyboardCellSymb1				:= picKeyboard_cell_1_buttons
+			KeyboardCellIndic 				:= picKeyboard_cell_spire
+						
+			KeyBoardFont					:= fntSegoeUI72
+			ShiftFont						:= fntSegoeUI50
+			ButtonTextPosXUp 				:= 0			//posunutí textu tlačítka Up od středu
+			ButtonTextPosYUp 				:= 0			//posunutí textu tlačítka Up od středu  
+			ButtonTextPosXDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ButtonTextPosYDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ShiftButtonTextPosYUp			:= 35			//posunutí textu tlačítka up od středu pro tlačítko shift
+			ShiftButtonTextPosYDown			:= 35			//posunutí textu tlačítka down od středu pro tlačítko shift
+			ShiftButtPosX					:= -35			//posunutí obrázku tlačítka od středu pro tlačítko shift
+			IndicMovePosY					:= 6			// posunutí ukazatele buňky k buňce
+			CellMovePosY					:= 12			// posunutí buňky k tlačítku
+	
+			BClosePosX						:= 1875			//pozice close tlačítka
+			BClosePosY						:= 15			//pozice close tlačítka	
+
+			CellShadowSize					:= 5			// velikost stínu buněk (kde nechci aby se vykresloval obdelník v background barvě;šířka, výška obdelníku; velikost buňky - CellShadowSize;)
+				
+			DialogFont						:= fntSegoeUI90
+			
+			DialogTextPosX					:= 54
+			DialogTextPosY					:= 24
+			DialogTextBoxWidth				:= 1779
+
+			PlusOffsePosX					:= 30
+			PlusOffsePosY					:= 20	
+						
+	Case 9	
+			KeyboardBackgroundWidth			:= 2560
+			KeyboardBackgroundHeight		:= 759
+			
+			KeyboardButtonUp				:= picKeyboard_button_enter_up6
+			KeyboardButtonDown				:= picKeyboard_button_enter_up6
+			KeyboardButton					:= picKeyboard_button_enter6
+			
+			ButtonCloseUp					:= picKeyboard_button_close_up6
+			ButtonCloseDown					:= picKeyboard_button_close_up6
+			ButtonClose						:= picKeyboard_button_close6
+			
+			KeyboardButtonEnterUp			:= picNumpad_button_enter_up6
+			KeyboardButtonEnterDown			:= picNumpad_button_enter_up6
+			KeyboardButtonEnter				:= picNumpad_button_enter6
+
+			DialogWindow					:= picKeyboard_dialog_window6
+			DialogWindowEye					:= picKeyboard_dialog_window_eye6
+			EyeIcon							:= picEye_large
+						
+			KeyboardButtonBackspace			:= picKeyboard_button_backspace
+			KeyboardButtonClose				:= picKeyboard_button_cl
+			
+			KeyboardNextButtonNonActive		:= picKeyboard_cell_button_nonActive
+			KeyboardNextButtonActive		:= picKeyboard_cell_button_nonActive
+			KeyboardNextButton				:= picKeyboard_cell_button
+			
+			KeyboardCellSymb6To10			:= picKeyboard_cell_610_buttons
+			KeyboardCellSymb5				:= picKeyboard_cell_5_buttons
+			KeyboardCellSymb4				:= picKeyboard_cell_4_buttons
+			KeyboardCellSymb3				:= picKeyboard_cell_3_buttons
+			KeyboardCellSymb2				:= picKeyboard_cell_2_buttons
+			KeyboardCellSymb1				:= picKeyboard_cell_1_buttons
+			KeyboardCellIndic 				:= picKeyboard_cell_spire
+			
+			KeyBoardFont					:= fntSegoeUI72
+			ShiftFont						:= fntSegoeUI50
+			ButtonTextPosXUp 				:= 0			//posunutí textu tlačítka Up od středu
+			ButtonTextPosYUp 				:= 0			//posunutí textu tlačítka Up od středu  
+			ButtonTextPosXDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ButtonTextPosYDown 				:= 0 			//posunutí textu tlačítka Down od středu 
+			ShiftButtonTextPosYUp			:= 35			//posunutí textu tlačítka up od středu pro tlačítko shift
+			ShiftButtonTextPosYDown			:= 35			//posunutí textu tlačítka down od středu pro tlačítko shift
+			ShiftButtPosX					:= -35			//posunutí obrázku tlačítka od středu pro tlačítko shift
+			IndicMovePosY					:= 6			// posunutí ukazatele buňky k buňce
+			CellMovePosY					:= 12			// posunutí buňky k tlačítku
+	
+			BClosePosX						:= 2324			//pozice close tlačítka
+			BClosePosY						:= 15			//pozice close tlačítka	
+			
+			CellShadowSize					:= 5			// velikost stínu buněk (kde nechci aby se vykresloval obdelník v background barvě;šířka, výška obdelníku; velikost buňky - CellShadowSize;)
+			
+			DialogFont						:= fntSegoeUI90
+			
+			DialogTextPosX					:= 54
+			DialogTextPosY					:= 24
+			DialogTextBoxWidth				:= 2230//1109//2230	
+
+			PlusOffsePosX					:= 30
+			PlusOffsePosY					:= 20		
+		End Select
+		
+		ButtonNumberFirstLine 			:= 4 //počet kláves v první řadě
+		ButtonNumberSecondLine			:= 4 // počet kláves v druhé řadě
+		ButtonNumberThLine				:= 3 // počet kláves v třetí řadě	
+		ButtonNumberFourLine			:= 4 // počet kláves v čtvrté řadě
+					
+		NumberLineButtons				:= 4 // počet řad kláves
+		MaxButtons						:= 15//13
+		ButtonDialogTextColor			:= _COLOR_WHITE
+		RectangleColor					:= BackgroundColor
+		KurzorColor						:= 	_COLOR_WHITE
+	End Function
+	
+End GraphicClass

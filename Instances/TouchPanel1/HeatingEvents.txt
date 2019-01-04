@@ -1,0 +1,187 @@
+////navigation HEATING-THEMROSTAT
+//
+//
+//
+//Private Process NavigationBarHeating_VerticalScrollListBox1_OnSelect( newselecteditem As Long ) Link NavigationBarHeating.VerticalScrollListBox1.OnSelect
+////	DebugPrintFormat ("-NavigationBarHeating.newselecteditem: {n}",newselecteditem)
+//	Main.InstanceClassModuleThermostat.ShowHeatingPage1(newselecteditem)	
+//End Process
+//
+//Private Function NavigationBarHeating_OnHideObject(  ) Link NavigationBarHeating.OnHideObject
+//	PageHeating.HideObject()
+//End Function
+//
+//Private Function NavigationBarHeating_OnShowObject(  ) Link NavigationBarHeating.OnShowObject
+//	Main.InstanceClassModuleThermostat.ShowHeatingPage1(NavigationBarHeating.VerticalScrollListBox1.GetSelectedItem())
+//End Function
+//
+//Private Process PageHeating_HeatingPresetAuto_OnPush(  ) Link PageHeating.HeatingPresetAuto.OnPush
+//	//Main.CloudInterface.KNX_Thermostat_SetThermostatPresetMode(Main.InstanceClassModuleThermostat.GetThermostatIndex(), HVAC_MODE_AUTO)
+//End Process
+//
+//
+//Private Process PageHeating_HeatingPresetComfort_OnPush(  ) Link PageHeating.HeatingPresetComfort.OnPush
+//			DebugPrintFormat ("Set Comfort  ")
+//	//Main.CloudInterface.KNX_Thermostat_SetThermostatPresetMode(Main.InstanceClassModuleThermostat.GetThermostatIndex(), HVAC_MODE_COMFORT)
+//End Process
+//
+//Private Process PageHeating_HeatingPresetEco_OnPush(  ) Link PageHeating.HeatingPresetEco.OnPush
+//			DebugPrintFormat ("Set Eco  ")
+//	//Main.CloudInterface.KNX_Thermostat_SetThermostatPresetMode(Main.InstanceClassModuleThermostat.GetThermostatIndex(), HVAC_MODE_ECO)
+//End Process
+//
+//Private Process PageHeating_HeatingPresetProtection_OnPush(  ) Link PageHeating.HeatingPresetProtection.OnPush	
+//			DebugPrintFormat ("Set Protect  ")
+//	//Main.CloudInterface.KNX_Thermostat_SetThermostatPresetMode(Main.InstanceClassModuleThermostat.GetThermostatIndex(), HVAC_MODE_PROTECTION1)
+//End Process
+//
+//Private Process PageHeating_HeatingTemperatureComfort_OnValueChange( newvalue As Double ) Link PageHeating.HeatingTemperatureComfort.OnValueChange
+//			DebugPrintFormat ("COMFORT NEWVALUE :{N} ", newvalue)
+//	//Main.CloudInterface.KNX_Thermostat_SetThermostatComfortTemperature(Main.InstanceClassModuleThermostat.GetThermostatIndex(), newvalue)
+//End Process
+//
+//Private Process PageHeating_HeatingTemperatureEco_OnValueChange( newvalue As Double ) Link PageHeating.HeatingTemperatureEco.OnValueChange
+//			DebugPrintFormat ("ECO NEWVALUE :{N} ", newvalue)
+//	//Main.CloudInterface.KNX_Thermostat_SetThermostatEcoTemperature(Main.InstanceClassModuleThermostat.GetThermostatIndex(), newvalue)
+//End Process
+//
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////
+////Private Process Controller1_KNX_OnThermostatChange( thermostats As AllThermostatsStructure ) Link Controller1.KNX_Thermostat.OnThermostatChange
+////	
+////	Main.MySiteConfiguration.Hvac.AllThermostats := thermostats
+////	
+////	//Main.PageSelectSemaphore.Lock()
+////	Main.InstanceClassModuleThermostat.OnDataChange()
+////	ModuleHome.UpdatePageHome()
+////	
+////	//Main.PageSelectSemaphore.Unlock()
+////End Process
+////
+////Private Process PageHeating_CalendarButton_OnPush(  ) Link PageHeating.CalendarButton.OnPush
+////	Var temp As CalendarStructrue
+////	Var calendarindex As Long
+////	
+////	calendarindex := Main.MySiteConfiguration.Hvac.AllThermostats.Thermostat[Main.InstanceClassModuleThermostat.GetThermostatIndex()].CalendarIndex
+////
+////	temp := Main.MyCalendar.Calendar[calendarindex]
+////		
+////	//CalendarDemo(myD)
+////
+////	CalendarUI1.SetCalendarData(temp)
+////	
+////	//**calendardemo
+////	CalendarUI1.ShowObject()
+////	
+////End Process
+////
+////Private Process CalendarUI1_CalendarIsChanged( temp As CalendarStructrue ) Link CalendarUI1.CalendarIsChanged
+////	Var index As Long 
+////	
+////	Var i As Long
+//// 	Var mytime As _TimeStructure
+//// 	Var N As Long
+//// 	TimeToTimeStructure(GetLocalTime(),mytime)
+////		
+////	index := temp.BackIndexToArray
+////	
+////	DebugPrintFormat("******************* CalendarUI1_CalendarIsChanged {n}",index)	
+////	
+////	//u sebe
+////	Main.MyCalendar.Calendar[index] := temp
+////	
+////	//v controleru
+////	Controller1.Main.SiteCalendar.Calendar[index] := temp
+////	
+////	//prepocitat vystup kalendare
+////	Controller1.KNX_Thermostat.ProcessThermostat(index)		
+////		
+////	//ulozit
+////	Controller1.SAVELOAD.SaveCalendars1()
+////	
+////	
+////	
+//////debug		
+////// For i := 1 To 96
+//////  DebugPrintFormat("i:{n} Time:{n02}:{n02} - {n02}:{n02} EnumState:{n}",i,((i-1)*15)/60,((i-1)*15)Mod 60 + 1,(i*15)/60,(i*15)Mod 60,temp.Day[2].TimeLine[i].EnumState)
+////// End For
+////// N := (mytime.Hour*60 + mytime.Minute)/15 + 1
+////// 
+////// DebugPrintFormat("{n}:{n} index {n} EnumState:{n}",mytime.Hour,mytime.Minute,N,temp.Day[2].TimeLine[N].EnumState)
+//// 
+////End Process
+//
+//
+////Private Function CalendarDemo(ByRef data As Namespace "CUE.GraphicCollection.Calendar.1".CalendarStructrue )
+////	
+////	Var i As Long
+////	Var myD As Namespace "CUE.GraphicCollection.Calendar.1".CalendarStructrue
+////	
+////	myD.Day[1].Selected := True
+////	myD.Day[2].Selected := True
+////	myD.Day[3].Selected := True
+////	myD.Day[4].Selected := True
+////	myD.Day[5].Selected := True
+////	myD.Day[6].Selected := True
+////	myD.Day[7].Selected := True
+////	
+////	For i := 1 To 40
+////		myD.Day[1].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_STANDARD	
+////		myD.Day[2].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_STANDARD	
+////		myD.Day[3].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_STANDARD	
+////		myD.Day[4].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_STANDARD	
+////		myD.Day[5].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_STANDARD	
+////		myD.Day[6].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_COMFORT
+////		myD.Day[7].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_COMFORT
+////	End For
+////	For i := 41 To 51
+////		myD.Day[1].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_STANDARD
+////		myD.Day[2].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_STANDARD	
+////		myD.Day[3].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_STANDARD	
+////		myD.Day[4].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_STANDARD	
+////		myD.Day[5].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_STANDARD	
+////		myD.Day[6].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_STANDARD
+////		myD.Day[7].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_STANDARD		
+////	End For
+////			
+////	For i := 52 To 64
+////		myD.Day[1].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_COMFORT
+////		myD.Day[2].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_COMFORT	
+////		myD.Day[3].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_COMFORT	
+////		myD.Day[4].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_COMFORT	
+////		myD.Day[5].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_COMFORT	
+////		myD.Day[6].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_STANDARD
+////		myD.Day[7].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_STANDARD		
+////	End For
+////	
+////	For i := 65 To 87
+////		myD.Day[1].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_STANDARD
+////		myD.Day[2].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_STANDARD	
+////		myD.Day[3].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_STANDARD	
+////		myD.Day[4].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_STANDARD	
+////		myD.Day[5].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_STANDARD	
+////		myD.Day[6].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_STANDARD
+////		myD.Day[7].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_STANDARD		
+////	End For
+////	
+////	For i := 88 To 96
+////		myD.Day[1].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_COMFORT
+////		myD.Day[2].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_COMFORT	
+////		myD.Day[3].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_COMFORT	
+////		myD.Day[4].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_COMFORT	
+////		myD.Day[5].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_COMFORT	
+////		myD.Day[6].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_COMFORT
+////		myD.Day[7].TimeLine[i].EnumState := Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_COMFORT	
+////	End For
+////	
+////	myD.EnumStates_items[Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_COMFORT].Color := COLOR_COMFORT
+////	myD.EnumStates_items[Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_COMFORT].Enable := True
+////	myD.EnumStates_items[Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_COMFORT].Label := "Comfort"
+////	
+////	myD.EnumStates_items[Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_STANDARD].Color := 0
+////	myD.EnumStates_items[Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_STANDARD].Enable := False
+////	myD.EnumStates_items[Namespace "CUE.GraphicCollection.Calendar.1".ENUM_STATE_STANDARD].Label := "Standard"
+////	
+////	data := myD
+////
+////End Function

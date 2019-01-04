@@ -1,0 +1,738 @@
+
+Private Structure SunriseSunsetEventStructure
+	Private Var Type As Long
+	Private Var EventTime As Time
+	Private Var	EventIsValid As Boolean
+End Structure
+
+
+Global Class SunriseSunsetTimer
+
+Private Property MyLatitude As Double := 51.5 WithAttributes
+{
+	PropertyGroup := "Location",
+	DisplayName := "Latitude"
+}
+
+Private Property MyLongitude As Double := 0 WithAttributes
+{
+	PropertyGroup := "Location",
+	DisplayName := "Longitude"
+}
+
+Private Property MyZenith As Double := ZENITH_CIVIL WithAttributes
+{
+	PropertyGroup := "Behavior",
+	DisplayName := "Zenith",
+	EditMode := "Enum; 'Official' := 90.833, 'Civil' := 96, 'Nautical' := 102, 'Astronomical' := 108"
+}
+
+Private Property RaiseEvents As Boolean := True WithAttributes
+{
+	PropertyGroup := "Behavior",
+	DisplayName := "EnableEvents"
+}
+
+Global Event OnSunrise As Process ()
+Global Event OnSunset As Process ()
+
+Private Const EVENT_SUNRISE As Long := 1
+Private Const EVENT_SUNSET As Long := 2
+Private Const EVENT_MIDNIGHT As Long := 3
+Private Const EVENT_NOW As Long := 4
+Private Const EVENT_PERMANENT_DAY As Long := 5
+Private Const EVENT_PERMANENT_NIGHT As Long := 6
+
+Global Const IS_DAYTIME As Long := 1
+Global Const IS_NIGHTTIME As Long := 0
+
+Global Const COMMAND_OK As Long := -1
+Global Const EXCEPTION_PERMANENT_DAY As Long := 1
+Global Const EXCEPTION_PERMANENT_NIGHT As Long := 2
+Global Const EXCEPTION_SUNRISE_ONLY As Long := 3
+Global Const EXCEPTION_SUNSET_ONLY As Long := 4
+Global Const ERROR_WRONG_PARAMETERS As Long := 5
+Global Const ERROR_FATAL As Long := 6
+Global Const ERROR_WRONG_TIME As Long := 7
+Global Const ZENITH_OFFICIAL As Double := 90.833
+Global Const ZENITH_CIVIL As Double := 96
+Global Const ZENITH_NAUTICAL As Double := 102
+Global Const ZENITH_ASTRONOMICAL As Double := 108
+Private Const NO_TIME As Time := :.0
+
+Private Const MAX_EVENTS As Long := 3
+Private Const MAX_ISDAY_DATA As Long := 11
+
+Private Var MyLock As _Semaphore
+
+
+Private Function Init ()
+
+	If RaiseEvents Then
+		StartProcess MyScheduler()
+	End If
+
+End Function
+
+
+Global Function GetLongitude () As Double
+
+	Return Value MyLongitude
+	
+End Function
+
+
+Global Function GetLatitude () As Double
+
+	Return Value MyLatitude
+	
+End Function
+
+
+Global Function SetLocation (newlatitude As Double, newlongitude As Double) As Long
+
+	If newlatitude < -90 Or newlatitude > 90 Then
+		Return Value ERROR_WRONG_PARAMETERS
+	End If
+	
+	If newlongitude < -180 Or newlongitude > 180 Then
+		Return Value ERROR_WRONG_PARAMETERS
+	End If
+
+	MyLock.Lock ()
+	StopProcess MyScheduler ()
+	
+	MyLongitude := newlongitude
+	MyLatitude := newlatitude
+		
+	If RaiseEvents Then
+		StartProcess MyScheduler()
+	End If
+	MyLock.Unlock ()
+	
+	Return Value COMMAND_OK
+	
+End Function
+
+
+Global Function GetLocation (ByRef latitude As Double, ByRef longitude As Double)
+
+	latitude := MyLatitude
+	longitude := MyLongitude
+	
+End Function
+
+
+Global Function GetZenith () As Double
+
+	Return Value MyZenith
+	
+End Function
+
+
+Global Function SetZenith (newzenith As Double) As Long
+
+	If newzenith < 90 Or newzenith > ZENITH_ASTRONOMICAL Then
+		Return Value ERROR_WRONG_PARAMETERS
+	End If
+
+	MyLock.Lock ()
+	StopProcess MyScheduler ()
+	
+	MyZenith := newzenith
+		
+	If RaiseEvents Then
+		StartProcess MyScheduler()
+	End If
+	MyLock.Unlock ()
+	
+	Return Value COMMAND_OK
+	
+End Function
+
+
+Global Function GetEnableEvents () As Boolean
+
+	Return Value RaiseEvents
+	
+End Function
+
+
+Global Function SetEnableEvents (newenableevents As Boolean)
+
+	MyLock.Lock ()
+	RaiseEvents := newenableevents
+	If newenableevents Then
+		StartProcess MyScheduler()
+	Else
+		StopProcess MyScheduler ()
+	End If
+	MyLock.Unlock ()
+	
+End Function
+
+
+Private Process MyScheduler ()
+Private Var Now As Time
+Private Var NextSunrise As Time
+Private Var NextSunset As Time
+Private Var NextMidnight As Time
+Private Var TempTime As Time
+Private Var MyError As Long
+Private Var LastIsDay As Long
+Private Var NowIsDay As Long
+Private Var MyEvents[MAX_EVENTS] As SunriseSunsetEventStructure
+
+	If MyLatitude >= -66 And MyLatitude <= 66 Then
+
+		Do
+			MyLock.Lock ()
+			Now := GetUTCTime()
+			GetSunriseSunsetEx(Now, MyLatitude, MyLongitude, MyZenith, NextSunrise, NextSunset)
+			
+			MyEvents[1].EventTime := NextSunrise
+			MyError := IsSameDay(Now, NextSunrise)
+			Select MyError
+				Case -1
+					GetSunriseSunsetEx(Now + 1:0:0:0.0, MyLatitude, MyLongitude, MyZenith, MyEvents[1].EventTime, TempTime)
+				Case 1
+					GetSunriseSunsetEx(Now - 1:0:0:0.0, MyLatitude, MyZenith, MyLongitude, MyEvents[1].EventTime, TempTime)
+			End Select
+			
+			MyEvents[1].Type := EVENT_SUNRISE
+			MyEvents[2].EventTime := NextSunset
+			MyError := IsSameDay(Now, NextSunset)
+			Select MyError
+				Case -1
+					GetSunriseSunsetEx(Now + 1:0:0:0.0, MyLatitude, MyLongitude, MyZenith, TempTime, MyEvents[2].EventTime)
+				Case 1
+					GetSunriseSunsetEx(Now - 1:0:0:0.0, MyLatitude, MyLongitude, MyZenith, TempTime, MyEvents[2].EventTime)
+			End Select
+			
+			MyEvents[2].Type := EVENT_SUNSET	
+			CalcMidnight(Now + 1:0:0:0.0, NextMidnight)
+			MyEvents[3].EventTime := NextMidnight
+			MyEvents[3].Type := EVENT_MIDNIGHT
+			
+			SortEvents (Now, MyEvents)
+			
+			MyLock.Unlock ()
+			WaitForUTCTime(MyEvents[1].EventTime)			
+			MyLock.Lock ()
+
+			Select MyEvents[1].Type
+				Case EVENT_SUNRISE
+					RaiseEvent OnSunrise ()
+				Case EVENT_SUNSET
+					RaiseEvent OnSunset ()
+			End Select
+			MyLock.Unlock ()
+		
+		End Do
+	
+	//polar areas
+	Else
+		LastIsDay := GetDaytimeNighttime ()
+		Do
+			MyLock.Lock ()
+			NowIsDay := GetDaytimeNighttime ()
+			If LastIsDay = IS_NIGHTTIME And NowIsDay = IS_DAYTIME Then
+				RaiseEvent OnSunrise ()
+			ElseIf LastIsDay = IS_DAYTIME And NowIsDay = IS_NIGHTTIME Then
+				RaiseEvent OnSunset ()
+			End If
+			LastIsDay := NowIsDay
+			MyLock.Unlock ()
+			Wait (1:0.0)
+		End Do
+	
+	End If
+
+End Process
+
+//this function returns:
+// 0 if nowtime is in nowday
+// -1 if nowtime is before nowday
+// +1 if nowtime is after nowday
+Private Function IsSameDay (nowday As Time, nowtime As Time) As Long
+Private Var NextMidnight As Time
+Private Var TodayMidnight As Time
+
+	CalcMidnight (nowday, TodayMidnight)
+	NextMidnight := TodayMidnight + 1:0:0:0.0
+	
+	If nowtime < TodayMidnight Then
+		Return Value -1
+	ElseIf nowtime >= NextMidnight Then
+		Return Value 1
+	Else
+		Return Value 0 
+	End If
+
+End Function
+
+
+Private Function SortEvents (nowtime As Time, ByRef eventstosort As Array[] As SunriseSunsetEventStructure)
+Private Var N As Long
+Private Var M As Long
+
+	For N := 1 To SizeOfDim (eventstosort, 1)
+		If eventstosort[N].EventTime < nowtime Then
+			eventstosort[N].EventIsValid := False
+		Else
+			eventstosort[N].EventIsValid := True
+		End If
+	End For
+	
+	//bubblesort valid events
+	If SizeOfDim (eventstosort, 1) > 1 Then
+		For N := SizeOfDim (eventstosort, 1) - 1 To 1 Step -1
+			For M := 1 To N
+				SortTwoEvents (eventstosort[M], eventstosort[M + 1])
+			End For
+		End For
+	End If
+	
+End Function
+
+
+Private Function SortTwoEvents (ByRef event1 As SunriseSunsetEventStructure, ByRef event2 As SunriseSunsetEventStructure)
+Private Var SwapTemp As SunriseSunsetEventStructure
+
+	If event1.EventIsValid And event2.EventIsValid Then
+		If event1.EventTime > event2.EventTime Then
+			SwapTemp := event2
+			event2 := event1
+			event1 := SwapTemp
+		ElseIf event1.EventTime = event2.EventTime Then
+			If event1.Type = EVENT_NOW Then
+				SwapTemp := event2
+				event2 := event1
+				event1 := SwapTemp
+			End If
+		End If
+	ElseIf event2.EventIsValid Then
+		event1 := event2
+	End If
+
+End Function
+
+
+Private Function CalcDayInYear (mytime As Time, ByRef dayinyear As Long) As Long
+Private Var MyTimeStructure As _TimeStructure
+Private Var January1st As _TimeStructure
+Private Var January1stTime As Time
+
+	If Not TimeToTimeStructure(mytime, MyTimeStructure) Then
+		Return Value ERROR_WRONG_TIME
+	End If
+	
+	January1st.Year := MyTimeStructure.Year
+	January1st.Month 		:= 1
+	January1st.Day			:= 1
+	January1st.Hour 		:= 0
+	January1st.Minute 		:= 0
+	January1st.Second 		:= 0
+	January1st.MicroSecond 	:= 0
+	
+	If Not TimeStructureToTime(January1st, January1stTime) Then
+		Return Value ERROR_WRONG_TIME
+	End If
+	
+	dayinyear := ((mytime - January1stTime)/ 1:0:0:0.0) + 1
+	
+	Return Value COMMAND_OK
+	
+End Function
+
+
+Private Function CalcMidnight (mytime As Time, ByRef midnight As Time) As Long
+Private Var MyTimeStructure As _TimeStructure
+
+	If Not TimeToTimeStructure(mytime, MyTimeStructure) Then
+		Return Value ERROR_WRONG_TIME
+	End If
+	
+	MyTimeStructure.Hour 		:= 0
+	MyTimeStructure.Minute 		:= 0
+	MyTimeStructure.Second 		:= 0
+	MyTimeStructure.MicroSecond := 0
+	
+	If Not TimeStructureToTime(MyTimeStructure, midnight) Then
+		Return Value ERROR_WRONG_TIME
+	End If
+
+	Return Value COMMAND_OK
+	
+End Function
+
+
+Global Function GetSunriseSunset (ByRef sunriseutc As Time, ByRef sunsetutc As Time) As Long
+
+	Return Value GetSunriseSunsetEx(GetLocalTime(), MyLatitude, MyLongitude, MyZenith, sunriseutc, sunsetutc)
+
+End Function
+
+
+Global Function GetSunriseSunsetEx (newdate As Time, newlatitude As Double, newlongitude As Double, newzenith As Double, ByRef sunriseutc As Time, ByRef sunsetutc As Time) As Long
+Private Var lngHour As Double
+Private Var Trise As Double
+Private Var Tset As Double
+Private Var N As Long
+Private Var M As Double
+Private Var L As Double
+Private Var cosH As Double
+Private Var RA As Double
+Private Var Hraise As Double
+Private Var Hset As Double
+Private Var IntError As Long := 0
+Private Var IntSunrise As Time := NO_TIME
+Private Var IntSunset As Time := NO_TIME
+Private Var ErrorDayBefore As Long
+Private Var ErrorDayAfter As Long
+Private Var Tmp1 As Time
+Private Var Tmp2 As Time
+
+	If newlatitude < -90 Or newlatitude > 90 Then
+		Return Value ERROR_WRONG_PARAMETERS
+	End If
+	
+	If newlongitude < -180 Or newlongitude > 180 Then
+		Return Value ERROR_WRONG_PARAMETERS
+	End If
+	
+	If newzenith < 90 Or newzenith > ZENITH_ASTRONOMICAL Then
+		Return Value ERROR_WRONG_PARAMETERS
+	End If
+	
+	lngHour := newlongitude / 15
+	
+	IntError := CalcDayInYear (newdate, N)
+	If IntError <> COMMAND_OK Then
+		Return Value IntError
+	End If
+	
+	IntError := 0
+	
+	Trise := N + ((6 - lngHour) / 24)
+	Tset := N + ((18 - lngHour) / 24)
+	
+	// calculation of sunrise
+	CalcCosH (Trise, newlongitude, newlatitude, newzenith, cosH, RA)
+	
+	If cosH > 1 Then
+		IntError += 1  
+	ElseIf cosH < -1 Then
+		IntError += 2
+	Else
+		Hraise := (360 - ACos (cosH))/15
+		IntSunrise := CalcUTCTime (newdate, Trise, Hraise, RA, lngHour)
+	End If
+	
+	// calculation of sunset
+	CalcCosH (Tset, newlongitude, newlatitude, newzenith, cosH, RA)
+		
+	If cosH > 1 Then
+		IntError += 4
+	ElseIf cosH < -1 Then
+		IntError += 8
+	Else
+		Hset := (ACos (cosH))/15
+		IntSunset := CalcUTCTime (newdate, Tset, Hset, RA, lngHour)
+	End If
+	
+	Select IntError
+		Case 0
+			If IntSunrise >= IntSunset Then
+				sunriseutc := NO_TIME
+				sunsetutc := NO_TIME
+				Return Value EXCEPTION_PERMANENT_DAY
+			Else
+				sunriseutc := IntSunrise
+				sunsetutc := IntSunset
+				Return Value COMMAND_OK
+			End If
+		Case 1, 4, 5
+			sunriseutc := NO_TIME
+			sunsetutc := NO_TIME
+			Return Value EXCEPTION_PERMANENT_NIGHT
+		Case 10
+			sunriseutc := NO_TIME
+			sunsetutc := NO_TIME
+			Return Value EXCEPTION_PERMANENT_DAY
+		Case 6
+			sunriseutc := NO_TIME
+			CalcMidnight (newdate + 1:0:0:0.0, sunsetutc)
+			Return Value EXCEPTION_SUNSET_ONLY
+		Case 2
+			sunriseutc := NO_TIME
+			sunsetutc := IntSunset
+			Return Value EXCEPTION_SUNSET_ONLY
+		Case 8
+			sunriseutc := IntSunrise
+			sunsetutc := NO_TIME
+			Return Value EXCEPTION_SUNRISE_ONLY
+		Case 9
+			CalcMidnight (newdate + 1:0:0:0.0, sunriseutc)
+			sunsetutc := NO_TIME
+			Return Value EXCEPTION_SUNRISE_ONLY
+			
+		Case Else
+			sunriseutc := NO_TIME
+			sunsetutc := NO_TIME
+			Return Value ERROR_FATAL
+	
+	End Select
+		
+End Function
+
+
+Private Function CalcCosH (t As Double, lon As Double, lat As Double, zen As Double, ByRef cosh As Double, ByRef ra As Double)
+Private Var M As Double
+Private Var L As Double
+Private Var Lquadrant As Double
+Private Var RAquadrant As Double
+Private Var sinDec As Double
+Private Var cosDec As Double
+
+	M := (0.9856 * t) - 3.289
+	
+	L := M + (1.916 * Sin (M)) + (0.02 * Sin (2 * M)) + 282.634
+	
+	SetRange0ToMax (L, 360)
+	
+	ra := ATan (0.91764 * Tan (L))
+	
+	SetRange0ToMax (ra, 360)
+	
+	Lquadrant := (Floor (L/90)) * 90
+	RAquadrant := (Floor (RA/90)) * 90
+	
+	ra += (Lquadrant - RAquadrant)
+	ra /= 15
+	
+	sinDec := 0.39782 * Sin (L)
+	cosDec := Cos (ASin (sinDec))
+	
+	cosh := (Cos (zen) - (sinDec * Sin (lat))) / (cosDec * Cos (lat))
+
+End Function
+
+
+Private Function CalcUTCTime (mydate As Time, t As Double, h As Double, ra As Double, lnghour As Double) As Time
+Private Var Temp As Double
+Private Var MyStruct As _TimeStructure
+Private Var Ret As Time
+
+	Temp := h + ra - (0.06571 * t) - 6.622
+	
+	SetRange0ToMax (Temp, 24)
+	Temp -= lnghour
+
+	TimeToTimeStructure(mydate, MyStruct)
+	MyStruct.Hour := 0
+	MyStruct.Minute := 0
+	MyStruct.Second := 0
+	MyStruct.MicroSecond := 0
+	
+	TimeStructureToTime(MyStruct, Ret)
+	
+	Return Value (Ret + (Temp * 1:0:0.0 ))
+	
+End Function
+
+
+Private Function SetRange0ToMax (ByRef input As Double, maxvalue As Long)
+
+	If input > maxvalue Then
+		Do While input > maxvalue
+			input -= maxvalue
+		End Do
+	ElseIf input < 0 Then
+		Do While input < 0
+			input += maxvalue
+		End Do
+	End If
+		
+End Function 
+
+
+Global Function GetDaytimeNighttime () As Long
+
+	Return Value GetDaytimeNightimeEx (GetUTCTime(), MyLatitude, MyLongitude, MyZenith)
+
+End Function
+
+
+Private Function AddIsDayEvents (myutctime As Time, ByRef index As Long, latitude As Double, longitude As Double, zenith As Double, ByRef myevents As Array [] As SunriseSunsetEventStructure) As Long
+Private Var MyError As Long
+Private Var Sunrise As Time
+Private Var Sunset As Time
+Private Var T As Time
+
+	MyError := GetSunriseSunsetEx(myutctime, latitude, longitude, zenith, Sunrise, Sunset)
+
+	Select MyError
+		Case ERROR_WRONG_PARAMETERS, ERROR_FATAL
+			Return Value MyError	
+			
+		Case EXCEPTION_PERMANENT_DAY
+			myevents[index].Type := EVENT_PERMANENT_DAY
+			CalcMidnight(myutctime, T)
+			myevents[index].EventTime := T
+			index += 1
+			
+		Case EXCEPTION_PERMANENT_NIGHT
+			myevents[index].Type := EVENT_PERMANENT_NIGHT
+			CalcMidnight(myutctime, T)
+			myevents[index].EventTime := T
+			index += 1
+			
+		Case COMMAND_OK
+			myevents[index].Type := EVENT_SUNRISE
+			myevents[index].EventTime := Sunrise
+			index += 1
+			myevents[index].Type := EVENT_SUNSET
+			myevents[index].EventTime := Sunset
+			index += 1
+		
+		Case EXCEPTION_SUNRISE_ONLY
+			myevents[index].Type := EVENT_SUNRISE
+			myevents[index].EventTime := Sunrise
+			index += 1
+			
+		Case EXCEPTION_SUNSET_ONLY
+			myevents[index].Type := EVENT_SUNSET
+			myevents[index].EventTime := Sunset
+			index += 1
+	
+	End Select
+	
+	Return Value COMMAND_OK
+
+End Function
+
+
+Global Function GetDaytimeNightimeEx (newutctime As Time, newlatitude As Double, newlongitude As Double, newzenith As Double) As Long
+Private Var MyReturn As Long
+Private Var NowIndex As Long := 1
+Private Var N As Long := 1
+Private Var Days As Time
+Private Var MyIsDayEvents[MAX_ISDAY_DATA] As SunriseSunsetEventStructure
+
+	MyIsDayEvents[N].EventTime := newutctime
+	MyIsDayEvents[N].Type := EVENT_NOW
+	N += 1
+	
+	//calculate sunrise and sunset for today, yesterday and tomorrow
+	For Days := newutctime - 1:0:0:0.0 To newutctime + 1:0:0:0.0 Step 1:0:0:0.0
+		MyReturn := AddIsDayEvents (Days, N, newlatitude, newlongitude, newzenith, MyIsDayEvents)
+		If MyReturn = ERROR_WRONG_PARAMETERS Or MyReturn = ERROR_FATAL Then
+			Return Value MyReturn
+		End If
+	End For
+	
+	SortIsDayEvents (N-1, MyIsDayEvents)
+	
+	Do While MyIsDayEvents[NowIndex].Type <> EVENT_NOW
+		NowIndex += 1
+	End Do
+	
+	Select NowIndex
+		Case 1
+			AddIsDayEvents (newutctime - 2:0:0:0.0, N, newlatitude, newlongitude, newzenith, MyIsDayEvents)
+		Case N
+			AddIsDayEvents (newutctime + 2:0:0:0.0, N, newlatitude, newlongitude, newzenith, MyIsDayEvents)
+	End Select
+	
+	SortIsDayEvents (N-1, MyIsDayEvents)
+	
+	Do While MyIsDayEvents[NowIndex].Type <> EVENT_NOW
+		NowIndex += 1
+	End Do
+		
+	If MyIsDayEvents[NowIndex-1].Type = EVENT_SUNRISE And  MyIsDayEvents[NowIndex+1].Type = EVENT_SUNSET Then
+		MyReturn := IS_DAYTIME
+	ElseIf MyIsDayEvents[NowIndex-1].Type = EVENT_SUNRISE And  MyIsDayEvents[NowIndex+1].Type = EVENT_PERMANENT_DAY Then
+		MyReturn := IS_DAYTIME
+	ElseIf MyIsDayEvents[NowIndex-1].Type = EVENT_SUNRISE And  MyIsDayEvents[NowIndex+1].Type = EVENT_PERMANENT_NIGHT Then
+		MyReturn := IS_DAYTIME
+	ElseIf MyIsDayEvents[NowIndex-1].Type = EVENT_SUNRISE Then
+		MyReturn := ERROR_FATAL
+		
+	ElseIf MyIsDayEvents[NowIndex-1].Type = EVENT_SUNSET And  MyIsDayEvents[NowIndex+1].Type = EVENT_SUNRISE Then
+		MyReturn := IS_NIGHTTIME
+	ElseIf MyIsDayEvents[NowIndex-1].Type = EVENT_SUNSET And  MyIsDayEvents[NowIndex+1].Type = EVENT_PERMANENT_NIGHT Then
+		MyReturn := IS_NIGHTTIME
+	ElseIf MyIsDayEvents[NowIndex-1].Type = EVENT_SUNSET And  MyIsDayEvents[NowIndex+1].Type = EVENT_PERMANENT_DAY Then
+		MyReturn := IS_NIGHTTIME
+	ElseIf MyIsDayEvents[NowIndex-1].Type = EVENT_SUNSET Then
+		MyReturn := ERROR_FATAL
+		
+	ElseIf MyIsDayEvents[NowIndex-1].Type = EVENT_PERMANENT_DAY And  MyIsDayEvents[NowIndex+1].Type = EVENT_SUNSET Then
+		MyReturn := IS_DAYTIME
+	ElseIf MyIsDayEvents[NowIndex-1].Type = EVENT_PERMANENT_DAY And  MyIsDayEvents[NowIndex+1].Type = EVENT_PERMANENT_DAY Then
+		MyReturn := IS_DAYTIME
+	ElseIf MyIsDayEvents[NowIndex-1].Type = EVENT_PERMANENT_DAY And  MyIsDayEvents[NowIndex+1].Type = EVENT_SUNRISE Then
+		MyReturn := IS_DAYTIME
+	ElseIf MyIsDayEvents[NowIndex-1].Type = EVENT_PERMANENT_DAY And  MyIsDayEvents[NowIndex+1].Type = EVENT_PERMANENT_NIGHT Then
+		MyReturn := IS_DAYTIME
+	ElseIf MyIsDayEvents[NowIndex-1].Type = EVENT_PERMANENT_DAY Then
+		MyReturn := ERROR_FATAL
+		
+	ElseIf MyIsDayEvents[NowIndex-1].Type = EVENT_PERMANENT_NIGHT And  MyIsDayEvents[NowIndex+1].Type = EVENT_PERMANENT_NIGHT Then
+		MyReturn := IS_NIGHTTIME
+	ElseIf MyIsDayEvents[NowIndex-1].Type = EVENT_PERMANENT_NIGHT And  MyIsDayEvents[NowIndex+1].Type = EVENT_SUNRISE Then
+		MyReturn := IS_NIGHTTIME
+	ElseIf MyIsDayEvents[NowIndex-1].Type = EVENT_PERMANENT_NIGHT And  MyIsDayEvents[NowIndex+1].Type = EVENT_SUNSET Then
+		MyReturn := IS_NIGHTTIME
+	ElseIf MyIsDayEvents[NowIndex-1].Type = EVENT_PERMANENT_NIGHT And  MyIsDayEvents[NowIndex+1].Type = EVENT_PERMANENT_DAY Then
+		MyReturn := IS_NIGHTTIME
+	ElseIf MyIsDayEvents[NowIndex-1].Type = EVENT_PERMANENT_NIGHT Then
+		MyReturn := ERROR_FATAL
+		
+	Else	
+		MyReturn := ERROR_FATAL
+	End If
+
+	Return Value MyReturn
+	
+End Function
+
+
+Private Function SortIsDayEvents (maxindex As Long, ByRef eventstosort As Array [] As SunriseSunsetEventStructure)
+Private Var N As Long
+Private Var M As Long
+Private Var MyMaxIndex As Long := Min (maxindex, SizeOfDim (eventstosort, 1))
+
+	For N := 1 To MyMaxIndex
+		eventstosort[N].EventIsValid := True
+	End For
+	
+	//bubblesort events
+	If MyMaxIndex > 1 Then
+		For N := MyMaxIndex - 1 To 1 Step -1
+			For M := 1 To N
+				SortTwoEvents (eventstosort[M], eventstosort[M + 1])
+			End For
+		End For
+	End If
+	
+End Function
+
+
+Global Function GetCurrentLocalToUTCTimeDifference () As Time
+Private Var Difference As Time := GetLocalTime() - GetUTCTime()
+
+	If Difference >= :.0 Then
+		Difference += :5.0
+	Else
+		Difference -= :5.0
+	End If
+	
+	Return Value (15:0.0 * CLong (Difference / 15:0.0))
+
+End Function
+
+
+End Class

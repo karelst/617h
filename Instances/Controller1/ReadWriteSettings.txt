@@ -1,0 +1,228 @@
+Global Const MAX_FILE_NAME As Long := 256
+Var alldata As Text[100*1024]
+Global Var FileThermostats As _TextFile 
+//Var TempThermostats As AllThermostatsStructure
+//Var TempFVEDataActual As FVE.FVEDataStructure
+//
+Global Function SaveCalendar()
+	
+	// Ulozeni aktualnich thermostatu do souboru
+	
+	DebugPrint("SaveCalendar:")
+	FormatJSON(Heating.HeatingCalendar,alldata)		
+	//DebugPrintFormat("delka JSON: {n}", GetTextActualLength(alldata))
+	
+	If FileThermostats.Open(FILE_CALENDAR) Then
+		FileThermostats.EraseContent()
+		FileThermostats.WriteText(alldata)
+		FileThermostats.Close()
+	Else
+		DebugPrintFormat("******************* SaveLiveData ERROR {n}",GetLastError())
+	End If
+End Function
+
+Public Function LoadCalendar()
+	
+	// Ulozeni pole calendaru
+	Var TempCalendar As HeatingCalendarStructure
+	DebugPrint("LoadCalendarAll:")
+	
+	If FileThermostats.Open(FILE_CALENDAR) Then
+		FileThermostats.ReadText(alldata)
+		FileThermostats.Close()
+		
+		If ParseJSON( alldata, TempCalendar) Then						
+			Heating.HeatingCalendar := TempCalendar
+			Return
+		End If
+	End If
+	DebugPrintFormat("******************* LoadTCalendar ERROR {n}",GetLastError())
+End Function
+////////////////////////////////////////////////////////////////////////////////////////
+
+
+//Public Function LoadAll1()
+//	LoadThermostats()
+//	LoadCalendars()
+//	LoadCommon()
+//	LoadFVEDataActual()
+//	LoadFVEPower()
+//End Function
+//
+//Public Function SaveThermostats()
+//
+//	Var errorcode As Long
+//	Var retValue As Boolean
+//	Var N As Long
+//	
+//	// Ulozeni aktualnich thermostatu do souboru
+//	DebugPrint("SaveThermostat:")
+//	FormatJSON(Main.SiteConfiguration.Hvac.AllThermostats,alldata)		
+//	//DebugPrintFormat("delka JSON: {n}", GetTextActualLength(alldata))
+//	
+//	If FileThermostats.Open(FILENAME_THERMOSTATS) Then
+//		FileThermostats.EraseContent()
+//		FileThermostats.WriteText(alldata)
+//		FileThermostats.Close()
+//	Else
+//		DebugPrintFormat("******************* SaveThermostat ERROR {n}",GetLastError())
+//	End If
+//End Function
+//
+//Public Function LoadThermostats()
+//
+//	Var errorcode As Long
+//	Var retValue As Boolean
+//	Var N As Long
+//	
+//	//DebugPrint("LoadThermostat:")
+//	
+//	If FileThermostats.Open(FILENAME_THERMOSTATS) Then
+//		FileThermostats.ReadText(alldata)
+//		FileThermostats.Close()
+//		
+//		If ParseJSON( alldata, TempThermostats) Then						
+//			Main.SiteConfiguration.Hvac.AllThermostats := TempThermostats
+//			Return						
+//		End If
+//	End If
+//	
+//	DebugPrintFormat("******************* LoadThermostat ERROR {n}",GetLastError())
+//End Function
+//
+//////////////////////////////////////////////////////////////////////////////////////////
+//Global Function SaveCommon()
+//	
+//	// Ulozeni aktualnich thermostatu do souboru
+//	
+//	DebugPrint("SaveCommon:")
+//	FormatJSON(Main.SiteConfiguration.CommonData,alldata)		
+//	//DebugPrintFormat("delka JSON: {n}", GetTextActualLength(alldata))
+//	
+//	If FileThermostats.Open(FILENAME_COMMON) Then
+//		FileThermostats.EraseContent()
+//		FileThermostats.WriteText(alldata)
+//		FileThermostats.Close()
+//	Else
+//		DebugPrintFormat("******************* SaveCommonData ERROR {n}",GetLastError())
+//	End If
+//End Function
+//
+//Public Function LoadCommon()
+//	
+//	// Ulozeni pole calendaru
+//	Var TempCommon As CommonDataStructure
+//	DebugPrint("CommonData:")
+//	
+//	If FileThermostats.Open(FILENAME_COMMON) Then
+//		FileThermostats.ReadText(alldata)
+//		FileThermostats.Close()
+//		
+//		If ParseJSON( alldata, TempCommon) Then						
+//			Main.SiteConfiguration.CommonData := TempCommon
+//			Return
+//		End If
+//	End If
+//	DebugPrintFormat("******************* LoadCommon ERROR {n}",GetLastError())
+//End Function
+//
+//Public Function DeleteMemoryDataAll()
+//	DeleteFolder(FILENAME_FOLDER_MEMORY)
+//End Function
+//
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+//Global Var DBFileFVE	As _TextFile
+////Global Event OnFVEDataDBChange As Process (db As DBYearStructure) WithFeedbackRefresh
+//
+//Public Function SaveFVEPower()
+//	Var NameFileTXT As Text[MAX_FILE_NAME]		
+//	Var indexh As Long
+//	
+//	//store energy ever produced from FVE to database and file
+//	For indexh := GetHour()+1 To 24
+//		Main.FVEDataDB.Month[GetMonth()].Day[GetDay()].Hour[indexh].myvalue := FVE.MyFVEData.FVE_Wh
+//	End For			
+//		
+//	//do souboru...
+//	//jmeno
+//	FormatText(NameFileTXT, "/filestorage/DataManager/DBFVE_{n.0}.txt",GetYear())
+//				
+//	//zapis
+//	DebugPrint("SaveFVEPower:")
+//	FormatJSON(Main.FVEDataDB,alldata)	
+//	
+//	If DBFileFVE.Open(NameFileTXT) Then
+//		DBFileFVE.EraseContent()		
+//		DBFileFVE.WriteText(alldata)
+//		DBFileFVE.Close()	    
+//	Else
+//		DebugPrintFormat("ERROR	SaveFVEPower Open {T}",NameFileTXT)
+//	End If
+//	
+//End Function
+//
+//Public Function LoadFVEPower()
+//	Var tempDBFVE As DBYearStructure
+//
+//	Var NameFileTXT As Text[MAX_FILE_NAME]		
+//	
+//	//do souboru...
+//	//jmeno
+//	FormatText(NameFileTXT, "/filestorage/DataManager/DBFVE_{n.0}.txt",GetYear())
+//				
+//	//cteni
+//	DebugPrint("LoadFVEPower:")
+//		
+//	
+//	If DBFileFVE.Open(NameFileTXT) Then
+//		DBFileFVE.ReadText(alldata)
+//		DBFileFVE.Close()
+//		
+//		If ParseJSON( alldata, tempDBFVE) Then							
+//			Main.FVEDataDB := tempDBFVE
+//			
+//			//RaiseEvent OnFVEDataDBChange(Main.FVEDataDB)
+//			Return						
+//		End If
+//	Else
+//		DebugPrintFormat("ERROR	SaveFVEPower Open {T}",NameFileTXT)
+//	End If
+//	
+//End Function
+//
+//Public Function LoadFVEDataActual()
+//
+//	Var errorcode As Long
+//	Var retValue As Boolean
+//	Var N As Long
+//	
+//	If FileThermostats.Open(FILENAME_FVEDATAACTUAL) Then
+//		FileThermostats.ReadText(alldata)
+//		FileThermostats.Close()
+//		
+//		If ParseJSON( alldata, TempFVEDataActual) Then
+//			//zatim mě zajímá pouze fveenable						
+//			FVE.SetFVEEnable(TempFVEDataActual.FVEEnable1)
+//			Return						
+//		End If
+//	End If
+//	
+//	DebugPrintFormat("******************* LoadFVEDataActual ERROR {n}",GetLastError())
+//End Function
+//
+//Global Function SaveFVEDataActual()
+//	
+//	// Ulozeni aktualnich thermostatu do souboru
+//	
+//	DebugPrint("SaveFVEDataActual:")
+//	FormatJSON(FVE.MyFVEData,alldata)		
+//	//DebugPrintFormat("delka JSON: {n}", GetTextActualLength(alldata))
+//	
+//	If FileThermostats.Open(FILENAME_FVEDATAACTUAL) Then
+//		FileThermostats.EraseContent()
+//		FileThermostats.WriteText(alldata)
+//		FileThermostats.Close()
+//	Else
+//		DebugPrintFormat("******************* SaveFVEDataActual ERROR {n}",GetLastError())
+//	End If
+//End Function

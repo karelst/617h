@@ -1,0 +1,480 @@
+Global DeviceClass relayCUE_8
+
+Friend Relay
+
+Connector PEbusConnector
+
+Const MAX_CHANNEL As Byte := 8
+Private Const MAX_PULSE_TIME As Time := 16:39.9
+
+Global Channel RE1 As Relay
+Global Channel RE2 As Relay
+Global Channel RE3 As Relay
+Global Channel RE4 As Relay
+Global Channel RE5 As Relay
+Global Channel RE6 As Relay
+Global Channel RE7 As Relay
+Global Channel RE8 As Relay
+
+Private Const RELAYCUE8_RECEIVE_TIMEOUT As Time := :.1
+
+
+Global Function iniChannelAddressTable(ByRef addrtab As Array[8] As AddressOf Relay )
+	addrtab[1] := Me.RE1
+	addrtab[2] := Me.RE2
+	addrtab[3] := Me.RE3
+	addrtab[4] := Me.RE4
+	addrtab[5] := Me.RE5
+	addrtab[6] := Me.RE6
+	addrtab[7] := Me.RE7
+	addrtab[8] := Me.RE8	
+End Function
+
+
+
+Protected Property Address As Byte := 1 WithAttributes
+{
+	EditMode := "Enum; '0':=0, '1':=1, '2':=2, '3':=3, '4':=4, '5':=5, '6':=6, '7':=7, '8':=8, '9':=9, '10':=10, '11':=11"
+}
+
+Protected Property Bank As Byte := 1 WithAttributes
+{
+	EditMode := "Enum; '0':=0, '1':=1, '2':=2, '3':=3, '4':=4, '5':=5, '6':=6, '7':=7, '8':=8, '9':=9"
+}
+
+Protected Property Filter As Time := :0.04 WithAttributes
+{
+	EditMode := "Enum; ':0.02':=:.02, ':0.04':=:.04, ':0.06':=:.06, ':0.08':=:.08, ':0.10':=:.10, ':0.12':=:.12, ':0.14':=:.14, ':0.16':=:.16, ':0.18':=:.18"
+}
+
+Protected Property LongPress As Time := :0.4 WithAttributes
+{
+	EditMode := "Enum; ':0.1':=:.1, ':0.2':=:.2, ':0.3':=:.3, ':0.4':=:.4, ':0.5':=:.5, ':0.6':=:.6, ':0.7':=:.7, ':0.8':=:.8, ':0.9':=:.9"
+}
+
+Protected Property UnitId As Long := 1 WithAttributes
+{
+	DisplayName := "UnitID"
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+Protected Property CacheTime1 As Time := :1.0 WithAttributes
+{
+	PropertyGroup := "RE1",
+	DisplayName := "CacheTime",
+	EditMode := "TimeInterval"
+}
+
+Protected Property Function1 As Byte := 1 WithAttributes
+{
+	PropertyGroup := "RE1",
+	DisplayName := "Function",
+	EditMode := "Enum; 'NoAction':=0, 'Coded':=1, 'Relay':=2, 'SystemOn':=3, 'Run':=4, 'Direction':=5, 'DelayedOff':=6, 'DelayedOn':=7, 'RunDC':=8, 'Pulse':=9"
+}
+
+Protected Property PairedRelay1 As Byte := 0 WithAttributes
+{
+	PropertyGroup := "RE1",
+	DisplayName := "PairedRelay",
+	EditMode := "Enum; 'None':=0, '2':=2, '3':=3, '4':=4, '5':=5, '6':=6, '7':=7, '8':=8"
+}
+
+// Time1-Time8 is from 0 To 23:59:59.9
+Protected Property Time1 As Time := :0.4 WithAttributes
+{
+	PropertyGroup := "RE1",
+	DisplayName := "Time",
+	EditMode := "TimeInterval"
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+Protected Property CacheTime2 As Time := :1.0 WithAttributes
+{
+	PropertyGroup := "RE2",
+	DisplayName := "CacheTime",
+	EditMode := "TimeInterval"
+}
+
+Protected Property Function2 As Byte := 1 WithAttributes
+{
+	PropertyGroup := "RE2",
+	DisplayName := "Function",
+	EditMode := "Enum; 'NoAction':=0, 'Coded':=1, 'Relay':=2, 'SystemOn':=3, 'Run':=4, 'Direction':=5, 'DelayedOff':=6, 'DelayedOn':=7, 'RunDC':=8, 'Pulse':=9"
+}
+
+Protected Property PairedRelay2 As Byte := 0 WithAttributes
+{
+	PropertyGroup := "RE2",
+	DisplayName := "PairedRelay",
+	EditMode := "Enum; 'None':=0, '1':=1, '3':=3, '4':=4, '5':=5, '6':=6, '7':=7, '8':=8"
+}
+
+Protected Property Time2 As Time := :0.4 WithAttributes
+{
+	PropertyGroup := "RE2",
+	DisplayName := "Time",
+	EditMode := "TimeInterval"
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+Protected Property CacheTime3 As Time := :1.0 WithAttributes
+{
+	PropertyGroup := "RE3",
+	DisplayName := "CacheTime",
+	EditMode := "TimeInterval"
+}
+
+Protected Property Function3 As Byte := 1 WithAttributes
+{
+	PropertyGroup := "RE3",
+	DisplayName := "Function",
+	EditMode := "Enum; 'NoAction':=0, 'Coded':=1, 'Relay':=2, 'SystemOn':=3, 'Run':=4, 'Direction':=5, 'DelayedOff':=6, 'DelayedOn':=7, 'RunDC':=8, 'Pulse':=9"
+}
+
+Protected Property PairedRelay3 As Byte := 0 WithAttributes
+{
+	PropertyGroup := "RE3",
+	DisplayName := "PairedRelay",
+	EditMode := "Enum; 'None':=0, '1':=1, '2':=2, '4':=4, '5':=5, '6':=6, '7':=7, '8':=8"
+}
+
+Protected Property Time3 As Time := :0.4 WithAttributes
+{
+	PropertyGroup := "RE3",
+	DisplayName := "Time",
+	EditMode := "TimeInterval"
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+Protected Property CacheTime4 As Time := :1.0 WithAttributes
+{
+	PropertyGroup := "RE4",
+	DisplayName := "CacheTime",
+	EditMode := "TimeInterval"
+}
+
+Protected Property Function4 As Byte := 1 WithAttributes
+{
+	PropertyGroup := "RE4",
+	DisplayName := "Function",
+	EditMode := "Enum; 'NoAction':=0, 'Coded':=1, 'Relay':=2, 'SystemOn':=3, 'Run':=4, 'Direction':=5, 'DelayedOff':=6, 'DelayedOn':=7, 'RunDC':=8, 'Pulse':=9"
+}
+
+Protected Property PairedRelay4 As Byte := 0 WithAttributes
+{
+	PropertyGroup := "RE4",
+	DisplayName := "PairedRelay",
+	EditMode := "Enum; 'None':=0, '1':=1, '2':=2, '3':=3, '5':=5, '6':=6, '7':=7, '8':=8"
+}
+
+Protected Property Time4 As Time := :0.4 WithAttributes
+{
+	PropertyGroup := "RE4",
+	DisplayName := "Time",
+	EditMode := "TimeInterval"
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+Protected Property CacheTime5 As Time := :1.0 WithAttributes
+{
+	PropertyGroup := "RE5",
+	DisplayName := "CacheTime",
+	EditMode := "TimeInterval"
+}
+
+Protected Property Function5 As Byte := 1 WithAttributes
+{
+	PropertyGroup := "RE5",
+	DisplayName := "Function",
+	EditMode := "Enum; 'NoAction':=0, 'Coded':=1, 'Relay':=2, 'SystemOn':=3, 'Run':=4, 'Direction':=5, 'DelayedOff':=6, 'DelayedOn':=7, 'RunDC':=8, 'Pulse':=9"
+}
+
+Protected Property PairedRelay5 As Byte := 0 WithAttributes
+{
+	PropertyGroup := "RE5",
+	DisplayName := "PairedRelay",
+	EditMode := "Enum; 'None':=0, '1':=1, '2':=2, '3':=3, '4':=4, '6':=6, '7':=7, '8':=8"
+}
+
+Protected Property Time5 As Time := :0.4 WithAttributes
+{
+	PropertyGroup := "RE5",
+	DisplayName := "Time",
+	EditMode := "TimeInterval"
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+Protected Property CacheTime6 As Time := :1.0 WithAttributes
+{
+	PropertyGroup := "RE6",
+	DisplayName := "CacheTime",
+	EditMode := "TimeInterval"
+}
+
+Protected Property Function6 As Byte := 1 WithAttributes
+{
+	PropertyGroup := "RE6",
+	DisplayName := "Function",
+	EditMode := "Enum; 'NoAction':=0, 'Coded':=1, 'Relay':=2, 'SystemOn':=3, 'Run':=4, 'Direction':=5, 'DelayedOff':=6, 'DelayedOn':=7, 'RunDC':=8, 'Pulse':=9"
+}
+
+Protected Property PairedRelay6 As Byte := 0 WithAttributes
+{
+	PropertyGroup := "RE6",
+	DisplayName := "PairedRelay",
+	EditMode := "Enum; 'None':=0, '1':=1, '2':=2, '3':=3, '4':=4, '5':=5, '7':=7, '8':=8"
+}
+
+Protected Property Time6 As Time := :0.4 WithAttributes
+{
+	PropertyGroup := "RE6",
+	DisplayName := "Time",
+	EditMode := "TimeInterval"
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+Protected Property CacheTime7 As Time := :1.0 WithAttributes
+{
+	PropertyGroup := "RE7",
+	DisplayName := "CacheTime",
+	EditMode := "TimeInterval"
+}
+
+Protected Property Function7 As Byte := 1 WithAttributes
+{
+	PropertyGroup := "RE7",
+	DisplayName := "Function",
+	EditMode := "Enum; 'NoAction':=0, 'Coded':=1, 'Relay':=2, 'SystemOn':=3, 'Run':=4, 'Direction':=5, 'DelayedOff':=6, 'DelayedOn':=7, 'RunDC':=8, 'Pulse':=9"
+}
+
+Protected Property PairedRelay7 As Byte := 0 WithAttributes
+{
+	PropertyGroup := "RE7",
+	DisplayName := "PairedRelay",
+	EditMode := "Enum; 'None':=0, '1':=1, '2':=2, '3':=3, '4':=4, '5':=5, '6':=6, '8':=8"
+}
+
+Protected Property Time7 As Time := :0.4 WithAttributes
+{
+	PropertyGroup := "RE7",
+	DisplayName := "Time",
+	EditMode := "TimeInterval"
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+Protected Property CacheTime8 As Time := :1.0 WithAttributes
+{
+	PropertyGroup := "RE8",
+	DisplayName := "CacheTime",
+	EditMode := "TimeInterval"
+}
+
+Protected Property Function8 As Byte := 1 WithAttributes
+{
+	PropertyGroup := "RE8",
+	DisplayName := "Function",
+	EditMode := "Enum; 'NoAction':=0, 'Coded':=1, 'Relay':=2, 'SystemOn':=3, 'Run':=4, 'Direction':=5, 'DelayedOff':=6, 'DelayedOn':=7, 'RunDC':=8, 'Pulse':=9"
+}
+
+Protected Property PairedRelay8 As Byte := 0 WithAttributes
+{
+	PropertyGroup := "RE8",
+	DisplayName := "PairedRelay",
+	EditMode := "Enum; 'None':=0, '1':=1, '2':=2, '3':=3, '4':=4, '5':=5, '6':=6, '7':=7"
+}
+
+Protected Property Time8 As Time := :0.4 WithAttributes
+{
+	PropertyGroup := "RE8",
+	DisplayName := "Time",
+	EditMode := "TimeInterval"
+}
+
+
+Private Function Init()
+
+	RE1.MyOwner := Me
+	RE2.MyOwner := Me
+	RE3.MyOwner := Me
+	RE4.MyOwner := Me
+	RE5.MyOwner := Me
+	RE6.MyOwner := Me
+	RE7.MyOwner := Me
+	RE8.MyOwner := Me
+
+	RE1.RelayCode := 1
+	RE2.RelayCode := 2
+	RE3.RelayCode := 3
+	RE4.RelayCode := 4
+	RE5.RelayCode := 5
+	RE6.RelayCode := 6
+	RE7.RelayCode := 7
+	RE8.RelayCode := 8
+	
+	RE1.MyCacheTime := CacheTime1
+	RE2.MyCacheTime := CacheTime2
+	RE3.MyCacheTime := CacheTime3
+	RE4.MyCacheTime := CacheTime4
+	RE5.MyCacheTime := CacheTime5
+	RE6.MyCacheTime := CacheTime6
+	RE7.MyCacheTime := CacheTime7
+	RE8.MyCacheTime := CacheTime8
+
+	PEbusConnector.RelayCUE8InitDevice(UnitId, Bank, Address, Filter, LongPress)
+
+	PEbusConnector.RelayCUE8InitRelay(Bank, Address, 1, Function1, PairedRelay1, Time1)
+	PEbusConnector.RelayCUE8InitRelay(Bank, Address, 2, Function2, PairedRelay2, Time2)
+	PEbusConnector.RelayCUE8InitRelay(Bank, Address, 3, Function3, PairedRelay3, Time3)
+	PEbusConnector.RelayCUE8InitRelay(Bank, Address, 4, Function4, PairedRelay4, Time4)
+	PEbusConnector.RelayCUE8InitRelay(Bank, Address, 5, Function5, PairedRelay5, Time5)
+	PEbusConnector.RelayCUE8InitRelay(Bank, Address, 6, Function6, PairedRelay6, Time6)
+	PEbusConnector.RelayCUE8InitRelay(Bank, Address, 7, Function7, PairedRelay7, Time7)
+	PEbusConnector.RelayCUE8InitRelay(Bank, Address, 8, Function8, PairedRelay8, Time8)
+	
+End Function
+
+
+Private Function Close(relaycode As Byte)
+
+	PEbusConnector.Close(Bank, Address, relaycode, MAX_CHANNEL)
+
+End Function
+
+
+Private Function Open(relaycode As Byte)
+
+	PEbusConnector.Open(Bank, Address, relaycode, MAX_CHANNEL)
+
+End Function
+
+
+Private Function ClosePulse(relaycode As Byte, pulsetime As Time)
+
+	PEbusConnector.ClosePulse(Bank, Address, relaycode, MAX_CHANNEL, Min (pulsetime, MAX_PULSE_TIME))
+
+End Function
+
+
+Private Function UpdateRelayCueStatus () As Boolean
+Private Var InputClosed[MAX_CHANNEL] As Boolean
+Private Var RelayClosed[MAX_CHANNEL] As Boolean
+Private Var MyRet As Boolean
+
+	MyRet := PEbusConnector.GetRelayCue8Status (Bank, Address, RELAYCUE8_RECEIVE_TIMEOUT, RelayClosed, InputClosed)
+	
+	If MyRet Then
+		RE1.MyUpdateTime := GetSystemTime()
+		RE2.MyUpdateTime := RE1.MyUpdateTime
+		RE3.MyUpdateTime := RE1.MyUpdateTime
+		RE4.MyUpdateTime := RE1.MyUpdateTime
+		RE5.MyUpdateTime := RE1.MyUpdateTime
+		RE6.MyUpdateTime := RE1.MyUpdateTime
+		RE7.MyUpdateTime := RE1.MyUpdateTime
+		RE8.MyUpdateTime := RE1.MyUpdateTime
+	End If
+	
+	RE1.MyIsClosed := RelayClosed[1]
+	RE2.MyIsClosed := RelayClosed[2]
+	RE3.MyIsClosed := RelayClosed[3]
+	RE4.MyIsClosed := RelayClosed[4]
+	RE5.MyIsClosed := RelayClosed[5]
+	RE6.MyIsClosed := RelayClosed[6]
+	RE7.MyIsClosed := RelayClosed[7]
+	RE8.MyIsClosed := RelayClosed[8]
+	
+	RE1.MyIsInputClosed := InputClosed[1]
+	RE2.MyIsInputClosed := InputClosed[2]
+	RE3.MyIsInputClosed := InputClosed[3]
+	RE4.MyIsInputClosed := InputClosed[4]
+	RE5.MyIsInputClosed := InputClosed[5]
+	RE6.MyIsInputClosed := InputClosed[6]
+	RE7.MyIsInputClosed := InputClosed[7]
+	RE8.MyIsInputClosed := InputClosed[8]
+	
+	Return Value MyRet
+	
+End Function
+
+
+End DeviceClass
+/////////////////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////////////////
+Global Class Relay
+
+Friend relayCUE_8
+
+Private Var MyOwner As AddressOf relayCUE_8
+Private Var RelayCode As Byte
+
+Private Var MyCacheTime As Time
+Private Var MyUpdateTime As Time := :.0
+Private Var MyIsClosed As Boolean := False
+Private Var MyIsInputClosed As Boolean := False
+
+
+Global Function Close()
+
+	MyOwner.Close(RelayCode)
+	MyUpdateTime := :0.0
+	
+End Function
+
+
+Global Function Open()
+
+	MyOwner.Open(RelayCode)
+	MyUpdateTime := :0.0
+
+End Function
+
+
+Global Function ClosePulse(newpulsetime As Time)
+
+	MyOwner.ClosePulse(RelayCode, newpulsetime)
+	MyUpdateTime := :0.0
+	
+End Function
+
+
+Global Function IsInputClosed() As Boolean
+
+	UpdateMyStatus ()
+	Return Value MyIsInputClosed
+	
+End Function
+
+Global Function IsClosed() As Boolean
+
+	UpdateMyStatus ()
+	Return Value MyIsClosed
+	
+End Function
+
+
+Global Function SetCacheTime(newcachetime As Time)
+
+	MyCacheTime := Max (newcachetime, :0.0)
+
+End Function
+
+
+Global Function GetCacheTime() As Time
+
+	Return Value MyCacheTime
+
+End Function
+
+
+Private Function UpdateMyStatus ()
+
+	If GetSystemTime() > MyCacheTime + MyUpdateTime Then
+		// read real values
+		MyOwner.UpdateRelayCueStatus ()
+	End If
+
+End Function
+
+
+End Class

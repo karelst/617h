@@ -1,0 +1,33 @@
+Global DeviceClass Relay
+Connector RelayConnector
+
+
+Global Function Close ()
+
+	RelayConnector.Close ()
+	
+End Function
+
+
+Global Function Open ()
+
+	RelayConnector.Open ()
+	
+End Function
+
+
+Global Function IsClosed () As Boolean
+
+	Return Value RelayConnector.IsClosed ()
+	
+End Function
+
+
+Global Function ClosePulse (pulsetime As Time)
+
+	RelayConnector.ClosePulse (pulsetime)
+	
+End Function
+
+
+End DeviceClass

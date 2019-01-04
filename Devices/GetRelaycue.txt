@@ -1,0 +1,334 @@
+//Public Function getMe() As AddressOf GetRelayCue
+//	Return Value Me
+//End Function
+
+
+Global DeviceClass GetRelayCue
+Connector SerialConnector
+
+
+
+Protected Property timeout As Time := :0.25 WithAttributes
+{
+	PropertyGroup := "watch loop",
+	DisplayName := "Timeout",
+	EditMode:= "time" //"Enum; 'ABCD':=1,'CDAB':=2,'BADC':=3,'DCBA':=4" 
+}
+
+Private Var	DebugEnable 	As	Boolean 	:= 	False //True//
+
+Global Var relayBusy As _Semaphore
+
+Global Var bRelayCueReady 	As 	Boolean 	:= 	False
+
+Global Var Input 			As 	Byte 		:= 	0
+Global Var Output 			As 	Byte 		:= 	0
+Global Var RelayOn[8] 		As 	Boolean 	:= 	[False,False,False,False,False,False,False,False]
+
+Global Event onOutputChange As Process ( changed As Byte, outputState As Byte )
+Global Event onInputChange As Process ( changed As Byte,  inputState As Byte  )
+
+//Public Function getAddressOfRelayOn() As AddressOf Array[] As Boolean 
+//	Return Value RelayOn
+//End Function
+
+Public Function getRelayState( indx As Byte ) As Boolean 
+	Return Value RelayOn[indx]
+End Function
+
+
+Private Function Init()
+relayBusy.Lock()
+SerialConnector.SetSerialParameters(_SERIAL_MODE_RS485,19200, 8, _SERIAL_PARITY_EVEN, _SERIAL_STOPBITS_ONE,_SERIAL_FLOWCONTROL_NONE )
+relayBusy.Unlock()
+
+StartProcess watchRelayCue()
+
+End Function
+
+
+//Var 	relayCUEok As Boolean :=False
+Var 	sLastState As ByteString[8] := &S""
+
+Var 	unitId 	As ByteString[255]	:=&S""
+Var 	prodNo	As ByteString[4]	:=&S""
+Var 	serNo	As ByteString[4]	:=&S""
+Var 	fwVer	As ByteString[4]
+Var 	inputState	As ByteString[4]
+Var 	outputState	As ByteString[4]
+Var 	address	As ByteString[4]	:=&S""
+Var 	bank	As ByteString[4]	:=&S""
+Var 	longpress	As ByteString[4]
+Var 	filter	As ByteString[4]
+
+Var 	sRqStatus	As ByteString[22] 	:= &S"\01y1?d1001\17\03"
+Var 	sCommand	As ByteString[22]	:= &S"\01y1!d1001\021c\17\03"
+
+
+
+
+Var sRecBuff As ByteString[8]
+//Var timeout As Time
+
+
+
+
+Private Process watchRelayCue()
+	Var i 			As 	Byte 		:= 	0
+	Var Inp 			As 	Byte 		:= 	0
+ 	Var Outp 			As 	Byte 		:= 	0
+
+	bRelayCueReady := relayCUE_ok()
+	Do
+		If bRelayCueReady Then
+			readState()		
+			Wait(timeout)
+		Else
+			Wait(timeout * 10)
+			bRelayCueReady := relayCUE_ok()
+		End If
+	End Do
+	
+End Process //watchRelayCue()
+
+
+
+
+
+
+
+ Var iCntr As Long
+Private Function readState( )
+	Var t 		As Time
+	Var bResp 	As	Boolean
+	
+		t:= GetLocalTime()
+//		SerialConnector.Send(&S"\01y1?d1001\17\03") //rq
+
+		relayBusy.Lock()
+		SerialConnector.Send(sRqStatus) //rq
+		bResp :=  SerialConnector.ReceiveHFPacket(sRecBuff, &S"\02", &S"\17", :.2)
+		relayBusy.Unlock()
+		//Namespace"CUE.Device.GetRelaycue01.1".relayBusy.Lock()
+		If bResp	 Then 
+			//If DebugEnable Then DebugPrintFormat  ("{:} , {s}", GetLocalTime()- t,sRecBuff)  End If
+			If DebugEnable Then DebugPrintFormat  ("Relays: {s}",sRecBuff)  End If
+			If  Not DebugEnable  And (iCntr Mod 100)=0 Then DebugPrintFormat  ("Relays: {s}",sRecBuff)  End If
+			iCntr += 1
+			//If DebugEnable Then DebugPrintFormat  ("Relays: {s} OUTPUT {NB08} rELAZON {L},{L},{L},{L},{L},{L},{L},{L}",sRecBuff,Output,RelayOn[8],RelayOn[7],RelayOn[6],RelayOn[5],RelayOn[4],RelayOn[3],RelayOn[2],RelayOn[1])  End If
+			
+		End If
+
+	If CompareByteString(sRecBuff,sLastState) <> _COMPARE_EQUAL Then
+		exeChanges()
+		sLastState := sRecBuff
+	End If	
+End Function
+
+
+	//12:38:43.982 Controller1 02113101
+	//             io          12345678
+
+
+Private Function exeChanges( )
+	Var i 			As 	Byte 			:= 	0
+	Var msk 			As 	Byte 		:= 	01
+	Var Inp 			As 	Byte 		:= 	0
+	Var Outp 			As 	Byte 		:= 	0
+
+//	msk := 	01
+	For i:= 1 To 8
+		If ((sRecBuff[i]/* - &H30*/) BitAnd 01 ) <> 0  Then		
+			Outp bitor= msk
+			RelayOn[i]:= True 
+		Else
+			RelayOn[i]:= False 		
+		End If	
+		If ((sRecBuff[i]/* - &H30*/) BitAnd 02 ) <> 0  Then		
+			Inp bitor= msk 
+		End If	
+		
+		msk <<= 1
+	End For
+	If Output <> Outp Then 
+		msk := Output BitXor Outp
+		Output := Outp 
+		RaiseEvent onOutputChange ( msk,Output ) 
+	End If
+	If Input <> Inp Then 
+		msk := Input BitXor Inp
+		Input := Inp
+		RaiseEvent onInputChange ( msk, Input ) 
+	End If
+	
+End Function
+
+
+
+
+
+//
+////	SerialConnector.Send(&S"SOH 'y1 ! d'b uuu STX p c ETB ETX")
+////SOH 'y1 ? d'b uuu ETB ETX
+//SerialConnector.Send(&S"\01y1?d1001\17\03")
+////SerialConnector.ReceiveHFPacket(recb, &S"\01", &S"\03", :2)	
+//SerialConnector.ReceiveHFPacket(recb, &S"\02", &S"\17", :.2)	
+//DebugPrint (recb)
+//
+//Do 
+//
+//
+//
+//		SerialConnector.Send(&S"\01y1!d1001\021c\17\03") //re1 close
+//	
+//		t:= GetLocalTime()
+////		SerialConnector.Send(&S"\01y1?d1001\17\03")  //rq
+//		SerialConnector.Send(&S"\01y1?d1001\17\03") //rq
+//		If SerialConnector.ReceiveHFPacket(recb, &S"\02", &S"\17", :.3)	 Then DebugPrintFormat  ("{:} , {s}", GetLocalTime()- t,recb) End If
+//
+//	Wait (:1)
+//
+//		SerialConnector.Send(&S"\01y1!d1001\021o\17\03") // re1 open
+//	
+//		t:= GetLocalTime()
+////		SerialConnector.Send(&S"\01y1?d1001\17\03") //rq
+//		SerialConnector.Send(&S"\01y1?d1001\17\03") //rq
+//		If SerialConnector.ReceiveHFPacket(recb, &S"\02", &S"\17", :.3)	 Then DebugPrintFormat  ("{:} , {s}", GetLocalTime()- t,recb) End If
+//
+//	Wait (:1)
+//
+//End Do
+//
+////12:38:43.982 Controller1 02113101
+////             io          12345678
+//
+
+
+
+
+
+Public Function relayCUE_ok() As Boolean
+	If readUnitID() Then Return Value True End If
+	Wait (:0.3)
+	If readUnitID() Then Return Value True End If
+	Wait (:0.3)
+	If readUnitID() Then Return Value True End If
+	Return Value False
+End Function
+
+
+//V4  SOH 'y1u?'ETB ETX
+Function readUnitID() As Boolean
+	Var bResp 	As	Boolean
+
+		 SerialConnector.ReceiveHFPacket(sRecBuff, &S"\02", &S"\17", :.2)
+
+	relayBusy.Lock()
+	SerialConnector.Send(&S"\01y1u?\17\03")
+	bResp := SerialConnector.ReceiveHFPacket(unitId , &S"\01", &S"\03", :.3)
+	relayBusy.Unlock()
+	If Not bResp Then  
+
+	//	//Unit ID: \01i0335000204\02000101040104050001000100010001000100010001000100040004000400040004000400040004\17\03
+
+		DebugPrintFormat("FAIL Response UnitID request!!! -- response: {s}",unitId)
+		Return Value False
+	Else	
+		ConcatenateByteString(unitId, &S"\01",unitId,&S"\03" )
+		GetByteStringMiddle(unitId, 3,4,prodNo )
+		GetByteStringMiddle(unitId, 7,4,serNo )
+		GetByteStringMiddle(unitId, 11,2,fwVer )
+	
+	
+		GetByteStringMiddle(unitId, 14,2,inputState)
+		GetByteStringMiddle(unitId, 16,2,outputState)
+	//	GetByteStringMiddle(unitId, 18,2,hex01)
+		GetByteStringMiddle(unitId, 20,2,address)
+		GetByteStringMiddle(unitId, 22,2,bank)
+		GetByteStringMiddle(unitId, 24,2,longpress)
+		GetByteStringMiddle(unitId, 26,2,filter)
+		If GetSubByteStringPosition(prodNo,&S"0335") = 0 Then
+			DebugPrintFormat("Unit RESPONDING  read failure!!! -- response: {s}",unitId)
+			Return Value False
+		End If
+		
+	
+	//inputState,outputState,address,bank
+	//, inputState:{s}H , outputState:{s}H, address:{s}H, bank:{s}H
+	
+		DebugPrintFormat("*** SerialNo: CS0335.{s} , FW ver:{s} ,  Addr:{s}H, Bank:{s}H, --- Longpress:{s}H x0.1s  ,Filter:{s}H x0.01s, ---  State input:{s}H , output:{s}H"
+		,serNo,fwVer,address,bank,longpress,filter,inputState,outputState )
+	
+		DebugPrintFormat("Response UnitID request: {s}",unitId)
+		DebugPrintFormat("_________default values : {s}",&S"\01i0335ssssff\02iioo01aabb04050001000100010001000100010001000100040004000400040004000400040004\17\03")
+	
+	//default values for fw04: 
+	//   relayCUE: *** SerialNo: CS0335.0235 , FW ver:04 ,  Addr:04H, Bank:08H, --- Longpress:04H x0.1s  ,Filter:05H x0.01s, ---  State input:00H , output:00H)
+	//    \01i0335023504\02000001040804050001000100010001000100010001000100040004000400040004000400040004\17\03
+		setWorkStrings()
+		Return Value True
+
+	End If
+
+End Function
+
+//
+//
+//“Unit State String" - current status of all parameters of the unit (lenght 90 bytes):
+//        Byte 1 'i'
+//        Byte 2 - 5 '0335'
+//        Byte 6 - 9 UnitID (BCD)
+//        Byte 10-11 FW version
+//        Byte 12 STX ("/02")
+//        Byte 13-14 input state (HEX)
+//        Byte 15-16 output state (HEX)
+//        Byte 17-18 internal check state (HEX) 01-O.K.
+//        Byte 19-20 unit address (HEX)
+//        Byte 21-22 unit bank (HEX)
+//        Byte 23-24 Long press Time in 0.1sec (HEX)
+//        Byte 25-26 input filter in 0.01sec (HEX)
+//        Byte 27-28 paired relay To relay 1 (HEX) 00-no pair.
+//        Byte 29-30 input1 mode (HEX) "0-NoAction", "1-Coded", "2-Relay", "3-SystemOn",
+//                        "4-Run", "5-Direction", "6-DelayedOff", "7-DelayedOn", "8-RunDC", "9-Pulse"
+//        Byte 31-32 paired relay To relay 2 (HEX) 00-no pair.
+//        Byte 33-34 input2 mode (HEX) "0-NoAction", "1-Coded", "2-Relay", "3-SystemOn",
+//                        "4-Run", "5-Direction", "6-DelayedOff", "7-DelayedOn", "8-RunDC", "9-Pulse"
+//...............
+//        Byte 55-56 paired relay To relay 8 (HEX) 00-no pair.
+//        Byte 57-58 input8 mode (HEX) "0-NoAction", "1-Coded", "2-Relay", "3-SystemOn",
+//                        "4-Run", "5-Direction", "6-DelayedOff", "7-DelayedOn", "8-RunDC", "9-Pulse"
+//        Byte 59-62 relay1 timer Value (HEX)
+//        Byte 53-66 relay2 timer Value (HEX)
+//...............
+//        Byte 87-90 relay8 timer Value (HEX)
+//Status string example:
+//"i0335000501\0200000100000504000100010001000100010001000100010005000500050005000500
+//0500050005"
+//User
+
+
+
+//Var 	sRqStatus	As ByteString[22] 	:= &S"\01y1?d1001\17\03"
+//                                            1  234567890  1           
+//Var 	sCommand	As ByteString[22]	:= &S"\01y1!d1001\021c\17\03"
+//                                            1  234567890  1           
+
+Private Function setWorkStrings()
+	Var n As Byte
+	n:= GetByteStringActualLength(bank)
+	sRqStatus[6] := bank[n]	
+	sCommand[6] := bank[n]	
+
+	n:= GetByteStringActualLength(address)
+	sRqStatus[7] := address[n-2]	
+	sRqStatus[8] := address[n-1]
+	sRqStatus[9] := address[n]	
+
+	sCommand[7] := sRqStatus[7]	
+	sCommand[8] := sRqStatus[8]
+	sCommand[9] := sRqStatus[9]	
+	DebugPrintFormat ("sRqStatus: {s} , sCommand:{s}", sRqStatus,sCommand )
+End Function
+
+
+End DeviceClass

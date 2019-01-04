@@ -1,0 +1,149 @@
+
+//Enum Security
+//	Disarm 	:= 00,
+//	Armed	:= 01,
+//	Arming	:= 02,
+//	Alarm	:= 03
+//End Enum
+//
+//
+//Global Var currentState 	As Security
+
+Global Var bPswEnter 		As Boolean := False
+Global Var bPswOK 			As Boolean := False
+Const TOUT_PSW_ENTER 		As Time := :20
+
+
+
+Private Process WinSecurity_AlarmButton_OnPush(  ) Link WinSecurity.AlarmButton.OnPush
+
+	Select Controller1.Security.currentSecurity
+		Case 	Controller1.Security.State.Armed , 
+				Controller1.Security.State.Arming , 
+				Controller1.Security.State.Alarm 
+				If bPasswordOk() Then 
+					If Controller1.Security.currentSecurity = Controller1.Security.State.Alarm Then Controller1.Security.AlarmStop() End If
+					Controller1.Security.DisArm()
+				End If
+	    Case Else// State.Disarm 
+				If bPasswordOk() Then 
+					Controller1.Security.Arming() 
+				End If
+	End Select
+	
+End Process
+
+
+
+Private Function bPasswordOk() As Boolean
+	Var tim As Time 
+	
+	            Private Var valid As Boolean := False
+            Private Var inputTxt As Text[111] :=""
+
+	
+	tim := GetLocalTime() + TOUT_PSW_ENTER
+	bPswEnter 	:= False
+	bPswOK 		:= False
+		Numpad1.ShowObject()
+		Numpad1.SetPrompt("enter password>")
+		Numpad1.SetPasswordMask(True)
+
+		
+	Do While Not bPswEnter And tim > GetLocalTime() 
+		Wait (:.1)
+	End Do
+	Numpad1.HideObject()
+
+//	Numpad1.EditText(inputTxt,False,"please use 1640 for 16:40")
+//	DebugPrint (inputTxt)
+	
+	If bPswEnter And bPswOK Then
+		 
+		Return Value True 
+	Else 
+		Return Value False
+	End If	
+	
+End Function
+
+
+
+Private Process Numpad1_OnEnter( keyboardtext As Text, id As Long ) Link Numpad1.OnEnter
+	Var iValue As Long
+	
+	//DebugPrint (keyboardtext )
+	ParseText(keyboardtext,"{n}",iValue)
+	
+	bPswOK := False
+	If iValue = 123456 Then
+		bPswOK := True
+	ElseIf iValue = 142536  Then
+		bPswOK := True
+	ElseIf iValue = 6  Then
+		bPswOK := True
+	End If
+	bPswEnter := True
+End Process
+
+
+Private Process OnSecurityStateChange (newstate As Controller1.Security.State) Link Controller1.Security.OnSecurityStateChange
+	Select newstate //Controller1.Security.currentSecurity
+		Case Controller1.Security.State.Disarm
+			DisArm()
+		Case Controller1.Security.State.Armed
+			Arm()
+		Case Controller1.Security.State.Arming
+			Arming()
+
+		Case Controller1.Security.State.Alarm
+	End Select
+
+End Process
+
+Private Function Arm()
+			StopProcess ArmingTP()
+	WinSecurity.TextAlarmState.SetText(txtLocked)
+	WinSecurity.AlarmStateIcon.SetUpIcon(picLockedON302x302)
+	//WinSecurity.AlarmStateIcon.SetDownIcon(picLockedON302x302)
+	WinSecurity.AlarmButton.SetUpText(txtUnlock)
+	WinSecurity.TextAlarmState.SetColor(COLOR_FONT_ACTIVE1)
+
+	Sound.play(snd9mmGunshot)
+End Function
+
+Private Function Arming()
+	WinSecurity.TextAlarmState.SetText(txtLocking)
+	WinSecurity.AlarmStateIcon.SetUpIcon(picLockedOFF302x302)
+	//WinSecurity.AlarmStateIcon.SetDownIcon(picLockedON302x302)
+	WinSecurity.AlarmButton.SetUpText(txtUnlock)
+	WinSecurity.TextAlarmState.SetColor(COLOR_FONT_ACTIVE1)
+
+	Sound.play(snd9mmGunshot)
+	StartProcess ArmingTP()
+
+End Function
+
+Process ArmingTP()
+	Do
+		Wait (:1)
+	WinSecurity.AlarmStateIcon.SetUpIcon(picLockedON302x302)
+	Sound.play(sndCensored_Beep)
+		Wait (:1)
+	WinSecurity.AlarmStateIcon.SetUpIcon(picLockedOFF302x302)
+	Sound.play(sndCensored_Beep)
+	
+	End Do
+	
+End Process
+
+
+Private Function DisArm()
+	StopProcess ArmingTP()
+	WinSecurity.AlarmStateIcon.SetUpIcon(picUnLockedOFF302x302)
+	//WinSecurity.AlarmStateIcon.SetDownIcon(picUnLockedOFF302x302)
+	WinSecurity.TextAlarmState.SetText(txtUnlocked)
+	WinSecurity.TextAlarmState.SetColor(COLOR_FONT1)
+	WinSecurity.AlarmButton.SetUpText(txtLock)
+	Sound.play(sndDixiehorn)
+End Function

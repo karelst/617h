@@ -1,0 +1,100 @@
+
+
+
+Private Process Weather_btnCzech_OnPush(  ) Link Weather.btnCzech.OnPush
+	SetLanguage(_LANGUAGE_CZECH)
+End Process
+
+
+Private Process Weather_btnEnglish_OnPush(  ) Link Weather.btnEnglish.OnPush
+	SetLanguage(_LANGUAGE_ENGLISH_GREAT_BRITAIN)
+End Process
+
+
+Private Process Weather_btnGerman_OnPush(  ) Link Weather.btnGerman.OnPush
+	SetLanguage(_LANGUAGE_GERMAN_GERMANY)
+End Process
+
+
+Private Process Weather_ToggleButtonTimeMode_OnToggle( isdown As Boolean ) Link Weather.ToggleButtonTimeMode.OnToggle
+	If isdown Then
+		Weather.DailyWeather1.SetTimeMode(Weather.DailyWeather1.TIME_MODE_12HOUR)
+	Else
+		Weather.DailyWeather1.SetTimeMode(Weather.DailyWeather1.TIME_MODE_24HOUR)
+	End If
+End Process
+
+
+Private Process Weather_ToggleButtonUnits_OnToggle( isdown As Boolean ) Link Weather.ToggleButtonUnits.OnToggle
+	If isdown Then
+		Weather.DailyWeather1.SetUnits(Weather.DailyWeather1.UNITS_IMPERIAL)
+	Else
+		Weather.DailyWeather1.SetUnits(Weather.DailyWeather1.UNITS_METRIC)
+	End If
+End Process
+
+
+Private Process Weather_ToggleButtonTempUnits_OnToggle( isdown As Boolean ) Link Weather.ToggleButtonTempUnits.OnToggle
+	If isdown Then
+		Weather.DailyWeather1.SetTemperatureUnits(Weather.DailyWeather1.UNITS_FAHRENHEIT)
+	Else
+		Weather.DailyWeather1.SetTemperatureUnits(Weather.DailyWeather1.UNITS_CELSIUS)
+	End If
+End Process
+
+Private Process Weather_ToggleButtonFeelsLike_OnToggle( isdown As Boolean ) Link Weather.ToggleButtonFeelsLike.OnToggle
+	If isdown Then
+		Weather.DailyWeather1.SetShowFeelsLikeTemperature(True)
+	Else
+		Weather.DailyWeather1.SetShowFeelsLikeTemperature(False)
+	End If
+End Process
+
+
+Private Process Weather_ToggleButtonUpdateTime_OnToggle( isdown As Boolean ) Link Weather.ToggleButtonUpdateTime.OnToggle
+	Weather.DailyWeather1.SetShowLastUpdateTime(isdown)
+End Process
+
+
+Private Function Weather_DailyWeather1_OnGetWeather( locationid As Long, ByRef weatherforecast As Namespace "CUE.Applet.DailyWeatherFromApixu.1".AllWeatherStructure ) As Boolean Link Weather.DailyWeather1.OnGetWeather
+	Return Value WeatherForecast1.GetWeather(locationid, weatherforecast)
+End Function
+
+
+Private Process Weather_PushButton5_OnPush(  ) Link Weather.PushButton5.OnPush
+	Weather.DailyWeather1.SetLocationID(1)
+End Process
+
+
+Private Process Weather_PushButton6_OnPush(  ) Link Weather.PushButton6.OnPush
+	Weather.DailyWeather1.SetLocationID(2)
+End Process
+
+
+Private Process Weather_PushButton7_OnPush(  ) Link Weather.PushButton7.OnPush
+	Weather.DailyWeather1.SetLocationID(3)
+End Process
+
+// Open keyboard and search for weather forecast in new location
+// If successfull, show forecast
+// If not successfull, reopen keyboard
+Public Var locationResult As Boolean := False
+
+Private Process Weather_PushButton1_OnPush(  ) Link Weather.PushButton1.OnPush
+Private Var T 			As Text[100]
+Private Var L 			As Namespace "CUE.Applet.DailyWeatherFromApixu.1".LocationStructure
+Private Var promtText 	As AddressOf Text
+
+	promtText := txtEnterWeatherForecastLocation
+	locationResult := False
+	Do While Not locationResult
+		T := ""
+		If Keyboard1.EditText(T, False, promtText) Then
+			If WeatherForecast1.SetLocation(4, T) And WeatherForecast1.GetLocation(4, T, L) Then
+				Weather.DailyWeather1.SetLocationID(4)
+				locationResult := True
+			End If
+		End If
+		promtText := txtLocationNotFound
+	End Do
+End Process

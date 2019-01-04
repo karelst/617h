@@ -1,0 +1,94 @@
+Global DeviceClass MDB_Thermometer Inherits Namespace "CUE.MDB.Base.1".MDB_NodeObject
+Connector ModbusConnector
+
+//Protected Property Register As Long := 1 WithAttributes
+//{
+//	PropertyGroup := "Connection",
+//	DisplayName := "Register"
+//}
+
+Protected Property DeviceAddress As Long := 255 WithAttributes
+{
+	PropertyGroup := "Connection",
+	DisplayName := "Slave Address"
+}
+
+Protected Property Offset As Double := 0 WithAttributes
+{
+	PropertyGroup := "Temperature",
+	DisplayName := "Offset"
+}
+
+Private Var Register As Long := 0
+Private Var WORDValue As Long 
+Private Var Temperature As Double 
+
+Global Event OnTemperatureChange As Process (newTemerature As Double) WithFeedbackRefresh
+
+//-------------------------------------------------------------------------------------------
+Private Function Init()
+//-------------------------------------------------------------------------------------------
+	ModbusConnector.MDB.RegisterNodeObject(Me)
+End Function
+
+////-------------------------------------------------------------------------------------------
+//Global Function GetAddress() As Long
+////-------------------------------------------------------------------------------------------
+//	Return Value (Address)
+//End Function
+
+
+//-------------------------------------------------------------------------------------------
+Global Function GetTemperature(Optional UpdateImmediately As Boolean:=True) As Double
+//-------------------------------------------------------------------------------------------
+Private Var WORDval[2] As Long
+	If (UpdateImmediately) Or (Not PoolRead) Then
+		If ModbusConnector.MDB.ReadInputRegisters(Register,2,WORDval,DeviceAddress) Then
+			ValueChange(WORDval[2])
+			//DebugPrintFormat("InputRegister[1]: {n}    temperature: {n.1}°C",WORDval[2],Temperature)
+			Return Value Temperature
+		Else
+			SetLastError(ModbusConnector.MDB.LastError())
+			Return Value 0
+		End If
+	Else
+		Return Value Temperature 
+	End If
+End Function
+
+//--------------------------------------------------------------------------
+Global Function CheckValue()
+//--------------------------------------------------------------------------
+Private Var WORDval[2] As Long
+
+If ModbusConnector.MDB.ReadInputRegisters(Register,2,WORDval,DeviceAddress) Then
+		ValueChange(WORDval[2])
+	End If
+End Function
+
+//-------------------------------------------------------------------------------------------
+Private Function ReWrite()
+//-------------------------------------------------------------------------------------------
+End Function
+
+//-------------------------------------------------------------------------------------------
+Private Function ReRead()
+//-------------------------------------------------------------------------------------------
+	CheckValue()
+End Function
+
+//-------------------------------------------------------------------------------------------
+Private Function ValueChange(newValue As Long)
+//-------------------------------------------------------------------------------------------
+Private Var Temp As Double 
+
+	Temp := /*(Double)*/ newValue
+	Temp /= 10
+	Temp += Offset
+	If Temperature<>Temp Then
+		Temperature := Temp
+		RaiseEvent OnTemperatureChange(Temp)
+	End If
+End Function
+
+End DeviceClass

@@ -1,0 +1,144 @@
+
+Global Class MDB_BaseDevice WithAttributes
+{
+	ObjectCode := "CS2000"
+//	HideInIDE := True
+}	
+
+Friend MDB_NodeObject
+
+Protected Const MAX_SLAVE_OBJECTS As Long := 100
+
+Public Var RegisteredNodeObjects[MAX_SLAVE_OBJECTS] As AddressOf MDB_NodeObject
+Public Var RegisteredNodeCount  As Long := 0
+
+Private Var NodeSemaphore As _Semaphore
+
+//-------------------------------------------------------------------------------------------
+Public Function GetRegisteredNodeCount() As Long
+//-------------------------------------------------------------------------------------------
+	Return Value RegisteredNodeCount
+End Function
+
+//-------------------------------------------------------------------------------------------
+Public Function RegisterNodeObject(object As AddressOf MDB_NodeObject) As Boolean
+//-------------------------------------------------------------------------------------------
+Var i As Long
+	If RegisteredNodeCount>=MAX_SLAVE_OBJECTS Then
+		Return Value False
+	End If
+	NodeSemaphore.Lock()
+	RegisteredNodeCount:=RegisteredNodeCount+1
+	RegisteredNodeObjects[RegisteredNodeCount]:=object
+	RegisteredNodeObjects[RegisteredNodeCount].ObjectID:=RegisteredNodeCount
+	NodeSemaphore.Unlock()	
+
+	Return Value True
+End Function
+
+Global Function ReadHoldingRegisters ( FromRegister As Long , NumberOfRegisters As Long , ByRef ResultField As Array[] As Long, Optional ModbusSlaveAddress As Byte :=&hff) As Boolean
+	Return Value False
+End Function
+
+Global Function WriteSingleRegister ( Register As Long, NewValue As Long, Optional ModbusSlaveAddress As Byte :=&hff) As Boolean
+	Return Value False
+End Function
+
+Global Function WriteMultipleRegisters ( FromRegister As Long , NumberOfRegisters As Long , ByRef NewValueField As Array[] As Long, Optional ModbusSlaveAddress As Byte :=&hff) As Boolean
+	Return Value False
+End Function
+
+Global Function ReadCoils ( FromCoil As Long , NumberOfCoils As Long , ByRef ResultField As Array[] As Byte, Optional ModbusSlaveAddress As Byte :=&hff) As Boolean
+	Return Value False
+End Function
+
+Global Function ReadDiscreteInputs ( FromInput As Long , NumberOfInputs As Long , ByRef ResultField As Array[] As Byte, Optional ModbusSlaveAddress As Byte :=&hff) As Boolean
+	Return Value False
+End Function
+
+Global Function WriteSingleCoil ( Coil As Long , NewValue As Boolean , Optional ModbusSlaveAddress As Byte :=&hff) As Boolean
+	Return Value False
+End Function
+
+Global Function WriteMultipleCoils ( FromCoil As Long , NumberOfCoils As Long , ByRef NewValueField As Array[] As Byte, Optional ModbusSlaveAddress As Byte :=&hff) As Boolean
+	Return Value False
+End Function
+
+Global Function ReadInputRegisters ( FromInput As Long , NumberOfInputs As Long , ByRef ResultField As Array[] As Long, Optional ModbusSlaveAddress As Byte :=&hff) As Boolean
+	Return Value False
+End Function
+//
+//Global Function SendPDUandReceiveResponse (PDU As ByteString , ByRef Response As ByteString  , Optional Timeout As Time :=:0.1 , Optional ModbusSlaveAddress As Byte :=&hff) As Boolean
+//	Return Value False
+//End Function
+
+Global Function LastError() As Long
+	Return Value 0
+End Function
+
+Global Function LastResponse(ByRef Response As ByteString) 
+End Function
+
+	
+End Class
+
+
+//-------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------
+//------------Node connector-----------------------------------------------------------------
+//-------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------
+Global Class MDB_NodeConnector
+//-------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------
+Friend MDB_BaseDevice
+
+Public Var MDB As AddressOf MDB_BaseDevice
+
+
+End Class
+
+
+//-------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------
+//------------Node object--------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------
+Global Class MDB_NodeObject
+//-------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------
+Friend MDB_BaseDevice
+
+Global Property PoolWrite As Boolean := False WithAttributes
+{
+	PropertyGroup := "Pool"
+}
+
+Global Property PoolRead As Boolean := False WithAttributes
+{
+	PropertyGroup := "Pool"
+}
+
+Private Var ObjectID As Byte 
+
+//-------------------------------------------------------------------------------------------
+Global Function GetAddress() As Long
+//-------------------------------------------------------------------------------------------
+	Return Value -1
+End Function
+
+//-------------------------------------------------------------------------------------------
+Public Function ReWrite()
+//-------------------------------------------------------------------------------------------
+End Function
+//-------------------------------------------------------------------------------------------
+Public Function ReRead()
+//-------------------------------------------------------------------------------------------
+End Function
+
+
+
+
+End Class

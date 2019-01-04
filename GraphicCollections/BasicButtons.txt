@@ -1,0 +1,1997 @@
+// ***************************************************************************************
+// Collection Name:	BasicButtons
+// Date of build:	20.9.2013
+// Last edited by:	Richard Milek
+// ***************************************************************************************
+
+
+// Start of group ***************************************************************** 
+// BasicButtons
+// Revised: 14.3.2012 by Richard Milek & Miroslav Pechlát
+// Author: Richard Milek
+
+Public Const OPACITY_100_P As Double := 1
+Private Const OPACITY_50_P As Double := 0.5
+Private Const OPACITY_30_P As Double := 0.3
+
+Private GraphicClass BaseButton Inherits BaseGraphicClass
+
+Protected Property Enabled As Boolean := True WithAttributes
+{
+	PropertyGroup := "Behavior",
+	EditMode := "Boolean; 'Yes' := True, 'No' := False"
+}
+
+Protected Property Opacity As Byte := 255 WithAttributes
+{
+	PropertyGroup := "Appearance",
+	EditMode := "Opacity"
+}
+
+Protected Property UpAlign As Long := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER WithAttributes 
+{
+	PropertyGroup := "Up",
+	EditMode := "ENUM; 'Left-Top' := _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNTOP,"
+				"'Left-Middle' := _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNVCENTER,"
+				"'Left-Bottom' := _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNBOTTOM,"
+				"'Center-Top' := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNTOP,"
+				"'Center-Middle' := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER,"
+				"'Center-Bottom' := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNBOTTOM,"
+				"'Right-Top' := _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNTOP,"
+				"'Right-Middle' := _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNVCENTER,"
+				"'Right-Bottom' := _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNBOTTOM"
+}
+
+Protected Property UpButtonColor As Long := &h00000000 WithAttributes
+{
+	PropertyGroup := "Up",
+	EditMode := "Color"
+}
+
+Protected Property UpFont As AddressOf _Font := fntDefault16 WithAttributes
+{
+	PropertyGroup := "Up"
+}
+
+Protected Property UpFontColor As Long  := _COLOR_BLACK WithAttributes
+{
+	PropertyGroup := "Up",
+	EditMode := "Color"
+}
+
+Protected Property UpLineSpacing As Double  := 1.2 WithAttributes
+{
+	PropertyGroup := "Up"
+}
+
+Protected Property UpPicture As AddressOf _Picture := Nothing WithAttributes
+{
+	PropertyGroup := "Up"
+}
+
+Protected Property UpPictureAlign As Long := PICTURE_ALIGNHCENTER BitOr PICTURE_ALIGNVCENTER WithAttributes
+{
+	PropertyGroup := "Up",
+	EditMode := "ENUM; 'Left-Top' := &H09,  'Left-Middle' := &H11, 'Left-Bottom' := &H21, 'Center-Top' := &H0A, 'Center-Middle' := &H12, 'Center-Bottom' := &H22, 'Right-Top' := &H0C, 'Right-Middle' := &H14, 'Right-Bottom' := &H24"
+}
+
+Protected Property UpPictureOffsetX As Long := 0 WithAttributes
+{
+	PropertyGroup := "Up"
+}
+
+Protected Property UpPictureOffsetY As Long := 0 WithAttributes
+{
+	PropertyGroup := "Up"
+}
+
+Protected Property UpText As AddressOf Text := txtCaption WithAttributes
+{
+	PropertyGroup := "Up"
+}
+
+Protected Property DownAlign As Long := UpAlign WithAttributes
+{
+	PropertyGroup := "Down",
+	EditMode := "ENUM; 'Left-Top' := _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNTOP,"
+				"'Left-Middle' := _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNVCENTER,"
+				"'Left-Bottom' := _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNBOTTOM,"
+				"'Center-Top' := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNTOP,"
+				"'Center-Middle' := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER,"
+				"'Center-Bottom' := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNBOTTOM,"
+				"'Right-Top' := _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNTOP,"
+				"'Right-Middle' := _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNVCENTER,"
+				"'Right-Bottom' := _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNBOTTOM"
+}
+
+Protected Property DownButtonColor As Long := UpButtonColor WithAttributes
+{
+	PropertyGroup := "Down",
+	EditMode := "Color"
+}
+
+Protected Property DownFont As AddressOf _Font := UpFont WithAttributes
+{
+	PropertyGroup := "Down",
+	EditMode := "font"
+}
+
+Protected Property DownFontColor As Long  := UpFontColor WithAttributes
+{
+	PropertyGroup := "Down",
+	EditMode := "Color"
+}
+
+Protected Property DownLineSpacing As Double  := UpLineSpacing WithAttributes
+{
+	PropertyGroup := "Down"
+}
+
+Protected Property DownPicture As AddressOf _Picture := UpPicture WithAttributes
+{
+	PropertyGroup := "Down"
+}
+
+Protected Property DownPictureAlign As Long := UpPictureAlign WithAttributes
+{
+	PropertyGroup := "Down",
+	EditMode := "ENUM; 'Left-Top' := &H09,  'Left-Middle' := &H11, 'Left-Bottom' := &H21, 'Center-Top' := &H0A, 'Center-Middle' := &H12, 'Center-Bottom' := &H22, 'Right-Top' := &H0C, 'Right-Middle' := &H14, 'Right-Bottom' := &H24"
+}
+
+Protected Property DownPictureOffsetX As Long := UpPictureOffsetX WithAttributes
+{
+	PropertyGroup := "Down"
+}
+
+Protected Property DownPictureOffsetY As Long := UpPictureOffsetY WithAttributes
+{
+	PropertyGroup := "Down"
+}
+
+Protected Property DownText As AddressOf Text := UpText WithAttributes
+{
+	PropertyGroup := "Down"
+}
+
+// Global constant declaration
+Global Const PICTURE_ALIGNLEFT As Long 		:=	&H00000001	// Horizontal align left
+Global Const PICTURE_ALIGNHCENTER As Long 	:=	&H00000002	// Horizontal align center
+Global Const PICTURE_ALIGNRIGHT As Long 	:=	&H00000004	// Horizontal align right
+Global Const PICTURE_ALIGNTOP As Long 		:=	&H00000008	// Vertical align top
+Global Const PICTURE_ALIGNVCENTER As Long 	:=	&H00000010	// Vertical align center
+Global Const PICTURE_ALIGNBOTTOM As Long 	:=	&H00000020	// Vertical align bottom
+
+// picture resources  ------------------------------------------------------------------------
+Protected Var PictureTopBottomEdgeCornes As AddressOf _Picture
+Protected Var PictureLeftRightEdge As AddressOf _Picture
+
+// picture positions -------------------------------------------------------------------------
+
+Protected Var ObjectWidth As Long
+Protected Var ObjectHeight As Long
+
+Protected Var ButtonLeftTopBottomWidth As Long
+Protected Var ButtonRightTopBottomWidth As Long
+Protected Var ButtonRightTopBottomSrc As Long
+Protected Var ButtonTopBottomHeight As Long
+Protected Var ButtonTopUpSrc As Long
+Protected Var ButtonTopDownSrc As Long
+Protected Var ButtonTopPushedSrc As Long
+Protected Var ButtonBottomY As Long
+Protected Var ButtonBottomUpSrc As Long
+Protected Var ButtonBottomDownSrc As Long
+Protected Var ButtonBottomPushedSrc As Long
+
+Protected Var ButtonSideWidth As Long
+Protected Var ButtonLeftSideUpSrc As Long
+Protected Var ButtonLeftSideDownSrc As Long
+Protected Var ButtonLeftSidePushedSrc As Long
+Protected Var ButtonRightSideX As Long
+Protected Var ButtonRightSideUpSrc As Long
+Protected Var ButtonRightSideDownSrc As Long
+Protected Var ButtonRightSidePushedSrc As Long
+Protected Var ButtonSideHeight As Long
+
+Protected Var ButtonInsideWidth As Long
+Protected Var ButtonInsideHeight As Long
+
+Protected Var TextUpOffsetX As Long
+Protected Var TextUpOffsetY As Long
+Protected Var TextUpWidth As Long 
+Protected Var TextUpHeight As Long
+Protected Var TextDownOffsetX As Long
+Protected Var TextDownOffsetY As Long
+Protected Var TextDownWidth As Long 
+Protected Var TextDownHeight As Long
+
+Protected Var ColorUp As Long
+Protected Var ColorDown As Long
+
+// width correction of a pushed state picture position
+Protected Const SRC_CORR_W_PUSHED As Long := (-1)
+
+// inactive sides of pictures
+Protected Var InactiveSideWidth As Long
+Protected Var InactiveSideHeight As Long
+
+// colours
+Protected Const INSIDE_RGB_UP As Byte := 170
+Protected Const INSIDE_RGB_DOWN As Byte := 153
+Protected Var IntOpacity As Byte
+// -------------------------------------------------------------------------------------------
+
+Public Const STATE_UP As Long := 1
+Public Const STATE_DOWN As Long := 2
+Protected Const STATE_PUSHED_DOWN As Long := 3
+
+Protected Var ButtonStatus As Long := STATE_UP
+Protected Var IsPressed As Boolean := False
+Protected Var FormatFlagsUp As Long
+Protected Var TextUpBuffer As Text[100] := ""
+Protected Var FormatFlagsDown As Long
+Protected Var TextDownBuffer As Text[100] := ""
+Protected Var UpExecuted As Boolean := False
+
+//up and down picture positions
+Private Var UpPictureX As Long
+Private Var UpPictureY As Long
+Private Var DownPictureX As Long
+Private Var DownPictureY As Long
+
+Private Function Init ()
+
+	SetInternalColors ()
+	FormatFlagsUp := UpAlign BitOr _TEXT_WORDWRAP
+	FormatFlagsDown := DownAlign BitOr _TEXT_WORDWRAP
+	CalcDrawParams ()
+
+End Function
+
+
+Private Function SetInternalColors ()
+Private Var TintOpacity As Long
+Private Var TintTransp As Long
+
+	If Enabled Then
+		IntOpacity := Opacity * OPACITY_100_P
+	Else
+		IntOpacity := Opacity * OPACITY_30_P
+	End If
+	
+	TintOpacity := GetColorComponentOpacity(UpButtonColor)
+	TintTransp := 255 - TintOpacity
+	
+	ColorUp := Color ((INSIDE_RGB_UP * TintTransp + GetColorComponentRed(UpButtonColor) * TintOpacity) / 256, 
+					(INSIDE_RGB_UP * TintTransp + GetColorComponentGreen(UpButtonColor) * TintOpacity) / 256,
+					(INSIDE_RGB_UP * TintTransp + GetColorComponentBlue(UpButtonColor) * TintOpacity) / 256,
+					IntOpacity)
+					
+	TintOpacity := GetColorComponentOpacity(DownButtonColor)
+	TintTransp := 255 - TintOpacity
+					  
+	ColorDown :=  Color ((INSIDE_RGB_DOWN * TintTransp + GetColorComponentRed(DownButtonColor) * TintOpacity) / 256, 
+					(INSIDE_RGB_DOWN * TintTransp + GetColorComponentGreen(DownButtonColor) * TintOpacity) / 256,
+					(INSIDE_RGB_DOWN * TintTransp + GetColorComponentBlue(DownButtonColor) * TintOpacity) / 256,
+					IntOpacity)
+
+End Function
+
+
+Protected Function CalcDrawParams ()
+Private Var TopBottomW As Long
+Private Var TopBottomH As Long
+Private Var LeftRightW As Long
+Private Var LeftRightH As Long
+
+	If GetPrimaryDisplay().GetWidth() <= 320 And GetPrimaryDisplay().GetHeight() <= 240 Then
+	
+		PictureTopBottomEdgeCornes := picButton320x240TopBottomEdgeAndCorners
+		PictureLeftRightEdge := picButton320x240LeftRightEdge
+		InactiveSideWidth := 8
+		InactiveSideHeight := 8
+		TextUpOffsetX := 10
+		TextUpOffsetY := 8
+		TextDownOffsetX := 12
+		TextDownOffsetY := 10
+		
+	Else
+		PictureTopBottomEdgeCornes := picButton1920x1280TopBottomEdgeAndCorners
+		PictureLeftRightEdge := picButton1920x1280LeftRightEdge
+		InactiveSideWidth := 11
+		InactiveSideHeight := 11
+		TextUpOffsetX := 16
+		TextUpOffsetY := 14
+		TextDownOffsetX := 18
+		TextDownOffsetY := 16
+		
+	End If
+	
+	TopBottomW := PictureTopBottomEdgeCornes.GetWidth()
+	TopBottomH := PictureTopBottomEdgeCornes.GetHeight() / 3
+	LeftRightW := PictureLeftRightEdge.GetWidth () / 3
+	LeftRightH := PictureLeftRightEdge.GetHeight ()
+	
+	GetSize (ObjectWidth, ObjectHeight)
+	If ObjectWidth < LeftRightW + 1 Then ObjectWidth := LeftRightW + 1 End If
+	If ObjectHeight < TopBottomH + 1 Then ObjectHeight := TopBottomH + 1 End If
+	SetSize (ObjectWidth, ObjectHeight)
+	
+	ButtonLeftTopBottomWidth := ObjectWidth/2
+	ButtonRightTopBottomWidth := ObjectWidth - ButtonLeftTopBottomWidth
+	ButtonRightTopBottomSrc := TopBottomW - ButtonRightTopBottomWidth
+	ButtonTopBottomHeight := TopBottomH / 2
+	
+	ButtonTopUpSrc := 0
+	ButtonTopPushedSrc := ButtonTopUpSrc + TopBottomH
+	ButtonTopDownSrc := ButtonTopPushedSrc + TopBottomH
+	
+	ButtonBottomUpSrc := ButtonTopBottomHeight
+	ButtonBottomPushedSrc := ButtonBottomUpSrc + TopBottomH
+	ButtonBottomDownSrc := ButtonBottomPushedSrc + TopBottomH
+	ButtonBottomY := ObjectHeight - ButtonTopBottomHeight
+	
+	ButtonSideWidth := LeftRightW / 2
+	ButtonSideHeight := ObjectHeight - TopBottomH
+	ButtonRightSideX := ObjectWidth - ButtonSideWidth
+	
+	ButtonLeftSideUpSrc := 0
+	ButtonLeftSidePushedSrc := ButtonLeftSideUpSrc + LeftRightW
+	ButtonLeftSideDownSrc := ButtonLeftSidePushedSrc + LeftRightW
+	ButtonRightSideUpSrc := ButtonSideWidth
+	ButtonRightSidePushedSrc := ButtonRightSideUpSrc + LeftRightW
+	ButtonRightSideDownSrc := ButtonRightSidePushedSrc + LeftRightW
+	
+	ButtonInsideWidth := ObjectWidth - LeftRightW
+	ButtonInsideHeight := ObjectHeight - TopBottomH
+	
+	TextUpWidth := ObjectWidth - TextUpOffsetX - TextUpOffsetX
+	TextUpHeight := ObjectHeight - TextUpOffsetY - TextUpOffsetY
+	TextDownWidth := ObjectWidth - TextDownOffsetX - TextDownOffsetX
+	TextDownHeight := ObjectHeight - TextDownOffsetY - TextDownOffsetY
+	
+	Select UpPictureAlign BitAnd &H07
+		Case PICTURE_ALIGNLEFT
+			UpPictureX := UpPictureOffsetX
+
+		Case PICTURE_ALIGNHCENTER
+			UpPictureX := (ObjectWidth - UpPicture.GetWidth()) / 2 + UpPictureOffsetX
+
+		Case PICTURE_ALIGNRIGHT
+			UpPictureX := ObjectWidth - UpPicture.GetWidth() + UpPictureOffsetX
+
+	End Select
+
+	Select UpPictureAlign BitAnd &H38
+		Case PICTURE_ALIGNTOP
+			UpPictureY := UpPictureOffsetY
+
+		Case PICTURE_ALIGNVCENTER
+			UpPictureY := (ObjectHeight - UpPicture.GetHeight()) / 2 + UpPictureOffsetY
+
+		Case PICTURE_ALIGNBOTTOM
+			UpPictureY := ObjectHeight - UpPicture.GetHeight() + UpPictureOffsetY
+
+	End Select
+
+	Select DownPictureAlign BitAnd &H07
+		Case PICTURE_ALIGNLEFT
+			DownPictureX := DownPictureOffsetX
+
+		Case PICTURE_ALIGNHCENTER
+			DownPictureX := (ObjectWidth - DownPicture.GetWidth()) / 2 + DownPictureOffsetX
+
+		Case PICTURE_ALIGNRIGHT
+			DownPictureX := ObjectWidth - DownPicture.GetWidth() + DownPictureOffsetX
+
+	End Select
+
+	Select DownPictureAlign BitAnd &H38
+		Case PICTURE_ALIGNTOP
+			DownPictureY := DownPictureOffsetY
+
+		Case PICTURE_ALIGNVCENTER
+			DownPictureY := (ObjectHeight - DownPicture.GetHeight()) / 2 + DownPictureOffsetY
+
+		Case PICTURE_ALIGNBOTTOM
+			DownPictureY := ObjectHeight - DownPicture.GetHeight() + DownPictureOffsetY
+
+	End Select
+
+	
+End Function
+
+
+Protected Function OnDraw ()
+
+	Select ButtonStatus
+		Case STATE_UP
+			DrawButtonUp ()
+
+		Case STATE_DOWN
+			DrawButtonDown ()
+
+		Case STATE_PUSHED_DOWN
+			If IsPressed = True Then
+				DrawButtonPushed ()
+			Else
+				DrawButtonDown ()
+			End If
+	End Select
+	
+End Function
+
+
+Protected Function DrawButtonUp ()
+
+	// top
+	DrawTintedPicture (PictureTopBottomEdgeCornes, UpButtonColor, 
+		0, 0,
+		ButtonLeftTopBottomWidth, ButtonTopBottomHeight,
+		0, ButtonTopUpSrc,
+		IntOpacity)
+	DrawTintedPicture (PictureTopBottomEdgeCornes, UpButtonColor,
+		ButtonLeftTopBottomWidth, 0,
+		ButtonRightTopBottomWidth, ButtonTopBottomHeight,
+		ButtonRightTopBottomSrc, ButtonTopUpSrc,
+		IntOpacity)
+	// bottom
+	DrawTintedPicture (PictureTopBottomEdgeCornes, UpButtonColor,
+		0, ButtonBottomY,
+		ButtonLeftTopBottomWidth, ButtonTopBottomHeight,
+		0, ButtonBottomUpSrc,
+		IntOpacity)
+	DrawTintedPicture (PictureTopBottomEdgeCornes, UpButtonColor,
+		ButtonLeftTopBottomWidth, ButtonBottomY,
+		ButtonLeftTopBottomWidth, ButtonTopBottomHeight,
+		ButtonRightTopBottomSrc, ButtonBottomUpSrc,
+		IntOpacity)
+	// left
+	DrawTintedPicture (PictureLeftRightEdge, UpButtonColor,
+		0, ButtonTopBottomHeight,
+		ButtonSideWidth, ButtonSideHeight,
+		ButtonLeftSideUpSrc, 0,
+		IntOpacity)
+	// right
+	DrawTintedPicture (PictureLeftRightEdge, UpButtonColor,
+		ButtonRightSideX, ButtonTopBottomHeight,
+		ButtonSideWidth, ButtonSideHeight,
+		ButtonRightSideUpSrc, 0,
+		IntOpacity)
+	// inside
+	DrawRectangle (ColorUp,
+		ButtonSideWidth, ButtonTopBottomHeight,
+		ButtonInsideWidth, ButtonInsideHeight)	
+	// picture
+	DrawPicture(UpPicture, UpPictureX, UpPictureY, -1, -1, 0, 0, IntOpacity)
+
+	DrawButtonTextUp ()
+	
+End Function
+
+
+Protected Function DrawButtonPushed ()
+
+	// top
+	DrawTintedPicture (PictureTopBottomEdgeCornes, DownButtonColor, 
+		0, 0,
+		ButtonLeftTopBottomWidth, ButtonTopBottomHeight,
+		0, ButtonTopPushedSrc,
+		IntOpacity)
+	DrawTintedPicture (PictureTopBottomEdgeCornes, DownButtonColor, 
+		ButtonLeftTopBottomWidth, 0,
+		ButtonRightTopBottomWidth, ButtonTopBottomHeight,
+		ButtonRightTopBottomSrc, ButtonTopPushedSrc,
+		IntOpacity)
+	// bottom
+	DrawTintedPicture (PictureTopBottomEdgeCornes, DownButtonColor, 
+		0, ButtonBottomY,
+		ButtonLeftTopBottomWidth, ButtonTopBottomHeight,
+		0, ButtonBottomPushedSrc,
+		IntOpacity)
+	DrawTintedPicture (PictureTopBottomEdgeCornes, DownButtonColor, 
+		ButtonLeftTopBottomWidth, ButtonBottomY,
+		ButtonLeftTopBottomWidth, ButtonTopBottomHeight,
+		ButtonRightTopBottomSrc, ButtonBottomPushedSrc,
+		IntOpacity)
+	// left
+	DrawTintedPicture (PictureLeftRightEdge, DownButtonColor, 
+		0, ButtonTopBottomHeight,
+		ButtonSideWidth, ButtonSideHeight,
+		ButtonLeftSidePushedSrc, 0,
+		IntOpacity)
+	// right
+	DrawTintedPicture (PictureLeftRightEdge, DownButtonColor, 
+		ButtonRightSideX, ButtonTopBottomHeight,
+		ButtonSideWidth, ButtonSideHeight,
+		ButtonRightSidePushedSrc, 0,
+		IntOpacity)
+	// inside
+	DrawRectangle (ColorDown,
+		ButtonSideWidth, ButtonTopBottomHeight,
+		ButtonInsideWidth, ButtonInsideHeight)
+	// picture
+	DrawPicture(DownPicture, DownPictureX, DownPictureY, -1, -1, 0, 0, IntOpacity)
+
+	DrawButtonTextDown ()
+	
+End Function
+
+
+Protected Function DrawButtonDown ()
+
+	// top
+	DrawTintedPicture (PictureTopBottomEdgeCornes, DownButtonColor, 
+		0, 0,
+		ButtonLeftTopBottomWidth, ButtonTopBottomHeight,
+		0, ButtonTopDownSrc,
+		IntOpacity)
+	DrawTintedPicture (PictureTopBottomEdgeCornes, DownButtonColor, 
+		ButtonLeftTopBottomWidth, 0,
+		ButtonRightTopBottomWidth, ButtonTopBottomHeight,
+		ButtonRightTopBottomSrc, ButtonTopDownSrc,
+		IntOpacity)
+	// bottom
+	DrawTintedPicture (PictureTopBottomEdgeCornes, DownButtonColor, 
+		0, ButtonBottomY,
+		ButtonLeftTopBottomWidth, ButtonTopBottomHeight,
+		0, ButtonBottomDownSrc,
+		IntOpacity)
+	DrawTintedPicture (PictureTopBottomEdgeCornes, DownButtonColor, 
+		ButtonLeftTopBottomWidth, ButtonBottomY,
+		ButtonLeftTopBottomWidth, ButtonTopBottomHeight,
+		ButtonRightTopBottomSrc, ButtonBottomDownSrc,
+		IntOpacity)
+	// left
+	DrawTintedPicture (PictureLeftRightEdge, DownButtonColor, 
+		0, ButtonTopBottomHeight,
+		ButtonSideWidth, ButtonSideHeight,
+		ButtonLeftSideDownSrc, 0,
+		IntOpacity)
+	// right
+	DrawTintedPicture (PictureLeftRightEdge, DownButtonColor, 
+		ButtonRightSideX, ButtonTopBottomHeight,
+		ButtonSideWidth, ButtonSideHeight,
+		ButtonRightSideDownSrc, 0,
+		IntOpacity)
+	// inside
+	DrawRectangle (ColorDown,
+		ButtonSideWidth, ButtonTopBottomHeight,
+		ButtonInsideWidth, ButtonInsideHeight)
+	// picture
+	DrawPicture(DownPicture, DownPictureX, DownPictureY, -1, -1, 0, 0, IntOpacity)
+
+	DrawButtonTextDown ()
+	
+End Function
+
+
+Protected Function DrawButtonTextUp ()
+
+	DrawText(UpFont, UpText, SetColorComponentOpacity(_COLOR_WHITE, OPACITY_50_P * IntOpacity),
+		TextUpOffsetX, TextUpOffsetY + 1,
+		TextUpWidth, TextUpHeight,
+		FormatFlagsUp,
+		UpLineSpacing)
+
+	DrawText(UpFont, UpText, SetColorComponentOpacity(UpFontColor, IntOpacity),
+		TextUpOffsetX, TextUpOffsetY,
+		TextUpWidth, TextUpHeight,
+		FormatFlagsUp,
+		UpLineSpacing)
+		
+End Function
+
+
+Protected Function DrawButtonTextDown ()
+
+	DrawText(DownFont, DownText, SetColorComponentOpacity(DownFontColor, IntOpacity),
+		TextDownOffsetX, TextDownOffsetY + 1,
+		TextDownWidth, TextDownHeight,
+		FormatFlagsDown,
+		DownLineSpacing)
+		
+	DrawText(DownFont, DownText, SetColorComponentOpacity(_COLOR_WHITE, OPACITY_50_P * IntOpacity),
+		TextDownOffsetX, TextDownOffsetY,
+		TextDownWidth, TextDownHeight,
+		FormatFlagsDown,
+		DownLineSpacing)
+		
+End Function
+
+
+Protected Function IsInsideButton (x As Long, y As Long) As Boolean
+
+	If (x < InactiveSideWidth) Or (y < InactiveSideHeight)
+		Or (x > (ObjectWidth - InactiveSideWidth)) Or (y > (ObjectHeight - InactiveSideHeight)) Then
+
+		Return Value False
+	End If
+
+	Return Value True
+	
+End Function
+
+
+Protected Function OnMove(x As Long, y As Long, eventtime As Time, isinside As Boolean)
+Private Var LastPressed As Boolean
+
+	If Not Enabled Then Return End If
+
+	LastPressed := IsPressed
+
+	If isinside = True Then
+		isinside := IsInsideButton(x, y)
+	End If
+
+	If Not isinside Then
+		IsPressed:= False
+		Redraw()
+	End If
+	
+	If LastPressed And (Not IsPressed) Then
+		OnUp (x, y, eventtime, isinside)
+	End If
+	
+End Function
+
+
+Public Function Enable() As Boolean
+
+	LockRedraw()
+	Enabled := True
+	SetInternalColors ()
+	UnlockRedraw()
+	Redraw()
+	
+	Return Value True
+	
+End Function
+
+
+Protected Function Disable() As Boolean
+
+    LockRedraw()
+    Enabled := False
+    SetInternalColors()
+    UnlockRedraw()
+    Redraw()
+    
+    Return Value True
+    
+End Function
+
+
+
+Public Function IsEnabled () As Boolean
+
+	Return Value Enabled
+	
+End Function
+
+
+Public Function SetUpText (newuptext As Text) As Boolean
+
+	LockRedraw()
+	
+	If GetMemorySegment(newuptext) = _MSEG_RESOURCEDATA Then
+		UpText := newuptext
+	Else
+		TextUpBuffer := newuptext
+		UpText := TextUpBuffer
+	End If
+	
+	UnlockRedraw()
+	Redraw()
+	
+	Return Value True
+	
+End Function
+
+
+Public Function GetUpText () As AddressOf Text
+
+	Return Value UpText
+	
+End Function
+
+
+Public Function SetUpFont (newupfont As AddressOf _Font) As Boolean
+	
+	LockRedraw ()
+	UpFont := newupfont
+	UnlockRedraw ()
+	Redraw()
+
+	Return Value True
+	
+End Function
+
+
+Public Function GetUpFont () As AddressOf _Font
+
+	Return Value UpFont
+	
+End Function
+
+
+Public Function SetDownText (newdowntext As Text) As Boolean
+
+	LockRedraw()
+	
+	If GetMemorySegment(newdowntext) = _MSEG_RESOURCEDATA Then
+		DownText := newdowntext
+	Else
+		TextDownBuffer := newdowntext
+		DownText := TextDownBuffer
+	End If
+
+	UnlockRedraw()
+	Redraw()
+	
+	Return Value True
+	
+End Function
+
+
+Public Function GetDownText () As AddressOf Text
+
+	Return Value DownText
+	
+End Function
+
+
+Public Function SetDownFont (newdownfont As AddressOf _Font) As Boolean
+	
+	LockRedraw ()
+	DownFont := newdownfont
+	UnlockRedraw ()
+	Redraw()
+
+	Return Value True
+	
+End Function
+
+
+Public Function GetDownFont () As AddressOf _Font
+
+	Return Value DownFont
+	
+End Function
+
+
+Public Function GetUpFontColor () As Long
+
+	Return Value UpFontColor
+	
+End Function
+
+
+Public Function SetUpFontColor (newfontcolor As Long) As Boolean
+	
+	LockRedraw ()
+	UpFontColor := newfontcolor
+	UnlockRedraw ()
+	Redraw()
+	Return Value True
+	
+End Function
+
+
+Public Function GetDownFontColor () As Long
+
+	Return Value DownFontColor
+	
+End Function
+
+
+Public Function SetDownFontColor (newfontcolor As Long) As Boolean
+	
+	LockRedraw ()
+	DownFontColor := newfontcolor
+	UnlockRedraw ()
+	Redraw()
+	Return Value True
+	
+End Function
+
+
+Public Function GetUpButtonColor () As Long
+
+	Return Value UpButtonColor
+	
+End Function
+
+
+Public Function SetUpButtonColor (newbuttoncolor As Long) As Boolean
+	
+	LockRedraw ()
+	UpButtonColor := newbuttoncolor
+	SetInternalColors ()
+	UnlockRedraw ()
+	Redraw ()
+	Return Value True
+
+End Function
+
+
+Public Function GetDownButtonColor () As Long
+
+	Return Value DownButtonColor
+	
+End Function
+
+
+Public Function SetDownButtonColor (newbuttoncolor As Long) As Boolean
+	
+	LockRedraw ()
+	DownButtonColor := newbuttoncolor
+	SetInternalColors ()
+	UnlockRedraw ()
+	Redraw ()
+	Return Value True
+
+End Function
+
+
+Public Function GetUpPicture () As AddressOf _Picture
+
+	Return Value UpPicture
+	
+End Function
+
+
+Public Function SetUpPicture (newuppicture As AddressOf _Picture) As Boolean
+
+	LockRedraw ()
+	UpPicture := newuppicture
+	CalcDrawParams()
+	UnlockRedraw ()
+	Redraw ()
+	Return Value True
+	
+End Function
+
+
+Public Function GetUpPictureAlign() As Long
+
+	Return Value UpPictureAlign
+
+End Function
+
+
+Public Function SetUpPictureAlign(newuppicturealign As Long) As Boolean
+
+	Select newuppicturealign
+		Case PICTURE_ALIGNLEFT BitOr PICTURE_ALIGNTOP, PICTURE_ALIGNLEFT BitOr PICTURE_ALIGNVCENTER, PICTURE_ALIGNLEFT BitOr PICTURE_ALIGNBOTTOM, PICTURE_ALIGNHCENTER BitOr PICTURE_ALIGNTOP, PICTURE_ALIGNHCENTER BitOr PICTURE_ALIGNVCENTER, PICTURE_ALIGNHCENTER BitOr PICTURE_ALIGNBOTTOM, PICTURE_ALIGNRIGHT BitOr PICTURE_ALIGNTOP, PICTURE_ALIGNRIGHT BitOr PICTURE_ALIGNVCENTER, PICTURE_ALIGNRIGHT BitOr PICTURE_ALIGNBOTTOM
+			UpPictureAlign := newuppicturealign
+			CalcDrawParams()
+			Redraw()
+			Return Value True
+
+		Case Else
+			Return Value False
+
+	End Select
+
+End Function
+
+
+Public Function GetUpPictureOffsetX () As Long
+
+	Return Value UpPictureOffsetX
+	
+End Function
+
+
+Public Function SetUpPictureOffsetX (newuppictureoffsetx As Long) As Boolean
+	
+	UpPictureOffsetX :=  newuppictureoffsetx 
+	Redraw()
+	Return Value True
+	
+End Function
+
+
+Public Function GetUpPictureOffsetY () As Long
+
+	Return Value UpPictureOffsetY
+	
+End Function
+
+
+Public Function SetUpPictureOffsetY (newuppictureoffsety As Long) As Boolean
+	
+	UpPictureOffsetY :=  newuppictureoffsety 
+	Redraw()
+	Return Value True
+	
+End Function
+
+
+Public Function GetDownPicture () As AddressOf _Picture
+
+	Return Value DownPicture
+	
+End Function
+
+
+Public Function SetDownPicture (newdownpicture As AddressOf _Picture) As Boolean
+
+	LockRedraw ()
+	DownPicture := newdownpicture
+	CalcDrawParams()
+	UnlockRedraw ()
+	Redraw ()
+	Return Value True
+	
+End Function
+
+
+Public Function GetDownPictureAlign() As Long
+
+	Return Value DownPictureAlign
+
+End Function
+
+
+Public Function SetDownPictureAlign(newdownpicturealign As Long) As Boolean
+
+	Select newdownpicturealign
+		Case PICTURE_ALIGNLEFT BitOr PICTURE_ALIGNTOP, PICTURE_ALIGNLEFT BitOr PICTURE_ALIGNVCENTER, PICTURE_ALIGNLEFT BitOr PICTURE_ALIGNBOTTOM, PICTURE_ALIGNHCENTER BitOr PICTURE_ALIGNTOP, PICTURE_ALIGNHCENTER BitOr PICTURE_ALIGNVCENTER, PICTURE_ALIGNHCENTER BitOr PICTURE_ALIGNBOTTOM, PICTURE_ALIGNRIGHT BitOr PICTURE_ALIGNTOP, PICTURE_ALIGNRIGHT BitOr PICTURE_ALIGNVCENTER, PICTURE_ALIGNRIGHT BitOr PICTURE_ALIGNBOTTOM
+			DownPictureAlign := newdownpicturealign
+			CalcDrawParams()
+			Redraw()
+			Return Value True
+
+		Case Else
+			Return Value False
+
+	End Select
+
+End Function
+
+
+Public Function GetDownPictureOffsetX () As Long
+
+	Return Value DownPictureOffsetX
+	
+End Function
+
+
+Public Function SetDownPictureOffsetX (newdownpictureoffsetx As Long) As Boolean
+	
+	DownPictureOffsetX :=  newdownpictureoffsetx 
+	Redraw()
+	Return Value True
+	
+End Function
+
+
+Public Function GetDownPictureOffsetY () As Long
+
+	Return Value DownPictureOffsetY
+	
+End Function
+
+
+Public Function SetDownPictureOffsetY (newdownpictureoffsety As Long) As Boolean
+	
+	DownPictureOffsetY :=  newdownpictureoffsety 
+	Redraw()
+	Return Value True
+	
+End Function
+
+Public Function SetUpAlign (newupalign As Long) As Boolean
+
+	Select newupalign
+		Case _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNTOP, _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNVCENTER, _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNBOTTOM, _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNTOP, _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER, _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNBOTTOM, _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNTOP, _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNVCENTER, _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNBOTTOM
+			LockRedraw ()
+			UpAlign := newupalign
+			FormatFlagsUp := UpAlign BitOr _TEXT_WORDWRAP
+			UnlockRedraw ()
+			Redraw()
+			Return Value True
+
+		Case Else
+			Return Value False
+			
+	End Select
+
+End Function
+
+
+Public Function GetUpAlign () As Long
+	
+	Return Value UpAlign
+	
+End Function
+
+
+Public Function SetDownAlign (newdownalign As Long) As Boolean
+
+	Select newdownalign
+		Case _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNTOP, _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNVCENTER, _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNBOTTOM, _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNTOP, _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER, _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNBOTTOM, _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNTOP, _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNVCENTER, _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNBOTTOM
+			LockRedraw ()
+			DownAlign := newdownalign
+			FormatFlagsDown := DownAlign BitOr _TEXT_WORDWRAP
+			UnlockRedraw ()
+			Redraw()
+			Return Value True
+
+		Case Else
+			Return Value False
+			
+	End Select
+
+End Function
+
+
+Public Function GetDownAlign () As Long
+
+	Return Value DownAlign
+
+End Function
+
+
+Public Function SetOpacity (newopacity As Byte) As Boolean
+	
+	LockRedraw ()
+	Opacity := newopacity
+	SetInternalColors ()
+	UnlockRedraw ()
+	Redraw ()
+	Return Value True
+	
+End Function
+
+
+Public Function GetOpacity () As Byte
+	
+	Return Value Opacity
+	
+End Function
+
+
+Public Function GetUpLineSpacing () As Double
+
+	Return Value UpLineSpacing
+	
+End Function
+
+
+Public Function SetUpLineSpacing (newuplinespacing As Double) As Boolean
+	
+	If newuplinespacing < 0 Then
+		Return Value False
+	End If
+	
+	LockRedraw ()
+	UpLineSpacing := newuplinespacing
+	UnlockRedraw ()
+	Redraw()
+	Return Value True
+	
+End Function
+
+
+Public Function GetDownLineSpacing () As Double
+
+	Return Value DownLineSpacing
+	
+End Function
+
+
+Public Function SetDownLineSpacing (newdownlinespacing As Double) As Boolean
+	
+	If newdownlinespacing < 0 Then
+		Return Value False
+	End If
+	
+	LockRedraw ()
+	DownLineSpacing := newdownlinespacing
+	UnlockRedraw ()
+	Redraw()
+	Return Value True
+	
+End Function
+
+
+Public Function SetObjectPosition (newx As Long, newy As Long) As Boolean
+
+	Return Value SetPosition (newx, newy)
+
+End Function
+
+
+Public Function GetObjectPosition (ByRef currentx As Long, ByRef currenty As Long)
+
+	GetPosition (currentx, currenty)
+
+End Function
+
+
+Public Function GetObjectDimensions (ByRef currentwidth As Long, ByRef currentheight As Long)
+
+	GetSize (currentwidth, currentheight)
+
+End Function
+
+
+Public Function SetObjectDimensions (newwidth As Long, newheight As Long) As Boolean
+Private Var R As Boolean
+
+ 	LockRedraw ()
+	R := SetSize (newwidth, newheight)
+	CalcDrawParams ()
+	UnlockRedraw ()
+	Redraw ()
+	Return Value R
+	
+End Function
+
+
+Public Function IsObjectVisible () As Boolean
+
+	Return Value GetVisible ()
+
+End Function
+
+
+Public Function ShowObject ()
+
+	Show ()
+
+End Function
+
+
+Public Function HideObject ()
+
+	Hide ()
+
+End Function
+
+
+End GraphicClass
+
+
+
+// Start of object -----------------------------------------------------------------------
+// PushButton
+
+
+Public GraphicClass PushButton Inherits BaseButton WithAttributes
+{
+	DisplayName := "PushButton",
+	ObjectCode := "OB0003-001",
+	DefaultWidth := 120,
+	DefaultHeight := 80
+	, DesignName := "Basic", GroupName := "Buttons"
+}
+
+Public Event OnPush As Process ()
+
+
+Public Function Disable() As Boolean
+
+	ButtonStatus := STATE_UP
+	Return Value BaseButton.Disable()
+	
+End Function
+
+
+Protected Function OnUp(x As Long, y As Long, eventtime As Time, isinside As Boolean)
+
+	If Not Enabled Then Return End If
+	
+	If Not UpExecuted Then
+	
+		ButtonStatus := STATE_UP
+		IsPressed := False
+		StopTimer (1)
+		Redraw()
+		
+	End If
+		
+	UpExecuted := True
+	
+End Function
+
+
+Protected Function OnDown(x As Long, y As Long, eventtime As Time) As Boolean
+
+	If IsInsideButton(x, y) = True Then
+		If Enabled = True Then
+			IsPressed := True
+			ButtonStatus := STATE_PUSHED_DOWN
+			Redraw()
+			RaiseEvent OnPush()
+			
+		End If
+		UpExecuted := False
+		Return Value True
+	End If
+
+	Return Value False
+	
+End Function
+
+
+Public Function WaitWhilePressed (Optional timeout As Time := _TIME_INFINITE) As Boolean
+Private Var StartTime As Time
+Private Var EndTime As Time
+Private Var TimeoutEnabled As Boolean
+
+	TimeoutEnabled := timeout <> _TIME_INFINITE
+	
+	StartTime := GetSystemTime ()
+	
+	If TimeoutEnabled Then EndTime := StartTime + timeout End If
+	
+	Do While IsPressed And Enabled
+		Wait (:.1)
+		If TimeoutEnabled And GetSystemTime () > EndTime Then 
+			OnUp (0, 0, GetSystemTime (), True)
+			Return Value False
+		End If
+	End Do
+	
+	Return Value True
+	
+End Function
+
+
+Public Function IsButtonPressed () As Boolean
+
+	Return Value IsPressed And Enabled
+	
+End Function
+
+
+End GraphicClass
+
+
+// PushButton
+// End of object -------------------------------------------------------------------------
+
+
+
+// Start of object -----------------------------------------------------------------------
+// LongPressButton
+
+
+Public GraphicClass LongPressButton Inherits BaseButton WithAttributes
+{
+	DisplayName := "LongPressButton",
+	ObjectCode := "OB0024-001",
+	DefaultWidth := 120,
+	DefaultHeight := 80
+	, DesignName := "Basic", GroupName := "Buttons"
+}
+
+Protected Property ShortPressTime As Time := :.4 WithAttributes
+{
+	PropertyGroup := "Behavior",
+	EditMode := "TimeInterval"
+}
+
+Public Event OnPress As Process (shortpress As Boolean)
+
+Private Var LongPress As Boolean := False
+
+
+Public Function SetShortPressTime (newshortpresstime As Time) As Boolean
+
+	If newshortpresstime < :0 Then
+		Return Value False
+	End If
+	
+	ShortPressTime := newshortpresstime
+	
+	Return Value True
+
+End Function
+
+
+Public Function GetShortPressTime () As Time
+
+	Return Value ShortPressTime
+
+End Function
+
+
+Protected Function OnTimer (timerid As Long)
+
+	LongPress := True
+	RaiseEvent OnPress (False)
+
+End Function
+
+
+Public Function IsButtonPressed () As Boolean
+
+	Return Value IsPressed And Enabled
+	
+End Function
+
+
+Public Function Disable() As Boolean
+
+	ButtonStatus := STATE_UP
+	Return Value BaseButton.Disable()
+	
+End Function
+
+
+Public Function WaitWhilePressed (Optional timeout As Time := _TIME_INFINITE) As Boolean
+Private Var StartTime As Time
+Private Var EndTime As Time
+Private Var TimeoutEnabled As Boolean
+
+	TimeoutEnabled := timeout <> _TIME_INFINITE
+	
+	StartTime := GetSystemTime ()
+	
+	If TimeoutEnabled Then EndTime := StartTime + timeout End If
+	
+	Do While IsPressed And Enabled
+		Wait (:.1)
+		If TimeoutEnabled And GetSystemTime () > EndTime Then 
+			OnUp (0, 0, GetSystemTime (), True)
+			Return Value False
+		End If
+	End Do
+	
+	Return Value True
+	
+End Function
+
+
+Protected Function OnUp(x As Long, y As Long, eventtime As Time, isinside As Boolean)
+
+	If Not Enabled Then Return End If
+	
+	If Not UpExecuted Then
+		ButtonStatus := STATE_UP
+		IsPressed := False
+		StopTimer (1)
+		Redraw()
+		
+		If Not LongPress Then
+			RaiseEvent OnPress (True)
+		End If
+		
+	End If
+		
+	UpExecuted := True
+	
+End Function
+
+
+Protected Function OnDown(x As Long, y As Long, eventtime As Time) As Boolean
+
+	If IsInsideButton(x, y) = True Then
+		If Enabled = True Then
+			IsPressed := True
+			LongPress := False
+			ButtonStatus := STATE_PUSHED_DOWN
+			Redraw()
+			StartTimer (1, ShortPressTime)
+		End If
+		UpExecuted := False
+		Return Value True
+	End If
+
+	Return Value False
+	
+End Function
+
+
+End GraphicClass
+
+
+// LongPressButton
+// End of object -------------------------------------------------------------------------
+
+
+
+// Start of object -----------------------------------------------------------------------
+// ToggleButton
+
+
+Public GraphicClass ToggleButton Inherits BaseButton WithAttributes
+{
+	DisplayName := "ToggleButton",
+	ObjectCode := "OB0004-001",
+	DefaultWidth := 120,
+	DefaultHeight := 80
+	, DesignName := "Basic", GroupName := "Buttons"
+}
+
+Protected Property EventType As Boolean := True WithAttributes
+{
+	PropertyGroup := "Behavior",
+	EditMode := "Boolean; 'OnDown' := True, 'OnUp' := False"
+}
+
+Protected Property DefaultState As Long := STATE_UP WithAttributes
+{
+	PropertyGroup := "Behavior",
+	EditMode := "Enum; 'Up' := STATE_UP, 'Down' := STATE_DOWN"
+}
+
+
+Protected Var IsDown As Boolean := False
+
+
+Public Event OnToggle As Process (isdown As Boolean)
+
+
+Public Function SetEventTypeOnUp () As Boolean
+
+	EventType := False
+	Return Value True
+	
+End Function
+
+
+Public Function SetEventTypeOnDown () As Boolean
+
+	EventType := True
+	Return Value True
+	
+End Function
+
+
+Public Function IsEventTypeOnDown () As Boolean
+	
+	Return Value EventType
+	
+End Function
+
+
+Public Function Disable() As Boolean
+
+	If IsDown = True Then
+			ButtonStatus := STATE_DOWN
+	Else
+		ButtonStatus := STATE_UP
+	End If
+	
+	Return Value BaseButton.Disable()
+	
+End Function
+
+
+Protected Function OnUp(x As Long, y As Long, eventtime As Time, isinside As Boolean)
+
+	If Not Enabled Then Return End If
+
+	If Not UpExecuted Then
+
+		If isinside = True Then
+			isinside := IsInsideButton(x, y)
+	
+			If (EventType = False) And (isinside = True) Then
+				IsDown := Not IsDown
+			End If
+		End If
+		
+		IsPressed := False
+	
+		If IsDown = True Then
+			ButtonStatus := STATE_DOWN
+		Else
+			ButtonStatus := STATE_UP
+		End If
+	
+		Redraw()
+	
+		If (EventType = False) And (isinside = True) Then
+			RaiseEvent OnToggle (IsDown)
+		End If
+		
+		UpExecuted := True
+		
+	End If
+	
+End Function
+
+
+Protected Function OnDown(x As Long, y As Long, eventtime As Time) As Boolean
+
+	If IsInsideButton(x, y) = True Then
+		If Enabled = True Then
+			IsPressed := True
+			ButtonStatus := STATE_PUSHED_DOWN
+			Redraw()
+
+			If EventType = True Then
+				IsDown := Not IsDown
+				RaiseEvent OnToggle (IsDown)
+			End If
+		End If
+		
+		UpExecuted := False
+		
+		Return Value True
+	End If
+
+	Return Value False
+	
+End Function
+
+
+Public Function SetStateUp () As Boolean
+
+	LockRedraw()
+	IsDown := False
+	ButtonStatus := STATE_UP
+	UnlockRedraw()
+	Redraw()
+	Return Value True
+	
+End Function
+
+
+Public Function SetStateDown () As Boolean
+
+	LockRedraw()
+	IsDown := True
+	ButtonStatus := STATE_DOWN
+	UnlockRedraw()
+	Redraw()
+	Return Value True
+
+End Function
+
+
+Public Function IsStateDown () As Boolean
+
+	Return Value IsDown
+
+End Function
+
+
+Private Function Init()
+
+	// set status by property
+	ButtonStatus := DefaultState
+	If DefaultState <> STATE_UP Then IsDown := True End If
+	
+End Function
+
+
+End GraphicClass
+
+// ToggleButton
+// End of object -------------------------------------------------------------------------
+
+
+
+// Start of object -----------------------------------------------------------------------
+// TwoStatePushButton
+
+
+Public GraphicClass TwoStatePushButton Inherits BaseButton WithAttributes
+{
+	DisplayName := "TwoStatePushButton",
+	ObjectCode := "OB0025-001",
+	DefaultWidth := 120,
+	DefaultHeight := 80
+	, DesignName := "Basic", GroupName := "Buttons"
+}
+
+Protected Property DefaultState As Long := STATE_UP WithAttributes
+{
+	PropertyGroup := "Behavior",
+	EditMode := "Enum; 'Up' := STATE_UP, 'Down' := STATE_DOWN"
+}
+
+
+Protected Var IsDown As Boolean := False
+
+Public Event OnPush As Process ()
+
+
+Public Function Disable() As Boolean
+
+	If IsDown = True Then
+		ButtonStatus := STATE_DOWN
+	Else
+		ButtonStatus := STATE_UP
+	End If
+	
+	Return Value BaseButton.Disable()
+	
+End Function
+
+
+Protected Function OnUp(x As Long, y As Long, eventtime As Time, isinside As Boolean)
+
+	If Not Enabled Then Return End If
+	
+	If Not UpExecuted Then
+
+		If isinside = True Then
+			isinside := IsInsideButton(x, y)
+		End If
+		
+		IsPressed := False
+	
+		If IsDown = True Then
+			ButtonStatus := STATE_DOWN
+		Else
+			ButtonStatus := STATE_UP
+		End If
+	
+		Redraw()
+		
+		UpExecuted := True
+		
+	End If
+	
+End Function
+
+
+Protected Function OnDown(x As Long, y As Long, eventtime As Time) As Boolean
+
+	If IsInsideButton(x, y) = True Then
+		If Enabled = True Then
+			IsPressed := True
+			ButtonStatus := STATE_PUSHED_DOWN
+			Redraw()
+
+			RaiseEvent OnPush ()
+
+		End If
+		
+		UpExecuted := False
+		
+		Return Value True
+	End If
+
+	Return Value False
+	
+End Function
+
+
+Public Function SetStateUp () As Boolean
+
+	SetStateUpProtected ()
+	Return Value True
+	
+End Function
+
+
+Public Function SetStateDown () As Boolean
+
+	SetStateDownProtected ()
+	Return Value True
+
+End Function
+
+
+Public Function IsStateDown () As Boolean
+
+	Return Value IsDown
+
+End Function
+
+
+Protected Function SetStateUpProtected ()
+
+	LockRedraw()
+	IsDown := False
+	ButtonStatus := STATE_UP
+	UnlockRedraw()
+	Redraw()
+	
+End Function
+
+
+Protected Function SetStateDownProtected ()
+
+	LockRedraw()
+	IsDown := True
+	If IsPressed Then
+		ButtonStatus := STATE_PUSHED_DOWN
+	Else
+		ButtonStatus := STATE_DOWN
+	End If
+	UnlockRedraw()
+	Redraw()
+
+End Function
+
+
+Public Function WaitWhilePressed (Optional timeout As Time := _TIME_INFINITE) As Boolean
+Private Var StartTime As Time
+Private Var EndTime As Time
+Private Var TimeoutEnabled As Boolean
+
+	TimeoutEnabled := timeout <> _TIME_INFINITE
+	
+	StartTime := GetSystemTime ()
+	
+	If TimeoutEnabled Then EndTime := StartTime + timeout End If
+	
+	Do While IsPressed And Enabled
+		Wait (:.1)
+		If TimeoutEnabled And GetSystemTime () > EndTime Then 
+			OnUp (0, 0, GetSystemTime (), True)
+			Return Value False
+		End If
+	End Do
+	
+	Return Value True
+	
+End Function
+
+
+Public Function IsButtonPressed () As Boolean
+
+	Return Value IsPressed And Enabled
+	
+End Function
+
+
+Protected Function Init()
+
+	// set status by property
+	ButtonStatus := DefaultState
+	If DefaultState <> STATE_UP Then IsDown := True End If
+
+End Function
+
+
+End GraphicClass
+
+// TwoStatePushButton
+// End of object -------------------------------------------------------------------------
+
+
+
+// Start of object -----------------------------------------------------------------------
+// RepeatButton
+
+
+Public GraphicClass RepeatButton Inherits BaseButton WithAttributes
+{
+	DisplayName := "RepeatButton",
+	ObjectCode := "OB0006-001",
+	DefaultWidth := 120,
+	DefaultHeight := 80
+	, DesignName := "Basic", GroupName := "Buttons"
+}
+
+Protected Property RepeatInterval As Time := :.4 WithAttributes
+{
+	PropertyGroup := "Behavior",
+	EditMode := "TimeInterval"
+}
+
+Public Event OnRepeat As Process()
+
+
+Protected Function OnUp(x As Long, y As Long, eventtime As Time, isinside As Boolean)
+
+	If Not Enabled Then Return End If
+	
+	StopTimer(1)
+
+	If Not UpExecuted Then
+		ButtonStatus := STATE_UP
+		IsPressed := False
+		Redraw()
+	End If
+	
+	UpExecuted := True
+	
+End Function
+
+
+Public Function Disable() As Boolean
+Private Var R As Boolean
+
+	ButtonStatus := STATE_UP
+	R := BaseButton.Disable()
+	StopTimer (1)
+	Return Value R
+	
+End Function
+
+
+Protected Function OnDown(x As Long, y As Long, eventtime As Time) As Boolean
+
+	If IsInsideButton(x, y) = True Then
+		If Enabled = True Then
+			IsPressed := True
+			ButtonStatus := STATE_PUSHED_DOWN
+			Redraw()
+			
+			RaiseEvent OnRepeat()
+
+			If RepeatInterval <> :0 Then
+				StartTimer(1, RepeatInterval)
+			End If
+		End If
+		
+		UpExecuted := False
+		
+		Return Value True
+	End If
+
+	Return Value False
+	
+End Function
+
+
+Protected Function OnTimer(timerid As Long)
+
+	If ButtonStatus = STATE_PUSHED_DOWN Then
+		StartTimer(1, RepeatInterval)
+		RaiseEvent OnRepeat()
+	End If
+	
+End Function
+
+
+Public Function SetRepeatInterval (newrepeatinterval As Time) As Boolean
+
+	If newrepeatinterval <= :0 Then
+		Return Value False
+	End If
+	
+	RepeatInterval := newrepeatinterval
+	
+	Return Value True
+
+End Function
+
+
+Public Function GetRepeatInterval () As Time
+
+	Return Value RepeatInterval
+
+End Function
+
+
+End GraphicClass
+
+
+// RepeatButton
+// End of object -------------------------------------------------------------------------
+
+
+
+// Start of object -----------------------------------------------------------------------
+// RadioButton
+
+
+Public GraphicClass RadioButton Inherits TwoStatePushButton WithAttributes
+{
+	DisplayName := "RadioButton",
+	ObjectCode := "OB0005-001",
+	DefaultWidth := 120,
+	DefaultHeight := 80
+	, DesignName := "Basic", GroupName := "Buttons"
+}
+
+Protected Property NavigationBarButtonID As Long := 0 WithAttributes
+{
+	PropertyGroup := "Behavior"
+}
+
+
+Protected Function OnShow()
+
+	If IsDown Then
+		SendJoinMessage(False, 1, NavigationBarButtonID)
+	End If
+
+End Function
+
+
+Protected Function OnHide()
+
+	If IsDown Then
+		SendJoinMessage(False, 1, -1)
+	End If
+	
+End Function
+
+
+Protected Function OnDown(x As Long, y As Long, eventtime As Time) As Boolean
+	
+	If IsInsideButton(x, y) = True Then
+		If Enabled = True Then
+			IsPressed := True
+			IsDown := True
+			ButtonStatus := STATE_PUSHED_DOWN
+			Redraw()
+
+			RaiseEvent OnPush ()
+			SendJoinMessage(False, 2, NavigationBarButtonID)
+			SendJoinMessage(False, 1, NavigationBarButtonID)
+
+		End If
+		
+		UpExecuted := False
+		
+		Return Value True
+	End If
+
+	Return Value False
+		
+End Function
+
+
+Private Function OnJoinMessage (msgobject As BaseGraphicClass, messageid As Long, ParamArray)
+
+	If messageid = 2 Then
+		If AddressOf msgobject = AddressOf Me Then
+			SendDown ()
+		Else
+			SendUp ()
+		End If
+	End If
+		
+End Function
+
+
+Protected Function SetStateDownProtected ()
+
+	SendDown ()
+	SendJoinMessage(False, 2)
+	If GetVisible() Then
+		SendJoinMessage(False, 1, NavigationBarButtonID)
+	End If
+
+End Function
+
+
+Protected Function SendUp ()
+
+	LockRedraw()
+	IsDown := False
+	ButtonStatus := STATE_UP
+	UnlockRedraw()
+	Redraw()
+	
+End Function
+
+
+Protected Function SetStateUpProtected ()
+
+	If GetVisible() And IsDown Then
+		SendJoinMessage(False, 1, -1)
+	End If
+	SendUp ()
+	
+End Function
+
+
+Private Function SendDown ()
+
+	LockRedraw()
+	IsDown := True
+	If IsPressed Then
+		ButtonStatus := STATE_PUSHED_DOWN
+	Else
+		ButtonStatus := STATE_DOWN
+	End If
+	UnlockRedraw()
+	Redraw()
+
+End Function
+
+
+End GraphicClass
+
+
+// RadioButton
+// End of object -------------------------------------------------------------------------
+
+// BasicButtons
+// End of group ******************************************************************* 

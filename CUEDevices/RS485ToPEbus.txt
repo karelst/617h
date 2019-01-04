@@ -1,0 +1,609 @@
+Private Const CUERING_WAIT_TIME_BEFORE_SEND As Time := :.06
+Private Const CUERING_WAIT_TIME_AFTER_SEND As Time := :.25
+Private Const CUERING_RECEIVE_TIMEOUT As Time := :.1
+
+Private Const PE_VALUE_NOT_AVAILABLE As Double := 0.000127
+
+Global Class PEbus
+
+Friend RS485ToPEbus
+
+// control characters
+Private Const STX As ByteString := &S"\02"
+Private Const ETX As ByteString := &S"\03"
+
+// 'd' message
+Private Const I_D_MESS_BANK As Byte := 3
+Private Const I_D_MESS_RELAY As Byte := 7
+
+// '?' message
+Private Const I_QUEST_MESS_BANK As Byte := 4
+Private Const I_QUEST_MESS_CHAN_ADD As Byte := 5
+
+// 'y' message
+Private Const I_Y_MESS_BANK As Byte := 6
+Private Const I_Y_MESS_CHAN_ADD As Byte := 7
+
+// '!' message
+Private Const EXCL_MESS_LENGTH As Byte := 50
+
+// status string
+Private Const PE_STATUS_STRING_LENGTH As Byte := 4
+Private Const PE_STATUS_STRING_OFFSET As Byte := 3
+Private Const RELAYCUE8_STATUS_STRING_LENGTH As Byte := 8
+Private Const RELAYCUE8_STATUS_STRING_OFFSET As Byte := 1
+
+// max_value * MAX_LEVEL_COEF = 990
+Private Const MAX_LEVEL_COEF As Double := 9.90
+
+Private Const RELAY_MASK As ByteString := &S"1248@P"
+
+Private Var InterfaceDeviceAddress As AddressOf RS485ToPEbus
+
+Private Var CommSemaphore As _Semaphore
+
+Private Var LastInitBank As Byte
+Private Var LastRelayCue8UnitID As Long
+Private Var DimmerAddressTable[32, 10] As Long := 0 //Table for dimmer address space conflicts checking.
+	// if unit has UnitID, there is stored UnitID. In case of PEF150 Channel, there is -1. 
+Private Var RelayAddressTable[96, 10] As Long := 0 //Table for relay address space conflicts checking.
+	// there is stored UnitID of registered unit.
+
+
+/////////////////////////////////////////////////////////////////////////////////////////
+// init devices
+/////////////////////////////////////////////////////////////////////////////////////////
+
+Public Function RelayCUE8InitDevice(
+	unitid As Long,
+	bank As Byte,
+	address As Byte,
+	filter As Time,
+	longpress As Time)
+
+Private Var SendPacket As ByteString[50]
+
+	LastInitBank := bank
+	LastRelayCue8UnitID := unitid
+
+	FormatByteString(SendPacket, &s"\01y1.0335{n05}\02{n}{n03}\17\03", unitid, bank, address)
+
+	CommSemaphore.Lock()
+	InterfaceDeviceAddress.Send(SendPacket, True)
+	CommSemaphore.Unlock()
+
+	FormatByteString(SendPacket, &s"\01y10d{n}{n03}\02{n02}{n}\17\03",
+		bank,
+		address,
+		CLong(filter / :.01) + 1,
+		CLong(longpress / :.1))
+
+	CommSemaphore.Lock()
+	InterfaceDeviceAddress.Send(SendPacket, True)
+	CommSemaphore.Unlock()
+	
+End Function
+
+
+Public Function RelayCUE8InitRelay(
+	bank As Byte,
+	address As Byte,
+	Relay As Byte,
+	functionality As Byte,
+	paired As Byte,
+	relaytime As Time)
+
+Private Var SendPacket As ByteString[50]
+
+	If RelayAddressTable[address * 8 + Relay, LastInitBank + 1] <> 0 Then
+		DebugPrintFormat ("WARNING: relayCUE-8 (UnitID {n}) has address conflict with another relay unit (UnitID {n})", LastRelayCue8UnitID, RelayAddressTable[address * 8 + Relay, LastInitBank + 1])
+	Else	
+		RelayAddressTable[address * 8 + Relay, LastInitBank + 1] := LastRelayCue8UnitID
+	End If
+
+	FormatByteString(SendPacket, &s"\01y1{n}d{n}{n03}\02{n}{n}{n06}\17\03",
+		Relay,
+		bank,
+		address,
+		functionality,
+		paired,
+		CLong(relaytime / :.1))
+
+	CommSemaphore.Lock()
+	InterfaceDeviceAddress.Send(SendPacket, True)
+	CommSemaphore.Unlock()
+	
+End Function
+
+
+Public Function PExInitDevice(
+	serialnumber As Long,
+	bank As Byte,
+	address As Byte,
+	filter As Byte,
+	longpress As Byte)
+
+Private Var SendPacket As ByteString[50]
+
+	LastInitBank := bank
+
+	FormatByteString(SendPacket, &s"\01y2P{n05}\02{n}{n}{n}\17\03",
+		serialnumber,
+		bank,
+		filter,
+		longpress)
+
+	CommSemaphore.Lock()
+	InterfaceDeviceAddress.Send(SendPacket, True)
+	CommSemaphore.Unlock()
+	
+End Function
+
+
+Public Function PER610InitRelay(
+	serialnumber As Long,
+	address As Byte,
+	relay As Byte,
+	functionality As Byte,
+	paired As Byte,
+	relaytime As Time)
+
+Private Var SendPacket As ByteString[50]
+
+	If RelayAddressTable[address * 6 + relay, LastInitBank + 1] <> 0 Then
+		DebugPrintFormat ("WARNING: PER610 (UnitID {n}) has address conflict with another relay unit (UnitID {n})", serialnumber, RelayAddressTable[address * 6 + relay, LastInitBank + 1])
+	Else	
+		RelayAddressTable[address * 6 + relay, LastInitBank + 1] := serialnumber
+	End If
+
+	FormatByteString(SendPacket, &s"\01y2\50{n05}\02{n02}{n}{n04}{n}\17\03",
+		serialnumber,
+		address * 6 + relay,
+		functionality,
+		CLong(relaytime / :.1),
+		paired)
+
+	SendPacket[4] := &H50 + relay
+
+	CommSemaphore.Lock()
+	InterfaceDeviceAddress.Send(SendPacket, True)
+	CommSemaphore.Unlock()
+
+End Function
+
+
+Public Function PExInitPEF150Channel (channeladdress As Byte, bank As Byte)
+
+	If DimmerAddressTable[channeladdress, bank + 1] > 0 Then
+		DebugPrintFormat ("WARNING: PEF150 Channel (ChannelAddress {n}, Bank {n}) has address conflict with Dimmer (UnitID {n})", channeladdress, bank, DimmerAddressTable[channeladdress, bank + 1])
+	ElseIf DimmerAddressTable[channeladdress, bank + 1] < 0 Then
+		DebugPrintFormat ("WARNING: PEF150 Channel (ChannelAddress {n}, Bank {n}) has address conflict with another PEF150Channel", channeladdress, bank)
+	Else	
+		DimmerAddressTable[channeladdress, bank + 1] := -1
+	End If
+
+End Function
+
+
+Public Function PExInitDimmer(
+	serialnumber As Long,
+	address As Byte,
+	dimmer As Byte,
+	dimmercount As Byte,
+	functionality As Byte,
+	minimum As Byte,
+	inter As Byte,
+	maximum As Byte,
+	shortpressfade As Time,
+	longpressfade As Time)
+
+Private Var SendPacket As ByteString[50]
+
+	If DimmerAddressTable[address * dimmercount + dimmer, LastInitBank + 1] > 0 Then
+		DebugPrintFormat ("WARNING: Dimmer (UnitID {n}) has address conflict with Dimmer (UnitID {n})", serialnumber, DimmerAddressTable[address * dimmercount + dimmer, LastInitBank + 1])
+	ElseIf DimmerAddressTable[address * dimmercount + dimmer, LastInitBank + 1] < 0 Then
+		DebugPrintFormat ("WARNING: Dimmer (UnitID {n}) has address conflict with PEF150Channel (ChannelAddress {n}, Bank {n})", serialnumber, address * dimmercount + dimmer, LastInitBank)
+	Else	
+		DimmerAddressTable[address * dimmercount + dimmer, LastInitBank + 1] := serialnumber
+	End If
+
+	FormatByteString(SendPacket, &s"\01y2\50{n05}\02{n02}{n}{n02}{n02}{n02}{n03}{n02}\17\03",
+		serialnumber,
+		address * dimmercount + dimmer,
+		functionality,
+		minimum,
+		inter,
+		maximum,
+		CLong(shortpressfade / :.1),
+		CLong(longpressfade / :1))
+
+	SendPacket[4] := &H50 + dimmer
+
+	CommSemaphore.Lock()
+	InterfaceDeviceAddress.Send(SendPacket, True)
+	CommSemaphore.Unlock()
+
+End Function
+
+
+/////////////////////////////////////////////////////////////////////////////////////////
+// PER610, relayCUE-8
+/////////////////////////////////////////////////////////////////////////////////////////
+
+Public Function Close(bank As Byte, address As Byte, relaycode As Byte, relaycount As Byte)
+Private Var SendPacket As ByteString := &S"\01d000\0200000000000000000000000000000000\17\03"
+Private Var	iByte As Byte
+Private Var RelayPosition As Long
+    
+	SendPacket[I_D_MESS_BANK] := &H40 + bank
+
+	RelayPosition := address * relaycount + relaycode - 1
+	iByte := I_D_MESS_RELAY + RelayPosition / 6
+	SendPacket[iByte] := RELAY_MASK[1 + (RelayPosition Mod 6)]
+
+	CommSemaphore.Lock()
+	InterfaceDeviceAddress.Send(SendPacket, False)
+	CommSemaphore.Unlock()
+	
+End Function
+
+
+Public Function Open(bank As Byte, address As Byte, relaycode As Byte, relaycount As Byte)
+Private Var SendPacket As ByteString := &S"\01d000\0200000000000000000000000000000000\17\03"
+Private Var	iByte As Byte
+Private Var RelayPosition As Long
+    
+	SendPacket[I_D_MESS_BANK] := &H40 + bank
+
+	RelayPosition := address * relaycount + relaycode - 1
+	iByte := I_D_MESS_RELAY + RelayPosition / 6 + 16 // 16 := MAX_ADDRESS(15) + 1
+	SendPacket[iByte] := RELAY_MASK[1 + (RelayPosition Mod 6)]
+
+	CommSemaphore.Lock()
+	InterfaceDeviceAddress.Send(SendPacket, False)
+	CommSemaphore.Unlock()
+	
+End Function
+
+
+Public Function ClosePulse(bank As Byte, address As Byte, relaycode As Byte, relaycount As Byte, pulsetime As Time)
+Private Var SendPacket As ByteString [42]
+Private Var	iByte As Byte
+Private Var RelayPosition As Long
+
+	If pulsetime <= :0 Then
+		Return
+	End If
+	
+	FormatByteString(SendPacket, &s"\01d0{n03}\0200000000000000000000000000000000\17\03", CLong (pulsetime/:.1))
+
+	SendPacket[I_D_MESS_BANK] := &H40 + bank
+
+	RelayPosition := address * relaycount + relaycode - 1
+	iByte := I_D_MESS_RELAY + RelayPosition / 6 + GetByteStringActualLength(SendPacket) - 40
+	SendPacket[iByte] := RELAY_MASK[1 + (RelayPosition Mod 6)]
+	
+	If relaycount = 8 Then //shortening message for relayCUE-8
+		SendPacket[iByte + 1] := &H17
+		SendPacket[iByte + 2] := &H03
+		SetByteStringActualLength(SendPacket, iByte + 2)
+	End If
+
+	CommSemaphore.Lock()
+	InterfaceDeviceAddress.Send(SendPacket, False)
+	CommSemaphore.Unlock()
+	
+End Function
+
+
+Public Function GetDigitalStatus (bank As Byte, channeladdress As Byte, timeout As Time, ByRef newisclosed As Boolean, ByRef newisinputclosed As Boolean) As Boolean
+Private Var SendPacket As ByteString := &s"\01?d000\02000012000\17\03"
+Private Var Status As ByteString[PE_STATUS_STRING_LENGTH]
+
+	If Not SendAndReceiveStatusPE(bank, channeladdress, SendPacket, Status, timeout) Then
+		newisclosed := False
+		newisinputclosed := False
+		Return Value False
+	End If
+	
+	newisclosed := (Status[1] BitAnd &H01) = &H01
+	newisinputclosed := (Status[1] BitAnd &H02) = &H02
+	
+	Return Value True
+
+End Function
+
+
+Public Function GetRelayCue8Status (bank As Byte, unitaddress As Byte, timeout As Time, ByRef newisclosed As Array[] As Boolean, ByRef newisinputclosed As Array[] As Boolean) As Boolean
+Private Var SendPacket As ByteString := &s"\01y1?d0000\17\03"
+Private Var Status As ByteString[RELAYCUE8_STATUS_STRING_LENGTH]
+Private Var N As Long
+
+	If Not SendAndReceiveStatusRelayCue8(bank, unitaddress, SendPacket, Status, timeout) Then
+		For N := 1 To SizeOfDim (newisclosed, 1)
+			newisclosed[N] := False
+			newisinputclosed[N] := False
+		End For
+		Return Value False
+	End If
+	
+	For N := 1 To SizeOfDim (newisclosed, 1)
+		newisclosed[N] := (Status[N] BitAnd &B00000001) > 0
+		newisinputclosed[N] := (Status[N] BitAnd &B00000010) > 0
+	End For
+
+	Return Value True
+
+End Function
+
+
+/////////////////////////////////////////////////////////////////////////////////////////
+// PED108, PED202, ...
+/////////////////////////////////////////////////////////////////////////////////////////
+
+Public Function GetAnalogStatus (bank As Byte, channeladdress As Byte, timeout As Time, ByRef newlevel As Double, ByRef newisupclosed As Boolean, ByRef newisdownclosed As Boolean) As Boolean
+Private Var SendPacket As ByteString := &s"\01?f000\02000004000\17\03"
+Private Var Status As ByteString[PE_STATUS_STRING_LENGTH]
+Private Var StatusLevel As ByteString[3]
+Private Var Level As Double
+
+	If Not SendAndReceiveStatusPE(bank, channeladdress, SendPacket, Status, timeout) Then
+		newlevel := 0.0
+		newisupclosed := False
+		newisdownclosed := False
+		Return Value False
+	End If
+	
+	GetByteStringRight(Status, 3, StatusLevel)
+
+	If ParseByteString(StatusLevel, &s"{n}", Level) Then
+		newlevel := Level / MAX_LEVEL_COEF
+		newisdownclosed := (Status[1] BitAnd &H02) = &H02
+		newisupclosed := (Status[1] BitAnd &H01) = &H01
+		Return Value True
+	Else
+		If CompareByteString(StatusLevel, &S"\3A\3A\3A") = _COMPARE_EQUAL Then
+			newlevel := PE_VALUE_NOT_AVAILABLE
+			newisdownclosed := False
+			newisupclosed := False
+			Return Value True
+		Else
+			newlevel := 0.0
+			newisupclosed := False
+			newisdownclosed := False
+			Return Value False
+		End If
+	End If
+	
+End Function
+
+
+Public Function StopAtCurrentLevel(bank As Byte, channeladdress As Byte)
+Private Var SendPacket As ByteString[50]
+
+	FormatByteString(SendPacket, &s"\01f000\02{n}////////////////////////////////\17\03", bank)
+	SendPacket[channeladdress + 7] := &H39 // stop change
+	SendPacket[channeladdress + 8] := &H17
+	SendPacket[channeladdress + 9] := &H03
+	SetByteStringActualLength(SendPacket, channeladdress + 9)
+	
+	CommSemaphore.Lock()
+	InterfaceDeviceAddress.Send(SendPacket, False)
+	CommSemaphore.Unlock()
+	
+End Function
+
+
+Public Function SetLevel(bank As Byte, channeladdress As Byte, level As Double, ramptime As Time)
+Private Var SendPacket As ByteString[50]
+Private Var RampTimeLong As Long
+
+	level := Max (level, 0)
+	level := Min (level, 100)
+	
+	ramptime := Max (ramptime, :.0)
+	ramptime := Min (ramptime, :99.9)
+
+	FormatByteString(SendPacket, &s"\01f{n03.0}\02{n}////////////////////////////////\17\03",
+		level * MAX_LEVEL_COEF,
+		bank)
+
+	SendPacket[channeladdress + 7] := &H38 // level preset
+	SendPacket[channeladdress + 8] := &H17
+	SendPacket[channeladdress + 9] := &H03
+	SetByteStringActualLength(SendPacket, channeladdress + 9)
+	RampTimeLong := ramptime / :.1
+
+	Select RampTimeLong
+		Case 1, 2
+			RampTimeLong := 3
+			// for ramp time value <= :.2 dimmers do not work well, ramp time :.3 is used
+	End Select
+	
+	CommSemaphore.Lock()
+	InterfaceDeviceAddress.Send(SendPacket, False)
+
+	FormatByteString(SendPacket, &s"\01f{n03}\02{n}////////////////////////////////\17\03",
+		RampTimeLong,
+		bank)
+
+	SendPacket[channeladdress + 7] := &H32 // level ON
+	SendPacket[channeladdress + 8] := &H17
+	SendPacket[channeladdress + 9] := &H03
+	SetByteStringActualLength(SendPacket, channeladdress + 9)
+
+	InterfaceDeviceAddress.Send(SendPacket, False)
+	CommSemaphore.Unlock()
+	
+End Function
+
+
+Public Function ChangeLevel(bank As Byte, channeladdress As Byte, leveldifference As Double, ramptime As Time)
+Private Var SendPacket As ByteString[50]
+Private Var ChangeDirection As Byte
+Private Var RampTimeLong As Long
+
+	leveldifference := Max (leveldifference, -100)
+	leveldifference := Min (leveldifference, 100)
+	
+	ramptime := Max (ramptime, :.0)
+	ramptime := Min (ramptime, :99.9)
+	RampTimeLong := ramptime / :.1
+	Select RampTimeLong
+		Case 1, 2
+			RampTimeLong := 3
+			// for ramp time value <= :.2 dimmers do not work well, ramp time :.3 is used
+	End Select
+
+	If leveldifference < 0.0 Then
+		leveldifference := -leveldifference // must not contain '-' character
+		ChangeDirection := &H28 // &H28 = '(', decrease level
+	Else
+		ChangeDirection := &H29 // &H29 = ')', increase level
+	End If
+
+	FormatByteString(SendPacket, &s"\01f{n03.0}{n03}\02{n}////////////////////////////////\17\03",
+		leveldifference * MAX_LEVEL_COEF,
+		RampTimeLong,
+		bank)
+
+	SendPacket[channeladdress + 10] := ChangeDirection
+	SendPacket[channeladdress + 11] := &H17
+	SendPacket[channeladdress + 12] := &H03
+	SetByteStringActualLength(SendPacket, channeladdress + 12)
+
+	CommSemaphore.Lock()
+	InterfaceDeviceAddress.Send(SendPacket, False)
+	CommSemaphore.Unlock()
+	
+End Function
+
+/////////////////////////////////////////////////////////////////////////////////////////
+// common
+/////////////////////////////////////////////////////////////////////////////////////////
+
+Function SendAndReceiveStatusPE(
+	bank As Byte,
+	address As Byte,
+	ByRef sendpacket As ByteString,
+	ByRef status As ByteString,
+	timeout As Time) As Boolean
+
+Private Var RecvPacket As ByteString[EXCL_MESS_LENGTH]
+Private Var OneChar As ByteString[1]
+Private Var N As Long := 0
+
+	sendpacket[I_QUEST_MESS_BANK] := bank + &H30
+	sendpacket[I_QUEST_MESS_CHAN_ADD] := address / 10 + &H30
+	sendpacket[I_QUEST_MESS_CHAN_ADD + 1] := address Mod 10 + &H30
+
+	CommSemaphore.Lock()
+	
+	InterfaceDeviceAddress.ClearReceiveBuffer()
+	
+	If Not InterfaceDeviceAddress.Send(sendpacket, False) Then
+		CommSemaphore.Unlock()
+		Return Value False
+	End If
+
+	If Not InterfaceDeviceAddress.ReceiveHLPacket(RecvPacket, STX, PE_STATUS_STRING_OFFSET + PE_STATUS_STRING_LENGTH - 1, timeout) Then
+		CommSemaphore.Unlock()
+		Return Value False
+	End If
+	
+	CommSemaphore.Unlock()
+	
+	Return Value GetByteStringRight(RecvPacket, PE_STATUS_STRING_LENGTH, status)
+	
+End Function
+
+
+Function SendAndReceiveStatusRelayCue8(
+	bank As Byte,
+	address As Byte,
+	ByRef sendpacket As ByteString,
+	ByRef status As ByteString,
+	timeout As Time) As Boolean
+
+Private Var RecvPacket As ByteString[EXCL_MESS_LENGTH]
+Private Var OneChar As ByteString[1]
+Private Var N As Long := 0
+
+	sendpacket[I_Y_MESS_BANK] := bank + &H30
+	sendpacket[I_Y_MESS_CHAN_ADD] := address / 100 + &H30
+	sendpacket[I_Y_MESS_CHAN_ADD + 1] := address / 10 + &H30
+	sendpacket[I_Y_MESS_CHAN_ADD + 2] := address Mod 10 + &H30
+
+	CommSemaphore.Lock()
+	InterfaceDeviceAddress.ClearReceiveBuffer()
+	
+	If Not InterfaceDeviceAddress.Send(sendpacket, False) Then
+		CommSemaphore.Unlock()
+		Return Value False
+	End If
+
+	If Not InterfaceDeviceAddress.ReceiveHLPacket(RecvPacket, STX, RELAYCUE8_STATUS_STRING_OFFSET + RELAYCUE8_STATUS_STRING_LENGTH - 1, timeout) Then
+		CommSemaphore.Unlock()
+		Return Value False
+	End If
+	
+	CommSemaphore.Unlock()
+	
+	Return Value GetByteStringRight(RecvPacket, RELAYCUE8_STATUS_STRING_LENGTH, status)
+	
+End Function
+
+
+End Class
+/////////////////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////////////////
+Global DeviceClass RS485ToPEbus
+
+Connector RS485Connector
+Public Channel PEbusConnector As PEbus
+
+Private Function Init()
+
+	PEbusConnector.InterfaceDeviceAddress := Me
+
+	RS485Connector.SetSerialParameters(
+		_SERIAL_MODE_RS485,
+		19200,
+		8,
+		_SERIAL_PARITY_EVEN,
+		_SERIAL_STOPBITS_ONE,
+		_SERIAL_FLOWCONTROL_NONE)
+		
+End Function
+
+
+Public Function Send(senddata As ByteString, waitafter As Boolean) As Boolean
+Private Var Ret As Boolean
+
+	Wait(CUERING_WAIT_TIME_BEFORE_SEND)
+	Ret :=  RS485Connector.Send(senddata)
+	If waitafter Then
+		Wait(CUERING_WAIT_TIME_AFTER_SEND)
+	End If
+	Return Value Ret
+	
+End Function
+
+
+Public Function ReceiveHLPacket(ByRef recvdata As ByteString, header As ByteString, datalenght As Long, timeout As Time) As Boolean
+
+	Return Value RS485Connector.ReceiveHLPacket(recvdata, header, datalenght, timeout)
+
+End Function
+
+
+Public Function ClearReceiveBuffer()
+
+	RS485Connector.ClearReceiveBuffer()
+
+End Function
+
+
+End DeviceClass

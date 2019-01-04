@@ -1,0 +1,225 @@
+Global DeviceClass RelaySimpleThermostat
+Connector RelayConnector
+
+
+Public Property ControlMode As Long := 2 WithAttributes
+{
+	PropertyGroup := "Behavior",
+	EditMode := "ENUM; 'Open' := 0, 'Close' := 1, 'AutoScan' := 2, 'ManualScan' := 3",
+	DisplayName := "ControlMode"
+}
+
+Public Property SetpointTemperature As Double := 21.0 WithAttributes
+{
+	PropertyGroup := "Behavior",
+	DisplayName := "SetpointTemperature"
+}
+
+Public Property LowTemperatureRelayState As Boolean := True WithAttributes
+{
+	PropertyGroup := "Behavior",
+	EditMode := "ENUM; 'Open' := False, 'Close' := True"
+}
+
+Public Property TemperatureAutoScanPeriod As Time := 2:0.0 WithAttributes
+{
+	PropertyGroup := "Behavior"
+}
+
+Public Property TemperatureHysteresis As Double := 0.5 WithAttributes
+{
+	PropertyGroup := "Behavior"
+}
+
+Public Property TemperatureSensorFailureRelayState As Boolean := False WithAttributes
+{
+	PropertyGroup := "Behavior",
+	EditMode := "ENUM; 'Open' := False, 'Close' := True"
+}
+
+Global Const CONTROL_MODE_OPEN As Long := 0
+Global Const CONTROL_MODE_CLOSE As Long := 1
+Global Const CONTROL_MODE_AUTOSCAN As Long := 2
+Global Const CONTROL_MODE_MANUALSCAN As Long := 3
+
+Global Event OnGetRealTemperatureRequest As Function (ByRef newrealtemperature As Double) As Boolean
+Global Event OnTemperatureChange As Process (newrealtemperature As Double, newsetpointtemperature As Double) 
+Global Event OnRelayChange As Process (newrelayisclosed As Boolean) 
+
+
+Private Var ControlLock As _Semaphore
+Private Var RealTemperature As Double
+Private Var RelayIsClosed As Boolean
+Private Var LastMeasurementIsValid As Boolean := True
+
+
+Private Function Init ()
+
+	ControlLock.Lock()
+	Select ControlMode
+		Case CONTROL_MODE_OPEN
+			SetRelay(False)
+		Case CONTROL_MODE_CLOSE
+			SetRelay(True)
+		Case CONTROL_MODE_AUTOSCAN
+			StartProcess ControlLoop ()
+	End Select
+	ControlLock.Unlock()
+	
+End Function
+
+
+Private Process ControlLoop ()
+	
+	Do
+		ScanInt (True)
+		Wait (TemperatureAutoScanPeriod)
+	End Do
+
+End Process
+
+
+Global Function Scan () As Boolean
+Private Var LastError As Boolean
+
+	ControlLock.Lock()
+	If ControlMode = CONTROL_MODE_AUTOSCAN Then
+		ControlLock.Unlock()
+		Return Value False
+	Else
+		LastError := ScanInt (ControlMode = CONTROL_MODE_MANUALSCAN)
+		ControlLock.Unlock()
+		Return Value LastError
+	End If
+
+End Function
+
+
+Private Function ScanInt (relayaction As Boolean) As Boolean
+Private Var LastError As Boolean
+
+	ControlLock.Lock()
+	
+	LastError := RaiseEvent OnGetRealTemperatureRequest (RealTemperature)
+	LastMeasurementIsValid := LastError
+	
+	If relayaction Then
+
+		If LastError Then
+			If RealTemperature < SetpointTemperature - TemperatureHysteresis Then
+				SetRelay(LowTemperatureRelayState)
+			ElseIf RealTemperature >= SetpointTemperature Then
+				SetRelay(Not LowTemperatureRelayState)
+			End If
+		
+		Else
+			SetRelay(TemperatureSensorFailureRelayState)
+			
+		End If
+		
+	End If
+
+	RaiseEvent OnTemperatureChange (RealTemperature, SetpointTemperature)
+
+	ControlLock.Unlock()
+
+	Return Value LastError
+
+End Function
+
+
+Private Function SetRelay (close As Boolean)
+
+	If close Then
+		RelayConnector.Close()
+		RelayIsClosed := True
+	Else
+		RelayConnector.Open()
+		RelayIsClosed := False
+	End If
+	
+	RaiseEvent OnRelayChange (RelayIsClosed)
+	
+End Function
+
+
+Global Function SetSetpointTemperature (newtemperature As Double)
+
+	If newtemperature <> SetpointTemperature Then
+		ControlLock.Lock()
+		StopProcess ControlLoop ()
+		SetpointTemperature := newtemperature
+		If ControlMode = CONTROL_MODE_AUTOSCAN Then
+			StartProcess ControlLoop ()
+		End If
+		RaiseEvent OnTemperatureChange (RealTemperature, SetpointTemperature)
+		ControlLock.Unlock()
+	End If
+
+End Function
+
+
+Global Function GetSetpointTemperature () As Double
+
+	Return Value SetpointTemperature
+	
+End Function
+
+
+Global Function GetLastRealTemperature () As Double
+
+	Return Value RealTemperature
+	
+End Function
+
+
+Global Function IsRelayClosed ()  As Boolean
+	
+	Return Value RelayIsClosed
+	
+End Function
+
+
+Global Function IsTemperatureMeasurementValid () As Boolean
+
+	Return Value LastMeasurementIsValid
+
+End Function
+
+
+Global Function SetControlMode (newcontrolmode As Long) As Boolean
+	
+	If newcontrolmode < CONTROL_MODE_OPEN Or newcontrolmode > CONTROL_MODE_MANUALSCAN Then
+		Return Value False
+	End If
+	
+	ControlLock.Lock()
+	If newcontrolmode <> ControlMode Then
+		ControlMode := newcontrolmode
+		StopProcess ControlLoop ()
+		
+		Select ControlMode
+			Case CONTROL_MODE_OPEN
+				SetRelay(False)
+			Case CONTROL_MODE_CLOSE
+				SetRelay(True)
+			Case CONTROL_MODE_AUTOSCAN
+				StartProcess ControlLoop ()
+		End Select
+		
+	End If
+	ControlLock.Unlock()
+	
+	Return Value True
+
+End Function
+
+
+Global Function GetControlMode () As Long
+
+	Return Value ControlMode
+	
+End Function
+
+
+End DeviceClass

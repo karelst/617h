@@ -1,0 +1,38 @@
+
+
+Global Var HeatingCalendar As HeatingCalendarStructure
+	
+	
+	
+Public Function IniHeatingCalendar( )
+	Var roomindx 	As Byte
+	Var day 		As Long
+	Var daytab 		As	DayStructure := {"",[0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0]} // ECO, COMFORT, PROTECT
+							 //		  	  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3	
+	
+	For roomindx := 1 To INDX_MAX
+		Dat.Room[roomindx].iHvacMode := HVAC_MODE.AUTO
+		HeatingCalendar.RoomHeatingCalendar[roomindx].tRoom := Dat.Room[roomindx].tName
+		For day := 1 To 7
+			HeatingCalendar.RoomHeatingCalendar[roomindx].Day[day] := daytab
+			Select day 
+				Case 1
+					HeatingCalendar.RoomHeatingCalendar[roomindx].Day[day].tDay := "Monday"
+				Case 2
+					HeatingCalendar.RoomHeatingCalendar[roomindx].Day[day].tDay := "Tuesday"
+				Case 3
+					HeatingCalendar.RoomHeatingCalendar[roomindx].Day[day].tDay := "Wensday"
+				Case 4
+					HeatingCalendar.RoomHeatingCalendar[roomindx].Day[day].tDay := "Thursday"
+				Case 5
+					HeatingCalendar.RoomHeatingCalendar[roomindx].Day[day].tDay := "Friday"
+				Case 6
+					HeatingCalendar.RoomHeatingCalendar[roomindx].Day[day].tDay := "Saturday"
+				Case 7
+					HeatingCalendar.RoomHeatingCalendar[roomindx].Day[day].tDay := "Sunday"
+			End Select
+			
+		End For 
+	End For
+End Function
+

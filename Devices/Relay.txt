@@ -1,0 +1,33 @@
+Global DeviceClass Light
+Connector RelayConnector
+
+
+Global Function On ()
+
+	RelayConnector.Close ()
+	
+End Function
+
+
+Global Function Off ()
+
+	RelayConnector.Open ()
+	
+End Function
+
+
+Global Function IsOn () As Boolean
+
+	Return Value RelayConnector.IsClosed ()
+	
+End Function
+
+
+Global Function Blick (pulsetime As Time)
+
+	RelayConnector.ClosePulse (pulsetime)
+	
+End Function
+
+
+End DeviceClass

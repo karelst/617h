@@ -1,0 +1,68 @@
+
+Private Process DiSireneTest_OnPush(  ) Link DiSireneTest.OnPush
+	Dio11OutSirene.Close()
+	GIO1.ClosePulse(:.3)
+	DiSireneTest.WaitWhilePressed()
+	Dio11OutSirene.Open()
+End Process
+
+
+Private Process IO8PullUp_OnPush(  ) Link IO8PullUp.OnPush
+	GIO8.PullupOn()
+	GIO1.ClosePulse(:.3)
+	StartProcess IR1outy 
+	IO8PullUp.WaitWhilePressed()
+	GIO8.PullupOff()
+	StopProcess IR1outy 
+End Process
+
+Private Process IR1outy( )
+ irOuty(IR1)
+End Process
+Private Process IR2outy( )
+ irOuty(IR2)
+End Process
+Private Process IR3outy( )
+ irOuty(IR3)
+End Process
+
+
+Private Function irOuty(port As AddressOf _Ir )
+  
+  port.SetSerialParameters(	_SERIAL_MODE_RS232,300,8,_SERIAL_PARITY_NO,_SERIAL_STOPBITS_ONE,_SERIAL_FLOWCONTROL_NONE)
+	Do	
+		port.Send( &S"UUUUUUUUUU") 
+	End Do
+End Function
+
+
+
+
+//gio
+//	8  Pullup
+//	7	button PullupGIO8
+//	6	button DIO11
+//	5   sense HighToIR3
+//	4
+//	3
+//	2	sense GIO5
+//	1	buttonpress	 	
+Private Process input1_OnHigh(  ) Link input1.OnHigh
+	GIO2.Close()
+	StartProcess IR3outy 
+End Process
+
+
+Private Process input1_OnLow(  ) Link input1.OnLow
+	GIO2.Open()
+	StopProcess IR3outy 
+End Process
+
+
+Private Process Dio7SmokeGarage_OnPush(  ) Link Dio7SmokeGarage.OnPush
+	Dio11OutSirene.Close()
+	GIO1.ClosePulse(:.3)
+	Dio7SmokeGarage.WaitWhilePressed()
+	Dio11OutSirene.Open()
+End Process
+

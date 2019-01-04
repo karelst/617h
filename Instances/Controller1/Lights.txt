@@ -1,0 +1,202 @@
+//Global Structure LightSwitchableStructure
+//	Var bEnabled 						As Boolean
+//	Var bActualValue					As Boolean
+//	Var Relay							As AddressOf relayCUE_8.Relay			
+//	Var positionInRoom					As Long
+//	Var name							As Text[MAX_STANDARD_TEXT_LENGTH]
+//End Structure
+
+
+Private	Var switch[8] As AddressOf relayCUE_8.Relay //:= Controller1.relayCUE_8.Relay
+Private Var DebugEnable As Boolean := False // true//
+
+
+
+////Private Const LIGHT_USED_FOR_SERIAL_RS232TO485_SWITCHING As AddressOf Controller1.relayCUE_8.Relay := ControllerAux1.RE1
+////Private Const SERIAL_USED_FOR_IR_TEST As AddressOf _Serial := ControllerAux1.S2
+////Private Const SERIAL_USED_FOR_SERIAL_TEST As AddressOf _Serial := ControllerAux1.S1
+
+
+Private Function Init( )
+	IniLights( )
+	Dat.Room[INDX_SLEEPING ].LightSwitchable[1].iRelay 	:= switch[LIGHT_SLEEPING ]
+	Dat.Room[INDX_KITCHEN  ].LightSwitchable[1].iRelay 	:= switch[LIGHT_KITCHEN	 ]
+	Dat.Room[INDX_KITCHEN  ].LightSwitchable[2].iRelay 	:= switch[LIGHT_KITCHEN2 ]
+	Dat.Room[INDX_LIVING   ].LightSwitchable[1].iRelay 	:= switch[LIGHT_LIVING	 ]
+	Dat.Room[INDX_LIVING   ].LightSwitchable[2].iRelay 	:= switch[LIGHT_STAIRS	 ]
+	Dat.Room[INDX_CHILDWEST].LightSwitchable[1].iRelay 	:= switch[LIGHT_CHILDWEST]
+	Dat.Room[INDX_CHILDEAST].LightSwitchable[1].iRelay 	:= switch[LIGHT_CHILDEAST]
+//	Dat.Room[INDX_BATHROOM ].LightSwitchable[1].iRelay 	:= switch[LIGHT_BATHROOM]
+//	Dat.Room[INDX_BATHROOM2].LightSwitchable[1].iRelay 	:= switch[LIGHT_BATHROOM2]
+	Dat.Room[INDX_RESERVE  ].LightSwitchable[1].iRelay 	:= switch[LIGHT_RESERVE	 ]
+End Function
+
+
+Global Function IniLights( )
+
+//Relay1.iniChannelAddressTable(switch)
+//switch[1].Close()
+//switch[2].Close()
+//switch[3].Close()
+//switch[4].Close()
+//switch[5].Close()
+//switch[6].Close()
+//switch[7].Close()
+//switch[1].Open()
+//switch[2].Open()
+//switch[3].Open()
+//switch[4].Open()
+//switch[5].Open()
+//switch[6].Open()
+//switch[7].Open()
+
+
+   	switch[LIGHT_SLEEPING] 	:= Relay1.RE2 /*1*/
+   	switch[LIGHT_KITCHEN] 	:= Relay1.RE6 /*2*/
+   	switch[LIGHT_LIVING] 	:= Relay1.RE5 /*3*/
+   	switch[LIGHT_STAIRS] 	:= Relay1.RE4 /*4*/
+   	switch[LIGHT_KITCHEN2] 	:= Relay1.RE1 /*5*/
+   	switch[LIGHT_CHILDWEST]	:= Relay1.RE7 /*6*/
+   	switch[LIGHT_CHILDEAST]	:= Relay1.RE3 /*7*/
+   	switch[LIGHT_RESERVE] 	:= Relay1.RE8 /*8*/
+
+
+End Function
+
+////LIGHT_SLEEPING 
+////LIGHT_KITCHEN 
+////LIGHT_LIVING 
+////LIGHT_STAIRS 
+////LIGHT_KITCHEN2
+////LIGHT_CHILDWEST
+////LIGHT_CHILDEAST
+////LIGHT_RESERVE	
+
+
+Private Function switchedLight( iSwitchNum As Byte, lvl As Long )
+	If DebugEnable Then DebugPrintFormat ("OOO  switchedLight {n},lvl: {N}",iSwitchNum,lvl) End If
+    GetRelay1.relayBusy.Lock()
+    If lvl =  LEVEL_TOGGLE Then
+   		If GetRelay1.getRelayState(iSwitchNum) Then
+    	//If 	((GetRelay1.Output >> (iSwitchNum-1)) BitAnd 1) <> 0 Then  
+    		switch[iSwitchNum].Open() 
+    		If DebugEnable Then DebugPrintFormat ("OOO TOGGLE  switchedLight OPEN END") End If
+    	Else
+    		switch[iSwitchNum].Close()
+    		If DebugEnable Then DebugPrintFormat ("OOO TOGGLE  switchedLight CLOSE END") End If
+    	End If  
+        GetRelay1.relayBusy.Unlock()
+  		Return 
+   	End If 
+   	If lvl>0 Then	switch[iSwitchNum].Close() Else	switch[iSwitchNum].Open() End If
+   	If DebugEnable Then DebugPrintFormat ("OOO  switchedLight END>{n}",lvl) End If
+    GetRelay1.relayBusy.Unlock()
+End Function
+
+
+
+
+
+Global Function LightKitchen( lvl As Long )
+	switchedLight(LIGHT_KITCHEN,lvl)	
+End Function
+
+
+Global Function LightLiving( lvl As Long )
+	switchedLight(LIGHT_LIVING,lvl)
+End Function
+
+Global Function LightSleeping( lvl As Long )
+	switchedLight(LIGHT_SLEEPING,lvl)
+End Function
+
+Global Function LightStairs( lvl As Long )
+	switchedLight(LIGHT_STAIRS,lvl)
+End Function
+
+Global Function LightKitchen2( lvl As Long )
+	switchedLight(LIGHT_KITCHEN2,lvl)
+End Function
+
+Global Function LightChildWest( lvl As Long )
+	switchedLight(LIGHT_CHILDWEST,lvl)
+End Function
+
+Global Function LightChildEast( lvl As Long )
+	switchedLight(LIGHT_CHILDEAST,lvl)
+End Function
+
+Global Function LightReserve( lvl As Long )
+	switchedLight(LIGHT_RESERVE,lvl)
+End Function
+
+////////////////////
+
+Global Function LightsAllOn()
+	LightsAll(LEVEL_ON)	
+End Function
+
+Global Function LightsAllOff()
+	LightsAll(LEVEL_OFF)	
+End Function
+
+Global Function LightsAll(lvl As Long)
+	LightKitchen(lvl)	
+	LightLiving(lvl)
+	LightSleeping(lvl)
+	LightStairs(lvl)
+	LightKitchen2(lvl)
+	LightChildWest(lvl)
+	LightChildEast(lvl)
+//	LIGHTRESERVE(lvl)
+End Function
+
+
+
+Private Process GetRelay1_onOutputChange( changed As Byte, Output As Byte ) Link GetRelay1.onOutputChange
+
+//		Dat.Room[INDX_SLEEPING 	].LightSwitchable[1].bActualValue := GetRelay1.RelayOn[LIGHT_SLEEPING] 
+//		Dat.Room[INDX_KITCHEN 	].LightSwitchable[1].bActualValue := GetRelay1.RelayOn[LIGHT_KITCHEN] 
+//		Dat.Room[INDX_LIVING 	].LightSwitchable[1].bActualValue := GetRelay1.RelayOn[LIGHT_LIVING] 
+//		Dat.Room[INDX_STAIRS 	].LightSwitchable[1].bActualValue := GetRelay1.RelayOn[LIGHT_STAIRS] 
+//		Dat.Room[INDX_KITCHEN 	].LightSwitchable[2].bActualValue := GetRelay1.RelayOn[LIGHT_KITCHEN2] 
+//		Dat.Room[INDX_CHILDWEST ].LightSwitchable[1].bActualValue := GetRelay1.RelayOn[LIGHT_CHILDWEST] 
+//		Dat.Room[INDX_CHILDEAST ].LightSwitchable[1].bActualValue := GetRelay1.RelayOn[LIGHT_CHILDEAST] 
+//		Dat.Room[INDX_RESERVE 	].LightSwitchable[1].bActualValue := GetRelay1.RelayOn[LIGHT_RESERVE] 
+
+
+// Var GetRelay1_RelayOn As AddressOf Array[] As Boolean
+////Public Function getAddressOfRelayOn() As AddressOf Array[] As Boolean 
+//	GetRelay1_RelayOn := GetRelay1.getAddressOfRelayOn()
+//		Dat.Room[INDX_SLEEPING 	].LightSwitchable[1].bActualValue := GetRelay1_RelayOn[LIGHT_SLEEPING] 
+//		Dat.Room[INDX_KITCHEN 	].LightSwitchable[1].bActualValue := GetRelay1_RelayOn[LIGHT_KITCHEN] 
+//		Dat.Room[INDX_LIVING 	].LightSwitchable[1].bActualValue := GetRelay1_RelayOn[LIGHT_LIVING] 
+//		Dat.Room[INDX_STAIRS 	].LightSwitchable[1].bActualValue := GetRelay1_RelayOn[LIGHT_STAIRS] 
+//		Dat.Room[INDX_KITCHEN 	].LightSwitchable[2].bActualValue := GetRelay1_RelayOn[LIGHT_KITCHEN2] 
+//		Dat.Room[INDX_CHILDWEST ].LightSwitchable[1].bActualValue := GetRelay1_RelayOn[LIGHT_CHILDWEST] 
+//		Dat.Room[INDX_CHILDEAST ].LightSwitchable[1].bActualValue := GetRelay1_RelayOn[LIGHT_CHILDEAST] 
+//		Dat.Room[INDX_RESERVE 	].LightSwitchable[1].bActualValue := GetRelay1_RelayOn[LIGHT_RESERVE] 
+
+
+//Public Function getRelayState( indx As Byte ) As Boolean 
+		Dat.Room[INDX_SLEEPING 	].LightSwitchable[1].bActualValue := GetRelay1.getRelayState(LIGHT_SLEEPING) 
+		Dat.Room[INDX_KITCHEN 	].LightSwitchable[1].bActualValue := GetRelay1.getRelayState(LIGHT_KITCHEN)
+		Dat.Room[INDX_LIVING 	].LightSwitchable[1].bActualValue := GetRelay1.getRelayState(LIGHT_LIVING)
+		Dat.Room[INDX_STAIRS 	].LightSwitchable[1].bActualValue := GetRelay1.getRelayState(LIGHT_STAIRS) 
+		Dat.Room[INDX_KITCHEN 	].LightSwitchable[2].bActualValue := GetRelay1.getRelayState(LIGHT_KITCHEN2) 
+		Dat.Room[INDX_CHILDWEST ].LightSwitchable[1].bActualValue := GetRelay1.getRelayState(LIGHT_CHILDWEST) 
+		Dat.Room[INDX_CHILDEAST ].LightSwitchable[1].bActualValue := GetRelay1.getRelayState(LIGHT_CHILDEAST) 
+		Dat.Room[INDX_RESERVE 	].LightSwitchable[1].bActualValue := GetRelay1.getRelayState(LIGHT_RESERVE) 
+
+//		Dat.Room[INDX_KITCHEN 	].LightSwitchable[1].bActualValue := GetRelay1.getRelayState(LIGHT_KITCHEN)
+//		Dat.Room[INDX_LIVING 	].LightSwitchable[1].bActualValue := GetRelay1.getRelayState(LIGHT_LIVING)
+//		Dat.Room[INDX_STAIRS 	].LightSwitchable[1].bActualValue := GetRelay1.getRelayState(LIGHT_STAIRS) 
+//		Dat.Room[INDX_KITCHEN 	].LightSwitchable[2].bActualValue := GetRelay1.getRelayState(LIGHT_KITCHEN2) 
+//		Dat.Room[INDX_CHILDWEST ].LightSwitchable[1].bActualValue := GetRelay1.getRelayState(LIGHT_CHILDWEST) 
+//		Dat.Room[INDX_CHILDEAST ].LightSwitchable[1].bActualValue := GetRelay1.getRelayState(LIGHT_CHILDEAST) 
+//		Dat.Room[INDX_RESERVE 	].LightSwitchable[1].bActualValue := GetRelay1.getRelayState(LIGHT_RESERVE) 
+
+End Process
+
+Function X()
+End Function

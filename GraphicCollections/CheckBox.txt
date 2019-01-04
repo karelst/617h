@@ -1,0 +1,457 @@
+Public GraphicClass CheckBox Inherits BaseGraphicClass WithAttributes {DefaultWidth := 150, DefaultHeight := 40}
+
+	Public Const	CHECKEDSYMBOLBACKGROUNDCOLOR 	As Long := 1
+	Public Const	CHECKEDSYMBOLCHECKMARK 			As Long := 2	
+	Public Const	CHECKEDSYMBOLCROSSMARK			As Long := 3	
+	Public Const	CHECKEDSYMBOLCHECKMARKCOLOR 	As Long := 4	
+	Public Const	CHECKEDSYMBOLCROSSMARKCOLOR		As Long := 5
+	
+	Public Const FRAME_ALIGNLEFT 					As Long := &H00000003	// Horizontal align left
+//	Public Const FRAME_ALIGNHCENTER 				As Long := &H00000002	// Horizontal align center
+	Public Const FRAME_ALIGNRIGHT 					As Long := &H00000004	// Horizontal align right
+//	Public Const FRAME_ALIGNTOP 					As Long := &H00000008	// Vertical align top
+//	Public Const FRAME_ALIGNVCENTER 				As Long := &H00000010	// Vertical align center
+//	Public Const FRAME_ALIGNBOTTOM 					As Long := &H00000020	// Vertical align bottom
+
+	Protected Property ActiveSt						As Boolean := True WithAttributes {propertygroup := "Appearance", EditMode := "ENUM; 'Yes' := True, 'No' := False", DisplayName := "Enabled"} 	
+	Protected Property DisabledSt					As Boolean := False WithAttributes {propertygroup := "Appearance", EditMode := "ENUM; 'Yes' := True, 'No' := False", DisplayName := "Checked"}
+	Protected Property Opacity 						As Byte := 255 WithAttributes {PropertyGroup := "Appearance", EditMode := "opacity"}	
+
+	Protected Property CheckedSymbol				As Long := 4 WithAttributes {PropertyGroup := "Frame", EditMode:="ENUM; 'Color' :=CHECKEDSYMBOLBACKGROUNDCOLOR, 'CheckMark' :=CHECKEDSYMBOLCHECKMARK, 'CrossMark' :=CHECKEDSYMBOLCROSSMARK,'CheckMarkColor' :=CHECKEDSYMBOLCHECKMARKCOLOR, 'CrossMarkColor' :=CHECKEDSYMBOLCROSSMARKCOLOR"}
+	Protected Property CheckedBackgroundColor		As Long := &HA6ffffff WithAttributes {PropertyGroup := "Frame", EditMode := "color"}
+	Protected Property FrameColor					As Long := _COLOR_BLACK WithAttributes {PropertyGroup := "Frame", EditMode := "color"}
+	Protected Property FrameLineWeight				As Long := 2 WithAttributes {PropertyGroup := "Frame"}
+	Protected Property FrameAlign					As Long := FRAME_ALIGNRIGHT WithAttributes {PropertyGroup := "Frame", EditMode := "ENUM; 'Left' := FRAME_ALIGNLEFT, 'Right' := FRAME_ALIGNRIGHT"}
+	Protected Property FrameOffsetX					As Long := 0 WithAttributes {PropertyGroup := "Frame"}
+
+	Protected Property CheckBoxText					As AddressOf Text := Nothing WithAttributes {PropertyGroup := "Text", EditMode := "text", DisplayName := "Text"}
+	Protected Property Font							As AddressOf _Font := fntDefault WithAttributes {PropertyGroup := "Text", EditMode := "font"}
+	Protected Property FontColor					As Long := _COLOR_BLACK WithAttributes {PropertyGroup := "Text", EditMode := "color"}
+	Protected Property TextAlign 					As Long := _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNVCENTER WithAttributes {PropertyGroup := "Text", EditMode := "ENUM; 'Left-Top' := _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNTOP, 'Left-Middle' := _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNVCENTER, 'Left-Bottom' := _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNBOTTOM, 'Center-Top' := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNTOP, 'Center-Middle' := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER, 'Center-Bottom' := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNBOTTOM, 'Right-Top' := _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNTOP, 'Right-Middle' := _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNVCENTER, 'Right-Bottom' := _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNBOTTOM"}
+	Protected Property TextOffsetX 					As Long := 0 WithAttributes {PropertyGroup := "Text"}
+	Protected Property TextOffsetY 					As Long := 0 WithAttributes {PropertyGroup := "Text"}
+	
+	Protected Var	FontCol							As Long
+	Protected Var	FrameCol						As Long
+	Protected Var	FrameSymbolCol					As Long
+	Protected Var	FrameSymbolColOpacity			As Byte	
+	Protected Var	CheckedBackgroundCol			As Long
+		
+	Protected Var TextBuffer 						As Text [500] := ""
+	
+	Protected Var FramePosX							As Long := 0
+	Protected Var FramePosY							As Long := 0
+	Protected Var FrameWidth						As Long := 0
+	Protected Var FrameHeight						As Long := 0
+	Protected Var ObjectWidth						As Long := 0
+	Protected Var ObjectHeight						As Long := 0
+	
+	Protected Var Checked							As Boolean := False
+	Protected Var ActiveState						As Boolean := True
+	Protected Var NonActiveCheckedBackgroundColor	As Long 
+	Protected Var NonActiveFrameColor				As Long 
+	Protected Var NonActiveFontColor				As Long 
+	Protected Var NonActiveMarkOpacity				As Byte
+	Protected Var NonActiveMarkcolor				As Long
+		
+	Protected Var CrossMarkPicture					As AddressOf _Picture := Nothing
+	Protected Var CheckMarkPicture					As AddressOf _Picture := Nothing		
+
+	Public Event OnPush As Process()
+	
+	Protected Function Init()
+		SetColor()	
+		ActiveState := ActiveSt
+		Checked := DisabledSt	
+		SetComponentPositionDimension()
+		SetPicture()
+		SetComponentColor()
+	End Function
+
+	Public Function SetOpacity(newopacity As Byte)As Boolean
+		LockRedraw()
+		Opacity := newopacity
+		SetColor()
+		SetComponentColor()
+		UnlockRedraw()
+		Redraw()
+		Return Value True	
+	End Function
+	
+	Public Function GetOpacity()As Byte
+		Return Value Opacity
+	End Function
+
+	Protected Function SetColor()
+		Var coloropacity As Byte
+		coloropacity 			:= GetColorComponentOpacity(FontColor)
+		FontCol 				:= SetColorComponentOpacity(FontColor,Opacity*coloropacity/255)
+		coloropacity 			:= GetColorComponentOpacity(FrameColor)
+		FrameCol	 			:= SetColorComponentOpacity(FrameColor,Opacity*coloropacity/255)		
+		FrameSymbolCol 			:= SetColorComponentOpacity(FrameColor,255)  
+		FrameSymbolColOpacity 	:= Opacity*coloropacity/255
+		coloropacity 			:= GetColorComponentOpacity(CheckedBackgroundColor)
+		CheckedBackgroundCol	:= SetColorComponentOpacity(CheckedBackgroundColor,Opacity*coloropacity/255)
+	End Function
+	
+	Protected Function SetComponentColor()
+		If GetColorComponentOpacity(CheckedBackgroundCol) - 102 < 0 Then
+			NonActiveCheckedBackgroundColor := SetColorComponentOpacity(CheckedBackgroundCol,0)		
+		Else
+			NonActiveCheckedBackgroundColor := SetColorComponentOpacity(CheckedBackgroundCol,GetColorComponentOpacity(CheckedBackgroundCol) - 102)
+		End If
+		
+		If GetColorComponentOpacity(FrameCol) - 102 < 0 Then
+			NonActiveFrameColor := SetColorComponentOpacity(FrameCol,0)
+			NonActiveMarkOpacity := 0
+			NonActiveMarkcolor := SetColorComponentOpacity(FrameCol,255)	
+		Else
+			NonActiveFrameColor := SetColorComponentOpacity(FrameCol,GetColorComponentOpacity(FrameCol)- 102)
+			NonActiveMarkOpacity := GetColorComponentOpacity(FrameCol)- 102 
+			NonActiveMarkcolor := SetColorComponentOpacity(FrameCol,255)	
+		End If
+		
+		If GetColorComponentOpacity(FontCol) - 102 < 0 Then
+			NonActiveFontColor := SetColorComponentOpacity(FontCol,0)
+		Else
+			NonActiveFontColor := SetColorComponentOpacity(FontCol,GetColorComponentOpacity(FontCol)- 102)	
+		End If
+	End Function
+		
+//	Protected Function SetComponentColor()
+//		If GetColorComponentOpacity(CheckedBackgroundColor) - 102 < 0 Then
+//			NonActiveCheckedBackgroundColor := SetColorComponentOpacity(CheckedBackgroundColor,0)		
+//		Else
+//			NonActiveCheckedBackgroundColor := SetColorComponentOpacity(CheckedBackgroundColor,GetColorComponentOpacity(CheckedBackgroundColor) - 102)
+//		End If
+//		
+//		If GetColorComponentOpacity(FrameColor) - 102 < 0 Then
+//			NonActiveFrameColor := SetColorComponentOpacity(FrameColor,0)
+//			NonActiveMarkOpacity := 0
+//			NonActiveMarkcolor := SetColorComponentOpacity(FrameColor,255)	
+//		Else
+//			NonActiveFrameColor := SetColorComponentOpacity(FrameColor,GetColorComponentOpacity(FrameColor)- 102)
+//			NonActiveMarkOpacity := GetColorComponentOpacity(FrameColor)- 102 
+//			NonActiveMarkcolor := SetColorComponentOpacity(FrameColor,255)	
+//		End If
+//		
+//		If GetColorComponentOpacity(FontColor) - 102 < 0 Then
+//			NonActiveFontColor := SetColorComponentOpacity(FontColor,0)
+//		Else
+//			NonActiveFontColor := SetColorComponentOpacity(FontColor,GetColorComponentOpacity(FontColor)- 102)	
+//		End If
+//	End Function
+
+	Protected Function SetComponentPositionDimension()
+		GetSize(ObjectWidth,ObjectHeight)
+		FrameHeight := ObjectHeight /2
+		FrameWidth := ObjectHeight  /2
+		FramePosY := (ObjectHeight - FrameHeight)/2
+		Select FrameAlign
+		Case FRAME_ALIGNLEFT
+			FramePosX := FrameOffsetX
+//		Case FRAME_ALIGNHCENTER
+//			FramePosX := FrameOffsetX + (ObjectWidth - FrameWidth)/2
+		Case FRAME_ALIGNRIGHT
+			FramePosX := FrameOffsetX + (ObjectWidth - FrameWidth)
+		End Select
+	End Function
+	
+	Protected Function SetPicture()
+		Var S As Long := Abs((FrameHeight-2*FrameLineWeight) - picCheckBoxCrossMark16.GetHeight())
+		Var M As Long := Abs((FrameHeight-2*FrameLineWeight) - picCheckBoxCrossMark32.GetHeight())
+		Var L As Long := Abs((FrameHeight-2*FrameLineWeight) - picCheckBoxCrossMark64.GetHeight())
+		Var H As Long := Abs((FrameHeight-2*FrameLineWeight) - picCheckBoxCrossMark96.GetHeight())
+		
+		If S <= M And S <= L And S <= H Then
+			CheckMarkPicture := picCheckBoxCheckMark16
+			CrossMarkPicture := picCheckBoxCrossMark16	
+		ElseIf M <= S And M <= L And M <= H Then
+			CheckMarkPicture := picCheckBoxCheckMark32
+			CrossMarkPicture := picCheckBoxCrossMark32			
+		ElseIf L <= S And L <= M And L <= H Then
+			CheckMarkPicture := picCheckBoxCheckMark64
+			CrossMarkPicture := picCheckBoxCrossMark64	
+		Else
+			CheckMarkPicture := picCheckBoxCheckMark96
+			CrossMarkPicture := picCheckBoxCrossMark96	
+		End If
+	End Function
+	
+	Protected Function toggleState()
+		If Checked Then
+			Checked := False
+		Else
+			Checked := True
+		End If
+	End Function
+
+	Public Function SetValue(newChecked As Boolean) As Boolean
+		Checked := newChecked
+		Redraw()
+		Return Value True
+	End Function
+
+	Public Function GetValue() As Boolean
+		Return Value Checked
+	End Function
+
+	Public Function SetEnabled(newenabled As Boolean) As Boolean
+		ActiveState := newenabled
+		Redraw()
+		Return Value True
+	End Function
+
+	Public Function GetEnabled() As Boolean
+		Return Value ActiveState
+	End Function
+		
+	Protected Function OnDown(x As Long,y As Long,eventtime As Time) As Boolean
+		If ActiveState Then
+			toggleState()
+			Redraw()
+		Return Value True
+		End If
+		Return Value False
+	End Function
+	
+	Protected Function OnUp(x As Long,y As Long,eventtime As Time,isinside As Boolean)
+		RaiseEvent OnPush()
+	End Function
+	
+	Protected Function OnDraw()
+		If ActiveState Then
+			If Checked Then
+				Select CheckedSymbol
+				Case CHECKEDSYMBOLBACKGROUNDCOLOR
+					DrawRectangle(CheckedBackgroundCol, FramePosX + 2*FrameLineWeight, FramePosY + 2*FrameLineWeight, FrameWidth - 4*FrameLineWeight, FrameHeight - 4*FrameLineWeight)
+				Case CHECKEDSYMBOLCROSSMARK
+					DrawStretchedTintedPicture(CrossMarkPicture,FrameSymbolCol,FramePosX + FrameLineWeight, FramePosY + FrameLineWeight, FrameWidth - 2*FrameLineWeight, FrameHeight - 2*FrameLineWeight,0,0,-1,-1,FrameSymbolColOpacity)
+				Case CHECKEDSYMBOLCHECKMARK
+					DrawStretchedTintedPicture(CheckMarkPicture,FrameSymbolCol,FramePosX + FrameLineWeight, FramePosY + FrameLineWeight, FrameWidth - 2*FrameLineWeight, FrameHeight - 2*FrameLineWeight,0,0,-1,-1,FrameSymbolColOpacity)
+				Case CHECKEDSYMBOLCHECKMARKCOLOR
+					DrawRectangle(CheckedBackgroundCol, FramePosX + FrameLineWeight, FramePosY + FrameLineWeight, FrameWidth - 2*FrameLineWeight, FrameHeight - 2*FrameLineWeight)
+					DrawStretchedTintedPicture(CheckMarkPicture,FrameSymbolCol,FramePosX + FrameLineWeight, FramePosY + FrameLineWeight, FrameWidth - 2*FrameLineWeight, FrameHeight - 2*FrameLineWeight,0,0,-1,-1,FrameSymbolColOpacity)
+				Case CHECKEDSYMBOLCROSSMARKCOLOR
+					DrawRectangle(CheckedBackgroundCol, FramePosX + FrameLineWeight, FramePosY + FrameLineWeight, FrameWidth - 2*FrameLineWeight, FrameHeight - 2*FrameLineWeight)
+					DrawStretchedTintedPicture(CrossMarkPicture,FrameSymbolCol,FramePosX + FrameLineWeight, FramePosY + FrameLineWeight, FrameWidth - 2*FrameLineWeight, FrameHeight - 2*FrameLineWeight,0,0,-1,-1,FrameSymbolColOpacity)
+				End Select
+			End If
+			//vykreslení rámečku
+			DrawRectangle(FrameCol, FramePosX, FramePosY, FrameWidth, FrameLineWeight)
+			DrawRectangle(FrameCol, FramePosX, FramePosY + FrameHeight - FrameLineWeight, FrameWidth, FrameLineWeight)
+			DrawRectangle(FrameCol, FramePosX, FramePosY + FrameLineWeight, FrameLineWeight, FrameHeight - 2*FrameLineWeight)
+			DrawRectangle(FrameCol, FramePosX + FrameWidth - FrameLineWeight, FramePosY + FrameLineWeight, FrameLineWeight, FrameHeight - 2*FrameLineWeight)
+			
+			// text
+//			DrawText(Font,CheckBoxText,FontColor,TextOffsetX,TextOffsetY,-1,-1,TextAlign)			
+			Select FrameAlign
+			Case FRAME_ALIGNLEFT
+				DrawText(Font,CheckBoxText,FontCol,TextOffsetX+FrameWidth+FrameOffsetX,TextOffsetY,ObjectWidth-FrameWidth+FrameOffsetX,-1,TextAlign)
+			Case FRAME_ALIGNRIGHT
+				DrawText(Font,CheckBoxText,FontCol,TextOffsetX,TextOffsetY,ObjectWidth-FrameWidth+FrameOffsetX,-1,TextAlign)
+			End Select
+				
+		Else
+			If Checked Then
+				Select CheckedSymbol
+				Case CHECKEDSYMBOLBACKGROUNDCOLOR
+					DrawRectangle(NonActiveCheckedBackgroundColor, FramePosX + 2*FrameLineWeight, FramePosY + 2*FrameLineWeight, FrameWidth - 4*FrameLineWeight, FrameHeight - 4*FrameLineWeight)
+				Case CHECKEDSYMBOLCROSSMARK
+					DrawStretchedTintedPicture(CrossMarkPicture,NonActiveMarkcolor,FramePosX + FrameLineWeight, FramePosY + FrameLineWeight, FrameWidth - 2*FrameLineWeight, FrameHeight - 2*FrameLineWeight,0,0,-1,-1,NonActiveMarkOpacity)
+				Case CHECKEDSYMBOLCHECKMARK
+					DrawStretchedTintedPicture(CheckMarkPicture,NonActiveMarkcolor,FramePosX + FrameLineWeight, FramePosY + FrameLineWeight, FrameWidth - 2*FrameLineWeight, FrameHeight - 2*FrameLineWeight,0,0,-1,-1,NonActiveMarkOpacity)
+				Case CHECKEDSYMBOLCHECKMARKCOLOR
+					DrawRectangle(NonActiveCheckedBackgroundColor, FramePosX + FrameLineWeight, FramePosY + FrameLineWeight, FrameWidth - 2*FrameLineWeight, FrameHeight - 2*FrameLineWeight)
+					DrawStretchedTintedPicture(CheckMarkPicture,NonActiveMarkcolor,FramePosX + FrameLineWeight, FramePosY + FrameLineWeight, FrameWidth - 2*FrameLineWeight, FrameHeight - 2*FrameLineWeight,0,0,-1,-1,NonActiveMarkOpacity)
+				Case CHECKEDSYMBOLCROSSMARKCOLOR
+					DrawRectangle(NonActiveCheckedBackgroundColor, FramePosX + FrameLineWeight, FramePosY + FrameLineWeight, FrameWidth - 2*FrameLineWeight, FrameHeight - 2*FrameLineWeight)
+					DrawStretchedTintedPicture(CrossMarkPicture,NonActiveMarkcolor,FramePosX + FrameLineWeight, FramePosY + FrameLineWeight, FrameWidth - 2*FrameLineWeight, FrameHeight - 2*FrameLineWeight,0,0,-1,-1,NonActiveMarkOpacity)
+				End Select
+			End If
+			//vykreslení rámečku
+			DrawRectangle(NonActiveFrameColor, FramePosX, FramePosY, FrameWidth, FrameLineWeight)
+			DrawRectangle(NonActiveFrameColor, FramePosX, FramePosY + FrameHeight - FrameLineWeight, FrameWidth, FrameLineWeight)
+			DrawRectangle(NonActiveFrameColor, FramePosX, FramePosY + FrameLineWeight, FrameLineWeight, FrameHeight - 2*FrameLineWeight)
+			DrawRectangle(NonActiveFrameColor, FramePosX + FrameWidth - FrameLineWeight, FramePosY + FrameLineWeight, FrameLineWeight, FrameHeight - 2*FrameLineWeight)
+			// text
+//			DrawText(Font,CheckBoxText,NonActiveFontColor,TextOffsetX,TextOffsetY,-1,-1,TextAlign)		
+			Select FrameAlign
+			Case FRAME_ALIGNLEFT
+				DrawText(Font,CheckBoxText,NonActiveFontColor,TextOffsetX+FrameWidth+FrameOffsetX,TextOffsetY,ObjectWidth-FrameWidth+FrameOffsetX,-1,TextAlign)
+			Case FRAME_ALIGNRIGHT
+				DrawText(Font,CheckBoxText,NonActiveFontColor,TextOffsetX,TextOffsetY,ObjectWidth-FrameWidth+FrameOffsetX,-1,TextAlign)
+			End Select
+		End If
+	End Function
+
+	Public Function SetObjectDimensions(newwidth As Long, newheight As Long) As Boolean	
+		SetSize(newwidth, newheight)
+		SetComponentPositionDimension()
+		Redraw()
+		Return Value True	
+	End Function
+		
+	Public Function GetObjectDimensions(ByRef currentwidth As Long, ByRef currentheight As Long)	
+		GetSize(currentwidth, currentheight)	
+	End Function	
+	
+	Public Function SetObjectPosition(newx As Long, newy As Long) As Boolean
+		Var Response As Boolean	
+		Response := SetPosition(newx, newy)
+		SetComponentPositionDimension()
+		Redraw()
+		Return Value Response	
+	End Function
+		
+	Public Function GetObjectPosition(ByRef currentx As Long, ByRef currenty As Long)	
+		GetPosition(currentx, currenty)	
+	End Function
+
+	Public Function SetCheckedSymbol(newcheckedsymbol As Long) As Boolean
+		If newcheckedsymbol = CHECKEDSYMBOLBACKGROUNDCOLOR Or newcheckedsymbol = CHECKEDSYMBOLCHECKMARK Or newcheckedsymbol = CHECKEDSYMBOLCROSSMARK Or newcheckedsymbol = CHECKEDSYMBOLCHECKMARKCOLOR Or newcheckedsymbol = CHECKEDSYMBOLCROSSMARKCOLOR Then
+			CheckedSymbol := newcheckedsymbol
+			Redraw()
+			Return Value True
+		Else
+			Return Value False
+		End If
+	End Function
+	
+	Public Function GetCheckedSymbol() As Long
+		Return Value CheckedSymbol
+	End Function
+
+	Public Function SetCheckedBackgroundColor(newcheckedbackgroundcolor As Long) As Boolean
+		CheckedBackgroundColor := newcheckedbackgroundcolor
+		SetColor()
+		SetComponentColor()
+		Redraw()
+		Return Value True
+	End Function
+	
+	Public Function GetCheckedBackgroundColor() As Long
+		Return Value CheckedBackgroundColor
+	End Function
+
+	Public Function SetFrameColor(newframecolor As Long) As Boolean
+		FrameColor := newframecolor
+		SetColor()
+		SetComponentColor()
+		Redraw()
+		Return Value True
+	End Function
+	
+	Public Function GetFrameColor() As Long
+		Return Value FrameColor
+	End Function
+
+	Public Function SetText(newtext As Text) As Boolean
+		If GetMemorySegment(newtext) = _MSEG_RESOURCEDATA Then
+			CheckBoxText := newtext
+		Else
+			TextBuffer := newtext
+			CheckBoxText := TextBuffer
+		End If
+		Redraw()
+		Return Value True	
+	End Function
+	
+	Public Function GetText() As AddressOf Text
+		Return Value CheckBoxText	
+	End Function
+	
+	Public Function SetFont(newfont As AddressOf _Font) As Boolean
+		Font := newfont
+		Redraw()
+		Return Value True	
+	End Function
+	
+	Public Function GetFont() As AddressOf _Font
+		Return Value Font	
+	End Function
+	
+	Public Function SetFontColor(newFontColor As Long) As Boolean
+		FontColor := newFontColor
+		SetColor()
+		SetComponentColor()
+		Redraw()
+		Return Value True
+	End Function
+	
+	Public Function GetFontColor() As Long
+		Return Value FontColor
+	End Function
+		
+	Public Function SetFrameLineWeight(newframelineweight As Long)As Boolean
+		FrameLineWeight := newframelineweight
+		SetPicture()
+		Redraw()
+		Return Value True
+	End Function
+	
+	Public Function GetFrameLineWeight()As Long
+		Return Value FrameLineWeight
+	End Function
+	
+	Public Function SetFrameAlign(newframealign As Long) As Boolean
+		If newframealign = FRAME_ALIGNLEFT Or newframealign = FRAME_ALIGNRIGHT Then			
+			FrameAlign := newframealign
+			SetComponentPositionDimension()
+			Redraw()
+			Return Value True
+		Else
+			Return Value False
+		End If
+	End Function
+	
+	Public Function GetFrameAlign() As Long
+		Return Value FrameAlign
+	End Function	
+
+	Public Function SetFrameOffsetX(newframeoffsetx As Long) As Boolean
+		FrameOffsetX := newframeoffsetx
+		Redraw()
+		Return Value True
+	End Function
+	
+	Public Function GetFrameOffsetX() As Long
+		Return Value FrameOffsetX
+	End Function
+	
+	Public Function SetTextAlign(newtextalign As Long) As Boolean	
+		Select newtextalign
+			Case _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNTOP, _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNVCENTER, _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNBOTTOM, _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNTOP, _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER, _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNBOTTOM, _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNTOP, _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNVCENTER, _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNBOTTOM
+				TextAlign := newtextalign
+				Redraw()
+				Return Value True
+			Case Else
+				Return Value False	
+		End Select	
+	End Function
+	
+	Public Function GetTextAlign() As Long
+		Return Value TextAlign
+	End Function	
+
+	Public Function SetTextOffsetX(newtextoffsetx As Long) As Boolean
+		TextOffsetX := newtextoffsetx
+		Redraw()
+		Return Value True
+	End Function
+	
+	Public Function GetTextOffsetX() As Long
+		Return Value TextOffsetX
+	End Function
+	
+	Public Function SetTextOffsetY(newtextoffsety As Long) As Boolean
+		TextOffsetY := newtextoffsety
+		Redraw()
+		Return Value True
+	End Function
+	
+	Public Function GetTextOffsetY() As Long
+		Return Value TextOffsetY
+	End Function	
+				 		
+End GraphicClass

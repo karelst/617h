@@ -1,0 +1,11 @@
+
+//		Var myaddr As As AddressOf
+ 		Var pir[8] As AddressOf Controller1._Relay
+ 		 
+
+	 	Var dio[8] As AddressOf Controller1._DigitalIO
+	 	Var gio[8] As AddressOf Controller1._GeneralIO
+	 	
+ 		 
+ 	
+

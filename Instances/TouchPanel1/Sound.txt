@@ -1,0 +1,9 @@
+
+
+
+
+Public Function play( snd As AddressOf _Sound, Optional myvolume As Byte := 100 )
+		SPK1.SetVolume(myvolume)
+		SPK1.Play(snd)
+End Function
+

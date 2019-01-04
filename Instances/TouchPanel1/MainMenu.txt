@@ -1,0 +1,47 @@
+
+
+Private Process NavigationBarMain_OnSelect( newselecteditem As Long ) Link NavigationBarMain.OnSelect
+	NavigationBarMainSelect( newselecteditem )
+End Process
+
+Public Function NavigationBarMainSelect( newselecteditem As Long ) 
+			DebugPrintFormat ("newselecteditem {n}",newselecteditem)
+	WinHome.HideObject()
+	WinMode.HideObject()
+	WinSecurity.HideObject()
+	Weather.HideObject()
+	PageHeating.HideObject()
+	NavigationBarHeating.HideObject()
+	WinLights.HideObject()
+	WinEnergy.HideObject()
+	WinSettings.HideObject()
+	
+	//Win.HideObject()
+	//Win.HideObject()
+	
+	Select newselecteditem
+		Case 1
+			WinHome.ShowObject()
+		Case 2
+			WinMode.ShowObject()
+		Case 3
+			WinSecurity.ShowObject()
+		Case 4
+			Weather.ShowObject()
+		Case 5
+			NavigationBarHeating.ShowObject()
+			PageHeating.ShowObject()
+		Case 6
+			WinLights.ShowObject()
+		Case 7
+			WinEnergy.ShowObject()
+		Case 8
+			WinSettings.ShowObject()
+		Case Else
+
+	End Select
+	NavigationBarMain.ShowObject()
+
+End Function
+
+

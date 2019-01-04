@@ -1,0 +1,36 @@
+//---------------------------------------------------------------------------------------------------------------------
+// 617H:
+//  - sigma : 151.249.106.61
+//	- http://151.249.106.61:8888/ - přesměrovat porty 80, 53128 na 192.168.100.2!!
+//  - RelayCUE UnitID 615
+// CUE:
+//  - sigma : 192.168.137.203
+//  - RelayCUE UnitID 2
+//---------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+Private Process Autoexec()
+
+	//SendPresetEmail(2,"ReseT7H","")
+
+	//	Controller1.Lights.IniLights()	
+	GetRelay1.relayCUE_ok()
+	DebugPrintFormat("{t}::", Dat.Room[1].tName)
+	DebugPrintFormat("{t}::", Dat.Room[2].tName)
+	DebugPrintFormat("{t}::", Dat.Room[3].tName)
+	
+ 	Heating.IniHeatingCalendar()
+ 	ReadWriteSettings.SaveCalendar()
+ 	ReadWriteSettings.LoadCalendar()
+ 	
+
+
+	Do
+		Thermometers.scanTemperatures()
+		 Wait (:45)
+	End Do
+End Process

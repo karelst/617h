@@ -1,0 +1,1205 @@
+
+//**********************************************************************************************
+// GatewayKNX driver
+// KNXgw232
+// Revised: 2.07.2014
+// Author:K.Steidl
+//**********************************************************************************************
+
+Structure recordStructure  // for configuration data
+	Var group 	As Long
+	Var eis 	As Byte
+End Structure
+
+
+Global DeviceClass GatewayKNX
+
+Connector SerialConnector
+
+
+//**********************************************************************************************
+// Property
+//**********************************************************************************************
+
+Protected Property PowerFromKNX  As Boolean :=  False  WithAttributes
+{
+	PropertyGroup := "KNXgw232 power",
+	DisplayName := "Power From KNX",
+	EditMode := "Boolean"
+}
+Var  Baudrate As Long :=  19200 
+
+Protected Property doConfigate  As Boolean :=  True  WithAttributes
+{
+	PropertyGroup := "Configuration",
+	DisplayName := "Update Settings in Init",
+	EditMode := "Boolean"
+}
+
+Protected Property Texts As AddressOf Text := "group/midgroup/subgroup  EISx" WithAttributes
+{
+	PropertyGroup := "Configuration",
+	DisplayName := "Gateway Settings"
+}
+
+Protected Property KNXaddress As AddressOf Text := "15.15.255" WithAttributes
+{
+	PropertyGroup := "Configuration",
+	DisplayName := "Physical Address"
+}
+
+
+
+//**********************************************************************************************
+// Constant
+//**********************************************************************************************
+
+Const MAX_REGISTERED_GROUPS_FOR_OnTelegram_Event	As Long := 30
+//Private Const STR As ByteString := &S"1248@P"
+
+
+//**********************************************************************************************
+// Event
+//**********************************************************************************************
+
+//Global
+Public Event OnTelegram As Process (KNXmaingroup As Byte, KNXmiddlegroup As Byte ,KNXsubgroup As Byte, DataLoad As Long , NumberOfDataBytes As Long)
+
+//Global 
+//Public Event OnAnyTelegram As Process (KNXmaingroup As Byte, KNXmiddlegroup As Byte ,KNXsubgroup As Byte, DataLoad As Long , NumberOfDataBytes As Long)
+
+
+//**********************************************************************************************
+// Variable
+//**********************************************************************************************
+Var debugDriver As Boolean :=   False // True //
+
+Var strOutMessage As ByteString[50]                //ByteString, where out message to be send is stored. Store message her and call SendPacket
+Var strInKNXData As ByteString [50]				//Data recieved from KNX
+Var bSending As Byte :=0                            //Flag for avoid of sending collisions 
+Var bSend As _Semaphore
+
+Var Filter[MAX_REGISTERED_GROUPS_FOR_OnTelegram_Event,3] As Byte
+Var FilterRecords As Long:=0 
+
+Var Settings[250]	As recordStructure
+
+
+
+//**********************************************************************************************
+//Init
+//**********************************************************************************************
+Private Function Init()
+Var t As Time
+Var str As ByteString[255] :=&S""
+Var gwResponding 	As Boolean := False
+
+	DebugPrint("*** KNXgw init START")
+	If Not PowerFromKNX Then
+		SerialConnector.SetSerialParameters(_SERIAL_MODE_RS232,19200, 8, _SERIAL_PARITY_EVEN, _SERIAL_STOPBITS_ONE,
+		_SERIAL_FLOWCONTROL_RTSCTS )
+	Else
+		SerialConnector.SetSerialParameters(_SERIAL_MODE_RS232,19200, 8, _SERIAL_PARITY_EVEN, _SERIAL_STOPBITS_ONE,
+		_SERIAL_FLOWCONTROL_NONE )
+	End If
+	
+	FilterRecords :=0
+
+
+	//	SerialConnector.Send(&S"\0208F7\0D")			//Gateway RESET
+
+//	DebugPrint("--- KNXgw init connection test Start")
+	bSending:=0
+	SerialConnector.ClearReceiveBuffer() 							//Reset input buffer
+
+
+	// test if KNXgw not connected or NOT responding =>  skip configuration!
+	ConfigateReadMem( 1 )
+	SerialConnector.Receive(str,:0.5)
+	If  GetByteStringActualLength(str) > 4 Then
+		gwResponding:=True
+	Else	
+		Wait (:0.3)
+		ConfigateReadMem( 2 )
+		SerialConnector.Receive(str,:0.5)
+		If  GetByteStringActualLength(str) > 4 Then
+			gwResponding:=True
+		Else
+			//speedup
+			//SerialConnector.SetSerialParameters(_SERIAL_MODE_RS232,19200, 8, _SERIAL_PARITY_EVEN, _SERIAL_STOPBITS_ONE,
+			//_SERIAL_FLOWCONTROL_NONE )
+			DebugPrint("--- KNXgw NOT responding !!")	
+		End If	
+	End If
+	
+	If gwResponding And doConfigate Then 
+		//if KNXgw232 is responding OK	and update required
+		DebugPrint("*** KNXgw232 settings UPDATE - could take 5-30 seconds!")
+		ConfigateKNXgw232()  
+	End If 
+	SerialConnector.ClearReceiveBuffer() 							//Reset input buffer
+	StartProcess KNXPool()
+	DebugPrint("*** KNXgw init END")
+
+//test
+	test()
+//
+End Function
+
+Function test()
+Var k As Long
+
+Var strInPacket As ByteString[100] :=&S"GEAABACADAEAFB0000Axx"                 		//ByteString, where physical packet is recieved
+Var strInMessage As ByteString[100]                 		//ByteString, where input message is decoded
+
+//		SetByteStringActualLength(strInMessage, (GetByteStringActualLength(strInPacket)-2)/2) //prepare empty ByteString of defined length in strInMessage
+//		
+//		For k:=1 To GetByteStringActualLength(strInMessage) Step 1					//Translate telegram from ASCII coding to byte coding
+//			strInMessage[k]:=Hex2Byte(strInPacket[(k*2)-1],strInPacket[(k*2)+1-1])
+//		End For 
+////      ParseByteString(strInPacket,&s"{sj}{nhj2}", strInPacket,strInMessage[GetByteStringActualLength(strInMessage)+2-k] )
+//		//DebugPrintFormat("lenght of strInMessage: {n},strInMessage: {s}",GetByteStringActualLength(strInMessage),strInMessage)
+//DebugPrintFormat("strInPacket: {s}   strInMessage: {s}",strInPacket,strInMessage)
+
+End Function
+
+//**********************************************************************************************
+//**********************************************************************************************
+// INTERFACE FUNCTIONS
+//**********************************************************************************************
+//**********************************************************************************************
+
+
+//**********************************************************************************************
+//FUNCTIONS For SENDING GROUP TELEGRAMS THROUGH KNXgw232 INTERFACE
+//**********************************************************************************************
+//**********************************************************************************************
+//SendBit
+//
+//This Function sends Group data
+//The type of data is 1-bit (On/Off)
+//**********************************************************************************************
+Public Function SendBit(KNXmaingroup As Byte, KNXmiddlegroup As Byte ,KNXsubgroup As Byte,data As Boolean, Optional priority As Byte:=128)
+//(KNXmaingroup As Byte, KNXmiddlegroup As Byte ,KNXsubgroup As Byte)
+	If (KNXmaingroup<16) And (KNXmiddlegroup<8) Then
+		Set_bSending()			
+		SetByteStringActualLength(strOutMessage,4)
+		
+		strOutMessage[1]:=((KNXmaingroup*8) BitOr KNXmiddlegroup)
+		strOutMessage[2]:=KNXsubgroup
+		strOutMessage[3]:=priority
+		If data Then
+			strOutMessage[4] :=1
+		Else	
+			strOutMessage[4] :=0
+		End If
+		SendPacket(&H0B)											//Send data
+	End If	
+End Function
+
+//**********************************************************************************************
+//SendDimming4Bit
+//
+//This function sends Group data
+//The type of data is:
+//	  	Dimming Up/Down (boolean) 	True =UP / False =DOWN
+//		Dimming Range 	(byte)		value 0-7
+//			0 = Stop
+//			1 = 100% dimming 
+//			2 = 50% dimming 
+//			3 = 25% dimming 
+//			4 = 12.5% dimming 
+//			5 = 6.25% dimming 
+//			6 = 3.2% dimming 
+//			7 = 1.6% dimming 
+//**********************************************************************************************
+
+Public Function SendDimming4Bit(KNXmaingroup As Byte, KNXmiddlegroup As Byte ,KNXsubgroup As Byte,DimmUp As Boolean,DimmRange As Byte, Optional priority As Byte:=128)
+	If (KNXmaingroup<16) And (KNXmiddlegroup<8) Then
+		If (DimmRange<8) Then
+			Set_bSending()				
+			SetByteStringActualLength(strOutMessage,4)
+		
+			strOutMessage[1]:=((KNXmaingroup*8) BitOr KNXmiddlegroup)
+			strOutMessage[2]:=KNXsubgroup
+			strOutMessage[3]:=priority
+			// 4bit value: XYYY
+			//			X 	Direction: (1 UP/ 0 Down)
+			//			YYY	Dimming range  1: 100%, 2: 50%, 3: 25%,.... 7: 1.56%
+			//          YYY = 000  STOP        
+			If DimmUp Then
+				strOutMessage[4] := &H08 BitOr DimmRange
+			Else	
+				strOutMessage[4] := DimmRange
+			End If
+			SendPacket(&H0B)											//Send data
+		Else
+			DebugPrintFormat ("**** RUNTIME ERROR KNXgw232 SendDimming4Bit() param out of range! actual value {n} should be 0-7 ",DimmRange)
+		End If	
+	End If	
+End Function
+
+//**********************************************************************************************
+//SendByte
+//
+//This Function sends Group data
+//The type of data is unsigned Byte
+//**********************************************************************************************
+Public Function SendByte(KNXmaingroup As Byte, KNXmiddlegroup As Byte ,KNXsubgroup As Byte, data As Byte, Optional priority As Byte:=128)
+	If (KNXmaingroup<16) And (KNXmiddlegroup<8) Then
+		Set_bSending()			
+		SetByteStringActualLength(strOutMessage,4)
+		strOutMessage[1] := ((KNXmaingroup*8) BitOr KNXmiddlegroup)
+		strOutMessage[2] := KNXsubgroup
+		strOutMessage[3] := priority
+		strOutMessage[4] := data
+		SendPacket(&H0B)											//Send data
+	End If	
+End Function
+
+//**********************************************************************************************
+//SendSignedByte
+//
+//This Function sends Group data
+//The type of data is signed Byte
+//**********************************************************************************************
+Public Function SendSignedByte(KNXmaingroup As Byte, KNXmiddlegroup As Byte ,KNXsubgroup As Byte,data As Long, Optional priority As Byte:=128)
+Var lData As Byte
+	If (KNXmaingroup<16) And (KNXmiddlegroup<8) Then
+		Set_bSending()			
+		If data>=0 Then
+			lData := data
+		Else
+			lData := -data
+			lData := (&H80 BitOr lData) BitAnd &HFF										//two//s complement
+		End If	
+		SetByteStringActualLength(strOutMessage,4)
+		strOutMessage[1] := ((KNXmaingroup*8) BitOr KNXmiddlegroup)
+		strOutMessage[2] := KNXsubgroup
+		strOutMessage[3] := priority
+		strOutMessage[4] := lData
+		SendPacket(&H0B)											//Send data
+	End If	
+End Function
+
+//**********************************************************************************************
+//SendWord
+//
+//This Function sends Group data
+//The type of data is word (2-Byte)
+//**********************************************************************************************
+Public Function SendWord(KNXmaingroup As Byte, KNXmiddlegroup As Byte ,KNXsubgroup As Byte,data As Long, Optional priority As Byte:=128)
+	If (KNXmaingroup<16) And (KNXmiddlegroup<8) Then
+		Set_bSending()			
+		SetByteStringActualLength(strOutMessage,5)
+		strOutMessage[1] := ((KNXmaingroup*8) BitOr KNXmiddlegroup)
+		strOutMessage[2] := KNXsubgroup
+		strOutMessage[3] := priority
+		strOutMessage[4] := data / &H100
+		strOutMessage[5] := data BitAnd &HFF
+		SendPacket(&H0B)											//Send data
+	End If	
+End Function
+
+//**********************************************************************************************
+//SendSignedWord 
+//
+//This Function sends Group data
+//The type of data is signed 2 byte (2-Byte)
+//**********************************************************************************************
+Public Function SendSignedWord(KNXmaingroup As Byte, KNXmiddlegroup As Byte ,KNXsubgroup As Byte,data As Long, Optional priority As Byte:=128)
+Var lData As Long
+	If (KNXmaingroup<16) And (KNXmiddlegroup<8) Then
+		Set_bSending()			
+		If data>=0 Then
+			lData:=data
+		Else
+			lData := -data
+			lData := (&H8000 BitOr lData)	BitAnd &HFFFF									//two//s complement
+		End If	
+		Set_bSending()			
+		SetByteStringActualLength(strOutMessage,5)
+		strOutMessage[1] := ((KNXmaingroup*8) BitOr KNXmiddlegroup)
+		strOutMessage[2] := KNXsubgroup
+		strOutMessage[3] := priority
+		strOutMessage[4] := lData / &H100
+		strOutMessage[5] := lData BitAnd &HFF
+		SendPacket(&H0B)											//Send data
+	End If	
+End Function
+
+//**********************************************************************************************
+//SendDate
+//
+//This Function sends Group data
+//The type of data is Date (3-Byte)
+//**********************************************************************************************
+Public Function SendDate(KNXmaingroup As Byte, KNXmiddlegroup As Byte ,KNXsubgroup As Byte,Year As Long,Month As Byte, Day As Byte, Optional priority As Byte:=128)
+	If (KNXmaingroup<16) And (KNXmiddlegroup<8) Then
+		Set_bSending()			
+		SetByteStringActualLength(strOutMessage,6)
+		strOutMessage[1] := ((KNXmaingroup*8) BitOr KNXmiddlegroup)
+		strOutMessage[2] := KNXsubgroup
+		strOutMessage[3] := priority
+		strOutMessage[6] := Year-2000
+		strOutMessage[5] := Month
+		strOutMessage[4] := Day
+		SendPacket(&H0B)											//Send data
+	End If	
+End Function
+
+//**********************************************************************************************
+//SendTime
+//
+//This Function sends Group data
+//The type of data is Time (3-Byte)
+//**********************************************************************************************
+Public Function SendTime(KNXmaingroup As Byte, KNXmiddlegroup As Byte ,KNXsubgroup As Byte,Hour As Byte,Minute As Byte, Second As Byte, Dow As Byte,Optional priority As Byte:=128)
+	If (KNXmaingroup<16) And (KNXmiddlegroup<8) Then
+		Set_bSending()			
+		SetByteStringActualLength(strOutMessage,6)
+		strOutMessage[1] := ((KNXmaingroup*8) BitOr KNXmiddlegroup)
+		strOutMessage[2] := KNXsubgroup
+		strOutMessage[3] := priority
+		strOutMessage[6] := Second
+		strOutMessage[5] := Minute
+		strOutMessage[4] := (Dow * 32) BitOr Hour
+		SendPacket(&H0B)											//Send data
+	End If	
+End Function
+
+
+//**********************************************************************************************
+//SendReadOutRequest
+//
+//This Function ask For an Group data
+//**********************************************************************************************
+Public Function SendReadOutRequest(KNXmaingroup As Byte, KNXmiddlegroup As Byte ,KNXsubgroup As Byte)
+	If (KNXmaingroup<16) And (KNXmiddlegroup<8) Then
+		Set_bSending()			
+		SetByteStringActualLength(strOutMessage,2)
+		strOutMessage[1] := ((KNXmaingroup*8) BitOr KNXmiddlegroup)
+		strOutMessage[2] := KNXsubgroup
+		SendPacket(&H0C)											//Send data
+	End If	
+End Function
+
+//**********************************************************************************************
+// CONFIGATE functions
+//**********************************************************************************************
+//ConfigateGroup 
+//
+//This Function sets KNXgw232 to work with  GroupAddress  
+// (one KNXgw232 is capable to work with 250 group adresses)
+//**********************************************************************************************
+/*Public*/
+Private Function ConfigateGroup(KNXmaingroup As Byte, KNXmiddlegroup As Byte ,KNXsubgroup As Byte, eis As Byte, Optional memAddr As Byte := 0 )
+//(KNXmaingroup As Byte, KNXmiddlegroup As Byte ,KNXsubgroup As Byte)
+	If (KNXmaingroup<16) And (KNXmiddlegroup<8) Then
+		Set_bSending()			
+		SetByteStringActualLength(strOutMessage,5)
+		
+		strOutMessage[1]:= memAddr/256
+		strOutMessage[2]:= memAddr Mod 256
+		strOutMessage[3]:=((KNXmaingroup*8) BitOr KNXmiddlegroup)
+		strOutMessage[4]:=KNXsubgroup
+		strOutMessage[5]:=eis
+		SendPacket(&H41)											//Send data
+	End If	
+End Function
+
+//**********************************************************************************************
+//Configate  Request to Read gateway Memory 
+//
+//This Function ask to get config memory state fro KNXgw232
+// note that  KNXgw232 is equipped with 250 separate memories for 250 group adressess + their EIS types
+// (one KNXgw232 is capable to work with 250 group adresses)
+//**********************************************************************************************
+/*Public*/
+Private Function ConfigateReadMem(Optional  memAddr As Byte := 0 )
+//(KNXmaingroup As Byte, KNXmiddlegroup As Byte ,KNXsubgroup As Byte)
+	If (memAddr <= 250) Then
+		Set_bSending()			
+		SetByteStringActualLength(strOutMessage,2)
+		
+		strOutMessage[1]:= memAddr/256
+		strOutMessage[2]:= memAddr Mod 256
+		SendPacket(&H40)											//Send data
+	End If	
+End Function
+
+
+//**********************************************************************************************
+//**********************************************************************************************
+//FUNCTIONS For EIS5 conversions
+//**********************************************************************************************
+//**********************************************************************************************
+
+//**********************************************************************************************
+//ConvertEIS5DataloadToTemperature
+//
+//This Function Converts  EIS5 Dataload (long) To Temperature(double)
+//**********************************************************************************************
+Public Function ConvertEIS5DataloadToTemperature(  eis5 As Long   ) As Double
+//Encoding : SEEE EMMM MMMM  MMMM : FloatValue = (0,01*M)*2^E
+// DebugPrintFormat (" mantisa {nh} : exponent {nh}",(-1) ^ (Dataload/&H8000) * (Dataload BitAnd &H07ff ),(Dataload BitAnd &H7800)/ &H800 )
+Var t As Double
+Var tl As Long
+
+
+	tl := eis5 BitAnd &H07ff
+	If ((eis5 BitAnd &H08000) <> 0) Then
+		
+		tl BitOr= ((-1)>>11) <<11 //&Hfffff800
+		tl := -tl 
+	End If
+	tl := tl << ((eis5 BitAnd &H07800) >> 11) //	tl :=  tl *  (2 ^ ((eis5 BitAnd &H7800)/ &H800) )
+	t:=tl
+
+	If ((eis5 BitAnd  &H08000) <> 0) Then t := -t End If
+	t :=  t /100	
+	Return Value  t
+End Function
+
+///
+
+
+
+
+
+//**********************************************************************************************
+//ConvertTemperatureToEIS5Dataload
+//
+//This Function Converts Temperature(double) To EIS5 Dataload (long) to be sent by SendWord() function 
+//**********************************************************************************************
+Public Function ConvertTemperatureToEIS5Dataload(  temperature As Double   ) As Long
+//To convert from decimal representation To DPT_Value_Temp (9.001), the following steps shall be done:
+//1. The Value has To be noted with a precision of 0,01
+//EXAMPLE 315 °C is noted As 31500
+//2. This is divided by 2 until you have a Value smaller than 2047. With each division, the Exponent is incremented. This gives the smalled exponent, which is the most accurate coding.
+//EXAMPLE 1968,75 with 4 devisions by 2.
+//3. The mantissa can only carry the integer part of the Value, so 1968,75 becomes 1968. Here of course, truncation errors occur.
+//4. The integer Value of the mantissa is binary encoded.
+//EXAMPLE 1968 becomes 11110110000b
+//5. The DPT_Value_Temp Value is composed As in the given format: M EEEE MMM MMMM MMMM
+//EXAMPLE 0 0100 111 1011 0000 is hexadecimally noted 27B0h.
+//
+//NOTE 1 Of course, an optimisation is possible: due To the truncation, 27B0h is Not really 315: it is 314,88. The Value 27B1h is more precise: this is 315,04.
+//NOTE 2 An interesting only tool can be found here: http://www.tapko.de/Tools.31.0.html
+
+	Var temp As Long
+	Var exp As Long := 0
+	Var minus As Long := 0
+    //Encoding : MEEE EMMM MMMM  MMMM : FloatValue = (0,01*M)*2^E
+    
+    If temperature >= 0 Then 
+		temp := (temperature + 0.005) * 100
+	Else
+		minus:= &H8000 
+		temp := (temperature - 0.005) * 100
+	End If
+
+ 	For exp := 0 To 15
+		If temp > 2047 Or temp < -2048 Then
+			temp /= 2
+		Else
+			Exit For
+		End If
+	End For
+   	temp := (temp) BitAnd &H07ff
+    
+    Return Value minus + exp * &H800 + temp
+End Function
+
+
+
+ 
+
+
+//**********************************************************************************************
+//**********************************************************************************************
+//FUNCTIONS For RECEIVING TELEGRAMS THROUGH KNXgw232 INTERFACE
+//**********************************************************************************************
+//**********************************************************************************************
+
+//**********************************************************************************************
+//RegisterKNXgroupForOnTelegramEvent
+//
+//This Function adds Group Address Filter record for telegram reception
+//**********************************************************************************************
+Public Function RegisterKNXgroupForOnTelegramEvent(  KNXmaingroup As Byte, KNXmiddlegroup As Byte ,KNXsubgroup As Byte   ) As Boolean
+Var i As Long 
+
+    If FilterRecords>0 Then
+		For i := 1 To FilterRecords
+			If (KNXmaingroup=Filter[i,1]) And (KNXmiddlegroup=Filter[i,2]) And (KNXsubgroup=Filter[i,3]) Then
+				Return Value True  //AlreadyExists
+			End If	
+		End For
+	End If
+    If FilterRecords< SizeOfDim(Filter,1) Then
+
+		FilterRecords += 1
+		Filter[FilterRecords,1] := KNXmaingroup
+		Filter[FilterRecords,2] := KNXmiddlegroup
+		Filter[FilterRecords,3] := KNXsubgroup
+
+		Return Value True
+	Else
+		Return Value False
+	End If
+End Function
+
+//**********************************************************************************************
+//UnregisterKNXgroupForOnTelegramEvent
+//
+//This Function adds Group Address Filter record for telegram reception
+//**********************************************************************************************
+Public Function UnregisterKNXgroupForOnTelegramEvent(  KNXmaingroup As Byte, KNXmiddlegroup As Byte ,KNXsubgroup As Byte   ) As Boolean
+Var i As Long 
+
+    If FilterRecords>0 Then
+		For i := 1 To FilterRecords
+			If (KNXmaingroup=Filter[i,1]) And (KNXmiddlegroup=Filter[i,2]) And (KNXsubgroup=Filter[i,3]) Then
+				//AlreadyExists
+				Filter[i,1] := Filter[FilterRecords,1]
+				Filter[i,2] := Filter[FilterRecords,2]
+				Filter[i,3] := Filter[FilterRecords,3]
+				FilterRecords -= 1
+				Return Value True
+			End If	
+		End For
+	End If
+	Return Value False
+End Function
+
+//**********************************************************************************************
+//ProcessTelegram
+//
+//this Function is called, when an KNX telegram is recieved
+//Filter Group addresses according Filter array
+//**********************************************************************************************
+Function ProcessTelegram(KNXmaingroup As Byte, KNXmiddlegroup As Byte ,KNXsubgroup As Byte ,DataLoad As Long  , NumberOfDataBytes As Byte )
+
+Var i As Long
+
+//DebugPrintFormat("ProcesTelegram {n} ,{n} ,{n} ,{n} ,{n}  ",KNXmaingroup , KNXmiddlegroup  ,KNXsubgroup , DataLoad  , NumberOfDataBytes)
+//DebugPrintFormat("KNXmaingroup :{n}",KNXmaingroup)
+//DebugPrintFormat("KNXmiddlegroup :{n}",KNXmiddlegroup)
+//DebugPrintFormat("KNXsubgroup :{n}",KNXsubgroup)
+//DebugPrintFormat("DataLoad :{n}",DataLoad)
+//DebugPrintFormat("NumberOfDataBytes :{n}",NumberOfDataBytes)
+
+
+
+	If FilterRecords <> 0 Then
+		For i := 1 To FilterRecords
+			If (KNXmaingroup=Filter[i,1]) And (KNXmiddlegroup=Filter[i,2]) And (KNXsubgroup=Filter[i,3]) Then
+				Do While Not RaiseEvent  OnTelegram(KNXmaingroup , KNXmiddlegroup  ,KNXsubgroup , DataLoad  , NumberOfDataBytes )
+				End Do
+			End If	
+		End For
+	End If
+
+
+//	RaiseEvent  OnAnyTelegram(KNXmaingroup , KNXmiddlegroup  ,KNXsubgroup , DataLoad  , NumberOfDataBytes )
+End Function
+
+
+
+
+//**********************************************************************************************
+//KNXPool
+//
+//This Function sends question To KNXgw232 terminal For any pending incomming KNX telegram
+//If tere is an telegram, it is decoded And Function ProcessPacket is called with decoded addresses
+//Telegram data is stored in strInKNXData variable
+//**********************************************************************************************
+Process KNXPool()
+
+Var k As Long
+
+Var strInPacket As ByteString[100]                  		//ByteString, where physical packet is recieved
+Var strInMessage As ByteString[100]                 		//ByteString, where input message is decoded
+Var KNXmaingroup As Byte								//Group address main
+Var KNXmiddlegroup As Byte								//Group address middle
+Var KNXsubgroup As Byte									//Group address Function
+Var DataLoad As Long :=0
+Var NumberOfDataBytes As Long :=0
+
+Var dbgRespTime As Time											//
+Var Twait As Time											//
+
+//--------------
+//21.12.2012
+//    If  BaudRate < 38400 Then	Twait := :0.08	
+//    If  BaudRate < 38400 Then	Twait := :0.06 //	:0.08	
+//    If  BaudRate < 38400 Then	Twait := :0.24 //	:0.08	
+ // OK   If  BaudRate < 38400 Then	Twait := :0.22 //	:0.08 ERR
+//    If  BaudRate < 38400 Then	Twait := :0.20 //	:0.08 ERR
+//    If  BaudRate < 38400 Then	Twait := :0.15 //	:0.08 ERR
+//    If  BaudRate < 38400 Then	Twait := :0.12 //	:0.08 ERR
+//	Twait := :0.12	
+  	Twait := :0.04	
+    	
+   							//wait for reply	 (Delay according used baudrate!)
+															//KNXgw232 Tresponse > 10ms!	     
+PoolAgain:
+//	wait( :0.7 )
+//	wait( :0.1 )
+//	wait( :0.04 )
+	Wait( :0.01 )
+
+	If FilterRecords = 0 Then  
+		Wait( :0.5 )
+		GoTo PoolAgain
+	End If
+	Set_bSending()	
+	Wait( :0.01 )		
+	SerialConnector.ClearReceiveBuffer() 					//Reset input buffer
+	SerialConnector.Send(&S"\0204FB\0D")					//Finally sending ByteString: Send request for data
+	dbgRespTime := GetSystemTime()
+//--------------
+//21.12.2012
+//	bSending:=0
+//	SerialConnector.ReceiveHFpacket(strInPacket, &S"\02FC",&S"\0D",4*Twait)
+	If Not SerialConnector.ReceiveHFPacket(strInPacket, &S"\02FC",&S"\0D", Twait ) Then
+		//DebugPrintFormat("receive FAIL>  len {n}strInPacket: {S}",strInPacket)		
+		//SerialConnector.Send(&S"\0204FB\0D")
+		SerialConnector.ReceiveHFPacket(strInPacket, &S"\02FC",&S"\0D", Twait*2 )
+	 End If
+	
+//21.12.2012
+	bSending:=0
+//--------------
+//sample
+//Rq 	<STX> 0x04 0xFB <CR>
+//Resp 	<STX> 0xFC 0x09 0x01 0x07 0xF2 <CR>
+//	DebugPrintFormat("strInPacket: {S}",strInPacket)		
+	If 
+		GetByteStringActualLength(strInPacket)<>0  
+		//And 
+		//strInPacket[1] = &H02 And 
+		//strInPacket[GetByteStringActualLength(strInPacket)] = &H0D 
+		 Then	//Test for correct telegram recieved
+		 
+		 //DebugPrintFormat("reptime: {:}  strInPacket: {S}", GetSystemTime()-dbgRespTime ,strInPacket)		
+//		 DebugPrintFormat("resptime: {:} ", GetSystemTime()-dbgRespTime )		
+
+		TrimByteString(strInPacket,strInPacket,&S"\06")
+
+		//DebugPrintFormat("lenght of strInPacket: {n} strInPacket: {s}",GetByteStringActualLength(strInPacket),strInPacket)		
+		SetByteStringActualLength(strInMessage, (GetByteStringActualLength(strInPacket)-2)/2) //prepare empty ByteString of defined length in strInMessage
+		
+		For k:=1 To GetByteStringActualLength(strInMessage) Step 1					//Translate telegram from ASCII coding to byte coding
+			strInMessage[k]:=Hex2Byte(strInPacket[(k*2)-1],strInPacket[(k*2)+1-1])
+		End For 
+//      ParseByteString(strInPacket,&s"{sj}{nhj2}", strInPacket,strInMessage[GetByteStringActualLength(strInMessage)+2-k] )
+		//DebugPrintFormat("lenght of strInMessage: {n},strInMessage: {s}",GetByteStringActualLength(strInMessage),strInMessage)
+
+		If True/*strInMessage[1]=&HFC*/ Then							//Answer with incomming telegram
+			KNXmaingroup:=(strInMessage[1] BitAnd &H78) / 8	//Decode Main Group Address
+			KNXmiddlegroup :=(strInMessage[1] BitAnd &H07)	//Decode Middle Group Address
+			KNXsubgroup := strInMessage[2]					//Decode Sub Group Address
+			
+			
+			NumberOfDataBytes:=GetByteStringActualLength(strInMessage)-2
+
+			
+			GetByteStringMiddle(strInMessage,3,NumberOfDataBytes,strInKNXData)
+//			DebugPrintFormat("strInKNXData 2: {Sh}",strInKNXData)
+
+		    DataLoad :=0
+//V204
+			For k:= 1 To NumberOfDataBytes 
+//				DebugPrintFormat("strInKNXData[{n}]: {nh}",k,strInKNXData[k])		
+				DataLoad := DataLoad * &h100 + strInKNXData[k]
+			End For 
+//V204
+
+//			DebugPrintFormat("strInMessage: {S}",strInMessage)
+//			RaiseEvent  OnAllTelegram(KNXmaingroup , KNXmiddlegroup  ,KNXsubgroup , DataLoad  , NumberOfDataBytes )
+
+			ProcessTelegram(KNXmaingroup,KNXmiddlegroup,KNXsubgroup, DataLoad  , NumberOfDataBytes )		//Calling user function to handle incomming telegram
+
+
+		End If
+	End If
+GoTo PoolAgain
+End Process
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////**********************************************************************************************
+////ProcessTelegram Utilities for DECODING data from  strInKNXData
+////
+////ProcessTelegram  Function is called, when an KNX telegram is recieved
+////Group addresses are decoded in parameters
+////Variable strInKNXData contains data of telegram 
+////
+////**********************************************************************************************
+//
+////**********************************************************************************************
+////KNXAsBoolean Function returns Boolean variable decoded from strInKNXData
+////**********************************************************************************************
+//Function KNXAsBoolean() As Boolean
+//	Return Value strInKNXData[1]>0
+//End Function
+////**********************************************************************************************
+////KNXAsByte Function returns Byte variable decoded from strInKNXData
+////**********************************************************************************************
+//Function KNXAsByte() As Byte
+//	Return Value strInKNXData[1]
+//End Function
+////**********************************************************************************************
+////KNXAsSmalInt Function returns signed Byte variable decoded from strInKNXData
+////**********************************************************************************************
+//Function KNXAsSmallInt() As Long
+//	If (strInKNXData[1] BitAnd &H80)<>0 Then
+//		Return Value -((&HFF BitXor(((strInKNXData[1] BitAnd &H7F)-1))) BitAnd &H7F)	//2//s complement
+//	Else 
+//		Return Value strInKNXData[1]
+//	End If	
+//End Function
+////**********************************************************************************************
+////KNXAsWord Function returns word variable decoded from strInKNXData
+////**********************************************************************************************
+//Function KNXAsWord() As Long
+//	Return Value (strInKNXData[1]*&H100)+strInKNXData[2]
+//End Function
+////**********************************************************************************************
+////KNXAsDate Function fills date variables decoded from strInKNXData
+////**********************************************************************************************
+//Function KNXAsDate(ByRef year As Long, ByRef month As Byte, ByRef day As Byte)
+//	year:=2000+strInKNXData[3]										//year
+//	month:=strInKNXData[2] 											//month
+//	day:=strInKNXData[1]											//day
+//End Function
+////**********************************************************************************************
+////KNXAsTime Function fills Time variables decoded from strInKNXData
+////**********************************************************************************************
+//Function KNXAsTime(ByRef hour As Byte, ByRef minute As Byte, ByRef second As Byte, ByRef dow As Byte)
+//	second:=strInKNXData[3]											//seconds
+//	minute:=strInKNXData[2]											//minutes
+//	hour:=strInKNXData[1] BitAnd &H1F								//hours
+//	dow:=(strInKNXData[1] BitAnd &HE0) /32							//day of week
+//End Function
+////**********************************************************************************************
+////KNXAsLong Function returns Long integer variable decoded from strInKNXData
+////**********************************************************************************************
+//Function KNXAsLong() As Long
+//	Return Value (strInKNXData[1]*&H1000000)+(strInKNXData[2]*&H10000)+(strInKNXData[3]*&H100)+strInKNXData[4]
+//End Function
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+//**********************************************************************************************
+//**********************************************************************************************
+//UTIL FUNCTIONS
+//**********************************************************************************************
+//**********************************************************************************************
+//Byte2Hex
+//
+//This Function returns ASCII representation of Byte Value(0..15)
+//**********************************************************************************************
+//Function Byte2Hex(b As Byte) As Byte
+//	If b<10 Then
+//		Return Value b+48
+//	Else
+//		Return Value b+55	
+//	End If		
+//End Function
+//**********************************************************************************************
+//Hex2Byte
+//
+//This Function returns Byte Value of ASCII representation of Byte (two ASCII chars "0".."9","A".."F"
+//**********************************************************************************************
+Function Hex2Byte(bHi As Byte, bLo As Byte) As Byte
+Var lbHi As Byte
+Var lbLo As Byte
+
+//Var xStr As ByteString[2] := &S"xx"
+//Var x 	 As Byte
+//
+//	xStr[1] := bHi
+//	xStr[2] := bLo
+//	ParseByteString(xStr, &S"{nh02}",x)
+//	Return Value x
+	 
+	If bHi >= &h41 Then
+		lbHi:=(/*LOWERCASE*/ bHi BitAnd &B11011111 ) - 55 //-&h41 + &h0A = -65+10 = -55
+	Else
+		lbHi:=bHi-48						// -&h30
+	End If	
+	If bLo >= &h41 Then
+		lbLo:=(/*LOWERCASE*/ bLo BitAnd &B11011111 ) - 55 //-&h41 + &h0A = -65+10 = -55 
+	Else
+		lbLo:=bLo-48
+	End If	
+	Return Value(lbHi*&H10)+lbLo
+End Function
+
+//**********************************************************************************************
+//SendPacket
+//
+//This Function constructs KNXgw232 telegram
+//Whole telegram To be send is stored in strOutMessage variable
+//**********************************************************************************************
+Function SendPacket(Funct As Byte)
+//xxxxxxx
+Var CS As Byte
+Var k As Long
+Var strOutPacket As ByteString [100]//*100						//ByteString, where physical packet to be send is constructed
+Var strTmp As ByteString [2]									//ByteString  temporary storage
+//
+	FormatByteString(strOutPacket,&S"\02{nH02}",Funct)
+	CS:= Funct
+	For k:=1 To GetByteStringActualLength( strOutMessage ) Step 1  //CS calculating and out buffer filling
+		CS:=CS+strOutMessage[k]
+		FormatByteString(strTmp,&S"{nH02}",strOutMessage[k])
+		ConcatenateByteString(strOutPacket,strOutPacket,strTmp)
+	End For	
+	CS:= CS BitXor &HFF
+	FormatByteString(strTmp,&S"{nH02}",CS)
+	ConcatenateByteString(strOutPacket,strOutPacket,strTmp,&S"\0D")
+
+//	DebugPrintFormat("Funct+strOutMessage :\\{nH02} {S}",Funct,strOutMessage)
+//	DebugPrintFormat("strOutPacket:{s}", strOutPacket)
+
+	SerialConnector.Send( strOutPacket)								//Finally sending ByteString
+	bSending:=0
+End Function
+
+
+
+//**********************************************************************************************
+//Set_bSending
+//
+//sets bSending To avoid proces collisions
+//This utility waits For bSending:=0 Then it sets bSending To 1 And Then returns
+//**********************************************************************************************
+Function Set_bSending()	//To avoid sending collisions
+
+TryAgain:
+	bSend.Lock()
+	If bSending=0 Then
+		bSending:=1
+	bSend.Unlock()
+	Else
+	bSend.Unlock()
+		Wait (:0.01)								//Attention without this delay would not work!
+		GoTo TryAgain
+	End If
+End Function
+			
+//**********************************************************************************************
+Function debug(txt As Text)
+	If debugDriver Then DebugPrint(txt) End If
+End Function
+
+
+
+//**********************************************************************************************
+//**********************************************************************************************
+//
+// ConfigateKNXgw232()
+//
+//**********************************************************************************************
+//**********************************************************************************************
+//-----------------------------------------------------------------------------------------------
+//Structure KNXgroup
+//	Var Main As Byte 
+//	Var Middle As Byte 
+//	Var Sub As Byte
+//End Structure
+//-----------------------------------------------------------------------------------------------
+
+
+Function ConfigateKNXgw232()
+	debug("Configuration KNXgw") 
+	If fillinSettings() Then 
+		debug("valid configuration record found") 
+		sendSettings () 
+	Else
+		DebugPrint("--- NOT valid configuration record found")
+	End If
+	debug("Update KNXgw KNXaddress") 
+	setKNXaddress()	
+End Function
+
+//-----------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------
+
+Function 	setKNXaddress()	 As Boolean
+//	"Update KNXgw KNXaddress from property")
+//    accept both: "." and "/" as address part delimiter
+
+Var n As Byte := 1
+Var address As Long
+Var i As Long := 1
+Var iEnd As Long 
+Var iEnd1 As Long
+
+Var txt As Text[255] :=""
+
+			
+//			DebugPrintFormat("gw KNXaddr : {t}",KNXaddress)
+
+			
+			iEnd:=GetSubTextPosition(KNXaddress, "/" ,i)			
+			iEnd1:=GetSubTextPosition(KNXaddress, "." ,i)
+			If iEnd	<> 0 And iEnd1<>0 Then iEnd:=Min(iEnd,iEnd1)
+			Else 	iEnd:=Max(iEnd,iEnd1)
+			End If 
+				
+		   	If iEnd =0 Then Return Value False End If 
+			GetTextMiddle(KNXaddress,i, iEnd-i,txt)
+			TrimText(txt,txt)
+			 If Not ParseText(txt,"{n}",n)  Then Return Value False End If
+			 If n >= 16   Then Return Value False End If
+			address := n*16
+			i:= iEnd+1
+
+
+			iEnd:=GetSubTextPosition(KNXaddress, "/" ,i)			
+			iEnd1:=GetSubTextPosition(KNXaddress, "." ,i)
+			If iEnd	<> 0 And iEnd1<>0 Then iEnd:=Min(iEnd,iEnd1)
+			Else 	iEnd:=Max(iEnd,iEnd1)
+			End If 
+		   	If iEnd =0 Then Return Value False End If 
+			GetTextMiddle(KNXaddress,i, iEnd-i,txt)
+			TrimText(txt,txt)
+			 If Not ParseText(txt,"{n}",n)  Then Return Value False End If
+			 If n >= 16   Then Return Value False End If
+			address += n
+			i:= iEnd+1
+			
+
+			GetTextMiddle(KNXaddress,i, 255,txt)
+			TrimText(txt,txt)
+			 If Not ParseText(txt,"{n}",n)  Then Return Value False End If
+			 If n >= 256   Then Return Value False End If
+			address := address *256 + n
+			//a := address
+			//DebugPrintFormat("gw KNXaddress: {n} .{n} .{n}  ",a/(256*16),(a Mod(256*16))/256, a Mod 256 )
+			
+			sendKNXaddress(address)
+			
+			Return Value True 
+	 
+End Function
+
+//-----------------------------------------------------------------------------------------------
+Function sendKNXaddress( i As Long)
+		Set_bSending()			
+		SetByteStringActualLength(strOutMessage,5)
+		
+		strOutMessage[1]:= &hFF
+		strOutMessage[2]:= &hFF
+		strOutMessage[3]:=	i / 256
+		strOutMessage[4]:=	i Mod 256
+		strOutMessage[5]:=	0
+		SendPacket(&H41)											//Send data
+End Function
+
+//-----------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------
+
+Function fillinSettings() As Boolean
+Var i 		As Long :=1
+Var pos 	As Long :=1
+Var posOld 	As Long
+Var notEmpty  As Boolean := False
+//Public 
+Var record As recordStructure
+
+Do While  i <= 250
+	posOld := pos
+	If getRecord( record,pos) Then
+		notEmpty := True	//valid configuration record found
+		If recordUnique(record ,i) Then 
+			
+	  		printRecord("valid configuration record for: ",record)	
+			Settings[i] := record
+			i+=1
+		End If		
+	Else
+		If posOld = pos Then
+			Settings[i].group 	:= &Hffff
+			Settings[i].eis 	:= 00	//&Hff
+			i+=1
+		End If
+	End If	 	
+End Do
+Return Value notEmpty
+End Function
+
+//-----------------------------------------------------------------------------------------------
+
+Function getRecord (ByRef record As recordStructure,ByRef pos As Long) As Boolean		//Texts
+
+Var n As Byte := 1
+Var i As Long := 1
+Var posCRLF As Long 
+Var iEnd As Long := 0
+Var txt As Text[255] := ""
+
+//Var CRLF As ByteString :=&S"\0a"
+Var CRLFtxt As Text[5] := "\000a"
+//	ByteStringToText(CRLF,CRLFtxt,_ASCII_TO_TEXT)
+
+	posCRLF:=GetSubTextPosition(Texts, CRLFtxt ,pos)
+   	If posCRLF = 0 And pos = 1Then 
+		Return Value False //NO RECORD
+   	End If 
+
+   	If posCRLF = 0 /*And pos > 1*/ And pos < GetTextActualLength(Texts)Then
+		GetTextMiddle(Texts,pos, GetTextActualLength(Texts),txt) // LAST LINE
+		pos := GetTextActualLength(Texts)
+	ElseIf pos = GetTextActualLength(Texts) Then
+		Return Value False
+	Else 
+		GetTextMiddle(Texts,pos, posCRLF-pos,txt) // line
+		pos := posCRLF + GetTextActualLength(CRLFtxt)
+   	End If 
+	
+	
+	If fillRecord(record,txt) Then
+//	  	printRecord("Found new Configuration item: ",record)	
+		Return Value True
+	End If
+	Return Value False
+End Function
+
+//-----------------------------------------------------------------------------------------------
+
+Function fillRecord (ByRef record As recordStructure,ByRef lnTxt As Text) As Boolean		//Texts
+
+Var n As Byte := 1
+Var i As Long := 1
+Var iEnd As Long := 0
+
+Var txt As Text[255] :=""
+	
+
+		//if recordOK   return TRUE// 
+			TextToUppercase(lnTxt,lnTxt)
+			
+		//	If (KNXmaingroup<16) And (KNXmiddlegroup<8) Then
+
+			iEnd:=GetSubTextPosition(lnTxt, "/" ,i)
+		   	If iEnd =0 Then Return Value False End If 
+			GetTextMiddle(lnTxt,i, iEnd-i,txt)
+
+			TrimText(txt,txt)
+			 If Not ParseText(txt,"{n}",n)  Then Return Value False End If
+			 If n >= 16   Then Return Value False End If
+			record.group := n*8*256
+			i:= iEnd+1
+
+			iEnd:=GetSubTextPosition(lnTxt, "/" ,i)
+		   	If iEnd =0 Then Return Value False End If 
+			GetTextMiddle(lnTxt,i, iEnd-i,txt)
+			TrimText(txt,txt)
+			 If Not ParseText(txt,"{n}",n)  Then Return Value False End If
+			 If n >= 8   Then Return Value False End If
+			record.group += n*256
+			i:= iEnd+1
+
+			iEnd:=GetSubTextPosition(lnTxt, "EIS" ,i)
+		   	If iEnd =0 Then Return Value False End If 
+			GetTextMiddle(lnTxt,i, iEnd-i,txt)
+			TrimText(txt,txt)
+			 If Not ParseText(txt,"{n}",n)  Then Return Value False End If
+			record.group += n
+			i:= iEnd+3
+
+			GetTextMiddle(lnTxt,i, 255,txt)
+			TrimText(txt,txt)
+			 If Not ParseText(txt,"{n}",n)  Then Return Value False End If
+			record.eis := n
+
+			Return Value True 
+End Function
+
+//-----------------------------------------------------------------------------------------------
+	
+Function recordUnique (ByRef record As recordStructure,ByRef pos As Long) As Boolean		//Texts
+
+Var i As Long := 1
+
+	If pos = 1 Then 	Return Value True End If
+	For i:=1 To pos-1
+		If Settings[i].group = record.group Then Return Value False End If
+	End For	
+	Return Value True
+End Function
+
+//-----------------------------------------------------------------------------------------------
+
+Function sendSettings () As Boolean		//Texts
+Var record As recordStructure
+Var oneCommandTime As Time := ( (:1 * 11/*bits*/ * ((2 + 2*7 )/*bytes in command*/ + 2/*bytes reserve*/))/19200 /*Bd*/)
+Var i As Long := 1
+//Var dbgtxt As Text[8] :="[{N}]"
+	
+	//	debug("Send KNXgw Settings")
+	For i:=1 To 250 //  10 //
+		//		FormatText(dbgtxt,"[{N}] : ",i)
+		//	  	printRecord(dbgtxt,Settings[i])	
+		Wait (2*oneCommandTime)
+		sendSettingsRecord(i)	
+	End For	
+	//	debug("End KNXgw Settings") 	
+	Return Value True
+End Function
+
+//-----------------------------------------------------------------------------------------------
+
+Function sendSettingsRecord( i As Long)
+		Set_bSending()			
+		SetByteStringActualLength(strOutMessage,5)
+		
+		strOutMessage[1]:= (i-1)/256
+		strOutMessage[2]:= (i-1) Mod 256
+		strOutMessage[3]:=	Settings[i].group / 256
+		strOutMessage[4]:=	Settings[i].group Mod 256
+		strOutMessage[5]:=	Settings[i].eis
+		SendPacket(&H41)											//Send data
+
+End Function
+
+
+//-----------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------
+
+Function printRecord(t As Text, ByRef record As recordStructure)
+	If debugDriver Then 
+		DebugPrintFormat ("{t} : {nh04}:{n} - {n}/{n}/{n} EIS{n} ",t,
+		record.group,
+		record.eis,
+		record.group/(256*8),
+		(record.group/(256)) BitAnd &H07,
+		record.group Mod 256,
+		record.eis)
+	 End If
+End Function
+
+
+//**********************************************************************************************
+//130430
+// INIT times  
+//Update settings: FALSE
+// no cable (no RTS-CTS)		- 11sec
+// Cable(ok RTS-CTS)no KNXgw232 -  1sec
+// cable OK+KNXgw232 			- 0.4sec
+
+//Update settings: TRUE
+// no cable (no RTS-CTS)		- 11sec
+// Cable(ok RTS-CTS)no KNXgw232 -  2sec
+// cable OK+KNXgw232 			- 22sec
+
+
+
+End DeviceClass

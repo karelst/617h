@@ -1,0 +1,633 @@
+// Structures
+Private Structure WeatherMessageCache
+	Var LocationSearchText		As Text[Namespace "CUE.Applet.DailyWeatherFromApixu.1".TEXT_LENGHT]
+	Var WeatherForecast 		As Namespace "CUE.Applet.DailyWeatherFromApixu.1".AllWeatherStructure
+	Var UpdateSystemTime		As Time
+End Structure
+
+Private Const RSS_TEXT_SIZE 				As Long	:= 100000
+Private Const COMMAND_GET_SIZE 				As Long	:= 200
+Private Const URL_SIZE 						As Long	:= 200
+
+// Device class
+Global DeviceClass DailyWeatherFromApixuReader
+Connector TCPClientConnector
+
+// Constants
+Private Const TIMEOUT_ON_THE_FLY As Time := :1.0
+
+Public Property APIKey As Text[Namespace "CUE.Applet.DailyWeatherFromApixu.1".TEXT_LENGHT] := "" WithAttributes
+{
+	PropertyGroup := "Behavior"
+}
+
+Public Property ConnectionTimeout As Time := :20.00 WithAttributes
+{
+	PropertyGroup := "Behavior",
+	EditMode 	  := "TimeInterval"
+}
+
+Protected Property Location1 As Text[100] := "Prague, Czech Republic" WithAttributes
+{
+	PropertyGroup := "Locations"
+}
+
+Protected Property Location2 As Text[100] := "" WithAttributes
+{
+	PropertyGroup := "Locations"
+}
+
+Protected Property Location3 As Text[100] := "" WithAttributes
+{
+	PropertyGroup := "Locations"
+}
+
+Protected Property Location4 As Text[100] := "" WithAttributes
+{
+	PropertyGroup := "Locations"
+}
+
+Protected Property Location5 As Text[100] := "" WithAttributes
+{
+	PropertyGroup := "Locations"
+}
+
+
+// Variables
+Private Var CommLock As _Semaphore
+Private Var WeatherCache[Namespace "CUE.Applet.DailyWeatherFromApixu.1".MAX_LOCATIONS] As WeatherMessageCache
+
+
+// Functions
+Private Function Init ()
+Private Var N As Long
+
+	For N := 1 To Namespace "CUE.Applet.DailyWeatherFromApixu.1".MAX_LOCATIONS
+		ClearAllWeatherStructure(WeatherCache[N].WeatherForecast)
+	End For
+
+	WeatherCache[1].LocationSearchText := Location1
+	WeatherCache[2].LocationSearchText := Location2
+	WeatherCache[3].LocationSearchText := Location3
+	WeatherCache[4].LocationSearchText := Location4
+	WeatherCache[5].LocationSearchText := Location5
+	
+	For N := 1 To Namespace "CUE.Applet.DailyWeatherFromApixu.1".MAX_LOCATIONS
+		WeatherCache[N].UpdateSystemTime := -:10.0
+	End For
+	
+	ConnectionTimeout := Min(10:0.0, ConnectionTimeout)
+	ConnectionTimeout := Max(:1.0, ConnectionTimeout)
+	
+End Function
+
+
+Global Function SetLocation (locationid As Long, locationsearchtext As Text) As Boolean
+Private Var OldLocation As WeatherMessageCache
+	
+	If locationid < 1 Or locationid > Namespace "CUE.Applet.DailyWeatherFromApixu.1".MAX_LOCATIONS Then
+		Return Value False
+	End If
+	
+	CommLock.Lock()
+	OldLocation := WeatherCache[locationid]
+	WeatherCache[locationid].LocationSearchText := locationsearchtext
+	
+	If UpdateWeather (locationid) Then
+		CommLock.Unlock()
+		Return Value True
+	Else
+		WeatherCache[locationid] := OldLocation
+		CommLock.Unlock()
+		Return Value False
+	End If
+
+End Function
+
+
+Global Function GetLocation (locationid As Long, ByRef locationsearchtext As Text, ByRef reallocationstructure As Namespace "CUE.Applet.DailyWeatherFromApixu.1".LocationStructure) As Boolean
+
+	If locationid < 1 Or locationid > Namespace "CUE.Applet.DailyWeatherFromApixu.1".MAX_LOCATIONS Then
+		Return Value False
+	End If
+	
+	locationsearchtext := WeatherCache[locationid].LocationSearchText
+	
+	If WeatherCache[locationid].UpdateSystemTime < :.0 Then
+		If UpdateWeather (locationid) Then
+			reallocationstructure := WeatherCache[locationid].WeatherForecast.location
+			Return Value True
+		Else
+			_ClearVariable(reallocationstructure)
+			reallocationstructure.lat := Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+			reallocationstructure.lon := Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+			Return Value False
+		End If
+	Else
+		reallocationstructure := WeatherCache[locationid].WeatherForecast.location
+		Return Value True
+	End If
+
+End Function
+
+
+Private Var MessageBuffer As Text[RSS_TEXT_SIZE]
+
+Private Function UpdateWeather (locationid As Long) As Boolean
+Private Var CommandGET As Text [COMMAND_GET_SIZE]
+Private Var MyError As Long
+Private Var WeatherJson As Namespace "CUE.Applet.DailyWeatherFromApixu.1".AllWeatherStructure
+
+	If locationid < 1 Or locationid > Namespace "CUE.Applet.DailyWeatherFromApixu.1".MAX_LOCATIONS Then
+		SetLastError(Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_WRONG_PARAMETERS)
+		Return Value False
+	End If
+	
+	If GetTextActualLength(WeatherCache[locationid].LocationSearchText) <= 0 Then
+		SetLastError(Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_LOCATION_NOT_SPECIFIED)
+		Return Value False
+	End If
+	
+	CommLock.Lock()
+	
+	FormatLocationName (WeatherCache[locationid].LocationSearchText, CommandGET)
+	FormatText(CommandGET, "/v1/forecast.json?key={t}&q={t}&days={n}", APIKey, CommandGET, Namespace "CUE.Applet.DailyWeatherFromApixu.1".MAX_FORECAST_DAYS)
+	
+	MyError := GetRSS(Namespace "CUE.Applet.DailyWeatherFromApixu.1".SERVER_URL, Namespace "CUE.Applet.DailyWeatherFromApixu.1".SERVER_PORT, ConnectionTimeout, CommandGET, MessageBuffer)
+
+	Wait (Namespace "CUE.Applet.DailyWeatherFromApixu.1".WAIT_AFTER_GETRSS_TIME)
+	If MyError <> Namespace "CUE.Applet.DailyWeatherFromApixu.1".COMMAND_OK Then
+		CommLock.Unlock()
+		SetLastError(MyError)
+		Return Value False
+	Else
+		ClearAllWeatherStructure(WeatherJson)	
+		If ParseJSON(MessageBuffer, WeatherJson) Then
+			WeatherCache[locationid].WeatherForecast := WeatherJson
+			WeatherCache[locationid].UpdateSystemTime := GetSystemTime()
+			CommLock.Unlock()
+			SetLastError(Namespace "CUE.Applet.DailyWeatherFromApixu.1".COMMAND_OK)
+			Return Value True
+		Else
+			CommLock.Unlock()
+			SetLastError(Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_WRONG_SERVER_ANSWER)
+			Return Value False
+		End If
+		
+	End If
+	
+End Function
+
+
+Global Function GetWeather (locationid As Long, ByRef weatherforecast As Namespace "CUE.Applet.DailyWeatherFromApixu.1".AllWeatherStructure) As Boolean
+Private Var MyError As Long
+
+	If locationid < 1 Or locationid > Namespace "CUE.Applet.DailyWeatherFromApixu.1".MAX_LOCATIONS Then
+		SetLastError(Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_WRONG_PARAMETERS)
+		Return Value False
+	End If
+	
+	If GetTextActualLength(WeatherCache[locationid].LocationSearchText) <= 0 Then
+		SetLastError(Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_LOCATION_NOT_SPECIFIED)
+		Return Value False
+	End If
+	
+	CommLock.Lock()	
+	If (WeatherCache[locationid].UpdateSystemTime < :0.0) Or ((GetSystemTime() - WeatherCache[locationid].UpdateSystemTime) >= Namespace "CUE.Applet.DailyWeatherFromApixu.1".FORECAST_CACHE_TIME) Then
+		If UpdateWeather (locationid) Then
+			weatherforecast := WeatherCache[locationid].WeatherForecast
+			CommLock.Unlock()
+			SetLastError(Namespace "CUE.Applet.DailyWeatherFromApixu.1".COMMAND_OK)
+			Return Value True
+		Else
+			MyError := GetLastError()
+			If WeatherCache[locationid].UpdateSystemTime > :0.0 And (GetSystemTime() - WeatherCache[locationid].UpdateSystemTime) <= Namespace "CUE.Applet.DailyWeatherFromApixu.1".FORECAST_MAX_AGE Then
+				weatherforecast := WeatherCache[locationid].WeatherForecast
+				CommLock.Unlock()
+				SetLastError(Namespace "CUE.Applet.DailyWeatherFromApixu.1".COMMAND_OK)
+				Return Value True
+			Else
+				ClearAllWeatherStructure(WeatherCache[locationid].WeatherForecast)
+				weatherforecast := WeatherCache[locationid].WeatherForecast
+				CommLock.Unlock()
+				SetLastError(MyError)
+				Return Value False
+			End If
+		End If
+	Else
+		weatherforecast := WeatherCache[locationid].WeatherForecast
+		CommLock.Unlock()
+		SetLastError(Namespace "CUE.Applet.DailyWeatherFromApixu.1".COMMAND_OK)
+		Return Value True
+	End If
+
+End Function
+
+
+Private Function GetRSS (url As Text, port As Long, timeout As Time, commandget As Text, ByRef rssdata As Text) As Long
+Private Var MyError As Long := 0
+Private Var ShortBuffer As ByteString [400]
+Private Var ShortTextBuffer As Text [400]
+Private Var AnswerLenght As Long := 0
+Private Var Charset As Long := 0
+Private Var ReceivedBytes As Long
+Private Var Tmp As Long
+Private Var Ver As Long
+Private Var SubVer As Long
+Private Var MaxAge As Time
+
+	SetTextActualLength(rssdata, 0)
+	If port < 1 Or port > 65535 Then
+		Return Value Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_WRONG_CONNECTION_PARAMETERS
+	End If
+	
+	If timeout < :.0 Or timeout > 10:0.0 Then
+		Return Value Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_WRONG_CONNECTION_TIMEOUT
+	End If
+	
+	//create HTTP_GET request
+	//trim SPACE, / and \ chars in url
+	TrimTextLeft(commandget, ShortTextBuffer, " /\005C")
+	If Not ConcatenateText(ShortTextBuffer, "GET /", ShortTextBuffer, " HTTP/1.0\000D\000AHost: ", url, "\000D\000A\000D\000A") Then
+		MyError := GetLastError()
+		If MyError = 56 Then
+			Return Value Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_DATA_TOO_LONG
+		Else
+			Return Value MyError
+		End If
+	End If
+	
+	If Not TextToByteString(ShortTextBuffer, ShortBuffer, _TEXT_TO_ASCII) Then
+		MyError := GetLastError()
+		If MyError = 71 Then
+			Return Value Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_DATA_TOO_LONG
+		Else
+			Return Value MyError
+		End If
+	End If
+	
+	MaxAge := :.0
+	
+	TCPClientConnector.ClearReceiveBuffer ()
+	
+	// Connect to RSS server
+	If Not TCPClientConnector.Connect (url, port, timeout) Then
+		MyError := GetLastError()
+		TCPClientConnector.Disconnect()
+		
+		If MyError = 88 Then
+			Return Value Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_WRONG_CONNECTION_PARAMETERS
+		Else
+			Return Value Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_CONNECTION_FAILED
+		End If
+	End If
+	
+	// Send request for data
+	If Not TCPClientConnector.Send (ShortBuffer) Then
+		MyError := GetLastError()
+		TCPClientConnector.Disconnect()
+		Return Value Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_CONNECTION_FAILED
+	End If
+
+ 	// Read data
+ 	If Not TCPClientConnector.WaitForData (timeout) Then
+ 		MyError := GetLastError()
+ 		TCPClientConnector.Disconnect()
+ 		Return Value Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_CONNECTION_FAILED
+ 	End If
+ 	
+ 	// Header
+ 	If Not TCPClientConnector.ReceiveFPacket(ShortBuffer, &S"\0D\0A", TIMEOUT_ON_THE_FLY) Then
+ 		MyError := GetLastError()
+ 		TCPClientConnector.Disconnect()
+ 		Return Value Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_CONNECTION_FAILED
+ 	End If
+ 	
+ 	If Not ParseByteString(ShortBuffer, &S"HTTP/{n}.{n} {n}", Ver, SubVer, Tmp) Then
+ 		TCPClientConnector.Disconnect()
+ 		Return Value Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_UNSUPPORTED_FORMAT
+ 	End If
+ 	
+ 	If Tmp <> 200 Then
+ 		TCPClientConnector.Disconnect()
+ 		If Tmp = 400 Then
+ 			Return Value Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_400_BAD_REQUEST
+ 		ElseIf Tmp = 401 Then
+ 			Return Value Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_401_UNAUTHORIZED
+ 		End If
+ 		Return Value Tmp
+ 	End If
+ 
+ 	If Ver = 1 And (SubVer = 0 Or SubVer = 1) Then
+ 		//Supported protocol
+ 	Else
+ 		//Unsupported protocol
+ 		TCPClientConnector.Disconnect()
+ 		Return Value Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_UNSUPPORTED_FORMAT
+ 	End If
+ 	
+ 	Do
+ 		If Not TCPClientConnector.ReceiveFPacket(ShortBuffer, &S"\0D\0A", TIMEOUT_ON_THE_FLY) Then
+ 			MyError := GetLastError()
+ 			TCPClientConnector.Disconnect()
+ 			Return Value Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_CONNECTION_FAILED
+ 		End If
+ 		
+ 		If AnswerLenght = 0 Then
+ 			If Not ParseByteString(ShortBuffer, &S"Content-Length:{N}", AnswerLenght) Then
+ 				AnswerLenght := 0
+ 			End If
+ 		End If
+ 		
+ 		If MaxAge = :.0 Then
+			If GetSubByteStringPosition (ShortBuffer, &S"Cache-Control:", 1, False) <> 0 Then
+				Tmp := GetSubByteStringPosition (ShortBuffer, &S"max-age=", 1, False)
+				If Tmp <> 0 Then
+					GetByteStringRight(ShortBuffer, GetByteStringActualLength(ShortBuffer) - Tmp + 1, ShortBuffer)
+ 					If ParseByteString(ShortBuffer, &S"max-age={N}", Tmp) Then
+ 						MaxAge := Tmp * :1.0
+ 					End If
+ 				End If
+ 			End If
+ 		End If
+ 		
+ 		If Charset = 0 Then
+ 			If GetSubByteStringPosition (ShortBuffer, &S"Content-Type:", 1, False) <> 0 Then
+ 				If GetSubByteStringPosition (ShortBuffer, &S"charset=UTF-8", 1, False) <> 0 Then
+ 					Charset := _UTF8_TO_TEXT
+ 				End If
+ 			End If
+ 		End If
+ 	Loop While ShortBuffer <> &S""
+ 	
+ 	// HTTP header is not correct
+ 	Select Charset
+ 		Case _UTF8_TO_TEXT
+ 		Case 0
+ 			Charset := _UTF8_TO_TEXT
+ 		Case Else
+ 			TCPClientConnector.Disconnect()
+ 			Return Value Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_UNSUPPORTED_FORMAT
+ 	End Select
+ 		
+	// receive answer body
+	ShortBuffer := &S""
+	rssdata := ""
+	
+	If AnswerLenght > 0 Then
+		Do While AnswerLenght > 0
+			ReceivedBytes := GetByteStringActualLength(ShortBuffer)		
+			If Not TCPClientConnector.ReceiveAppend (ShortBuffer, TIMEOUT_ON_THE_FLY) Then
+				MyError := GetLastError()
+				TCPClientConnector.Disconnect()
+ 				Return Value Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_CONNECTION_FAILED
+ 			End If
+ 			ReceivedBytes := GetByteStringActualLength(ShortBuffer) - ReceivedBytes
+ 			AnswerLenght -= ReceivedBytes	
+ 			If Not ByteStringToTextOnTheFly(ShortBuffer, rssdata, Charset, True) Then
+				TCPClientConnector.Disconnect()
+ 				Return Value Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_WRONG_SERVER_ANSWER
+ 			End If
+ 		End Do	
+ 	Else
+ 		Do
+			If Not TCPClientConnector.ReceiveAppend (ShortBuffer, TIMEOUT_ON_THE_FLY) Then
+				Exit Do
+ 			End If
+ 			If Not ByteStringToTextOnTheFly(ShortBuffer, rssdata, Charset, True) Then
+				TCPClientConnector.Disconnect()
+ 				Return Value Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_WRONG_SERVER_ANSWER
+ 			End If	
+ 		End Do
+ 	End If
+	
+	// Disconnect connection
+	TCPClientConnector.Disconnect ()
+
+	If GetTextActualLength(rssdata) = 0 Then
+		Return Value Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_WRONG_SERVER_ANSWER
+	Else
+		Return Value Namespace "CUE.Applet.DailyWeatherFromApixu.1".COMMAND_OK
+	End If 
+	
+End Function
+
+
+Private Function FormatLocationName (locationname As Text, ByRef formatedlocationname As Text)
+Private Var TempText As Text[Namespace "CUE.Applet.DailyWeatherFromApixu.1".TEXT_LENGHT]
+Private Var Pos1 As Long := 1
+Private Var Pos2 As Long
+Private Var N As Long
+Private Var Lat As Double
+Private Var Lon As Double
+Private Var A1 As Long
+Private Var A2 As Long
+Private Var A3 As Long
+Private Var A4 As Long
+
+	formatedlocationname := ""
+	
+	//IP address from stored location name
+	If ParseText (locationname, "IP {n}.{n}.{n}.{n}", A1, A2, A3, A4) Then
+		FormatText(formatedlocationname, "{n}.{n}.{n}.{n}", A1, A2, A3, A4)
+		Return
+	End If
+	
+	//Lat and Lon format from search box with space
+	If ParseText (locationname, "{n},{n}", Lat, Lon) Then
+		FormatText(formatedlocationname, "{n.04},{n.04}", Lat, Lon)
+		Return
+	End If
+	
+	Do
+		Pos2 := GetSubTextPosition(locationname, ",", Pos1, False)
+		If Pos2 > 0 Then
+			GetTextMiddle(locationname, Pos1, Pos2 - Pos1, TempText)
+		Else
+			GetTextRight(locationname, GetTextActualLength(locationname) - Pos1 + 1,  TempText)
+		End If
+		
+		TrimInternalSpaces(TempText)
+		
+		Pos1 := Pos2 + 1
+		ConcatenateText(formatedlocationname, formatedlocationname, TempText)
+		If Pos2 > 0 Then
+			ConcatenateText(formatedlocationname, formatedlocationname, ",")
+		End If
+		
+	Loop While Pos2 > 0
+
+	N := GetTextActualLength(formatedlocationname)
+	If N > 0 Then
+		// replace spaced(ASCII 32 dec) with + sign (ASCII 43 dec)
+		For N := 1 To N
+			If formatedlocationname[N] = 32 Then
+				formatedlocationname[N] := 43
+			End If
+		End For
+	End If
+
+End Function
+
+
+Private Function TrimInternalSpaces (ByRef mytext As Text)
+Private Var In As Long := 1
+Private Var Out As Long := 1
+Private Var OneChar As Text[1]
+Private Var CharCount As Long
+
+	TrimText (mytext, mytext)
+	
+	CharCount := GetTextActualLength(mytext)
+
+	If CharCount = 0 Then
+		Return
+	End If
+	
+	Do 
+		GetTextMiddle(mytext, In, 1, OneChar)
+		If OneChar <> " " Then
+			mytext[Out] := mytext[In]
+			Out += 1
+			In += 1
+		Else
+			mytext[Out] := mytext[In]
+			Out += 1
+			In += 1
+			GetTextMiddle(mytext, In, 1, OneChar)
+			Do While OneChar = " "
+				In += 1
+				GetTextMiddle(mytext, In, 1, OneChar)
+			End Do
+			mytext[Out] := mytext[In]
+			Out += 1
+			In += 1
+		End If
+			
+	Loop While In <= CharCount
+
+	SetTextActualLength(mytext, Out - 1)
+	
+End Function
+
+
+Global Function GetWeatherDescription (weathercode As Long, Optional isday As Long := 1) As AddressOf Text
+
+	If weathercode = 1000 And isday <> 1 Then
+		Return Value txtWeatherCode1000N
+	End If
+	
+	Select weathercode
+	Case 1000 Return Value txtWeatherCode1000D
+	Case 1003 Return Value txtWeatherCode1003
+	Case 1006 Return Value txtWeatherCode1006
+	Case 1009 Return Value txtWeatherCode1009
+	Case 1030 Return Value txtWeatherCode1030
+	Case 1063 Return Value txtWeatherCode1063
+	Case 1066 Return Value txtWeatherCode1066
+	Case 1069 Return Value txtWeatherCode1069
+	Case 1072 Return Value txtWeatherCode1072
+	Case 1087 Return Value txtWeatherCode1087
+	Case 1114 Return Value txtWeatherCode1114
+	Case 1117 Return Value txtWeatherCode1117
+	Case 1135 Return Value txtWeatherCode1135
+	Case 1147 Return Value txtWeatherCode1147
+	Case 1150 Return Value txtWeatherCode1150
+	Case 1153 Return Value txtWeatherCode1153
+	Case 1168 Return Value txtWeatherCode1168
+	Case 1171 Return Value txtWeatherCode1171
+	Case 1180 Return Value txtWeatherCode1180
+	Case 1183 Return Value txtWeatherCode1183
+	Case 1186 Return Value txtWeatherCode1186
+	Case 1189 Return Value txtWeatherCode1189
+	Case 1192 Return Value txtWeatherCode1192
+	Case 1195 Return Value txtWeatherCode1195
+	Case 1198 Return Value txtWeatherCode1198
+	Case 1201 Return Value txtWeatherCode1201
+	Case 1204 Return Value txtWeatherCode1204
+	Case 1207 Return Value txtWeatherCode1207
+	Case 1210 Return Value txtWeatherCode1210
+	Case 1213 Return Value txtWeatherCode1213
+	Case 1216 Return Value txtWeatherCode1216
+	Case 1219 Return Value txtWeatherCode1219
+	Case 1222 Return Value txtWeatherCode1222
+	Case 1225 Return Value txtWeatherCode1225
+	Case 1237 Return Value txtWeatherCode1237
+	Case 1240 Return Value txtWeatherCode1240
+	Case 1243 Return Value txtWeatherCode1243
+	Case 1246 Return Value txtWeatherCode1246
+	Case 1249 Return Value txtWeatherCode1249
+	Case 1252 Return Value txtWeatherCode1252
+	Case 1255 Return Value txtWeatherCode1255
+	Case 1258 Return Value txtWeatherCode1258
+	Case 1261 Return Value txtWeatherCode1261
+	Case 1264 Return Value txtWeatherCode1264
+	Case 1273 Return Value txtWeatherCode1273
+	Case 1276 Return Value txtWeatherCode1276
+	Case 1279 Return Value txtWeatherCode1279
+	Case 1282 Return Value txtWeatherCode1282
+	Case Else Return Value Nothing
+	End Select
+	
+End Function
+
+
+Private Function ClearAllWeatherStructure (ByRef data As Namespace "CUE.Applet.DailyWeatherFromApixu.1".AllWeatherStructure)
+Private Var N As Long
+
+	data.location.country 					:= ""
+	data.location.lat 						:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+	data.location.lon 						:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+	data.location.name 						:= ""
+	data.location.region 					:= ""
+	
+	data.current.cloud 						:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+	data.current.condition.code 			:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+	data.current.condition.description 		:= ""
+	data.current.feelslike_c 				:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+	data.current.feelslike_f 				:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+	data.current.humidity 					:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+	data.current.is_day 					:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+	data.current.last_updated_epoch 		:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+	data.current.precip_in 					:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+	data.current.precip_mm 					:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+	data.current.pressure_in 				:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+	data.current.pressure_mb 				:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+	data.current.temp_c 					:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+	data.current.temp_f 					:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+	data.current.vis_km 					:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+	data.current.vis_miles 					:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+	data.current.wind_degree 				:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+	data.current.wind_dir 					:= ""
+	data.current.wind_kph 					:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+	data.current.wind_mph 					:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+	
+	For N := 1 To Namespace "CUE.Applet.DailyWeatherFromApixu.1".MAX_FORECAST_DAYS
+		data.forecast.forecastday[N].astro.moonrise	:= ""
+		data.forecast.forecastday[N].astro.moonset	:= ""
+		data.forecast.forecastday[N].astro.sunrise	:= ""
+		data.forecast.forecastday[N].astro.sunset	:= ""
+		
+		data.forecast.forecastday[N].date_epoch 				:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+		
+		data.forecast.forecastday[N].day.avghumidity			:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+		data.forecast.forecastday[N].day.avgtemp_c				:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+		data.forecast.forecastday[N].day.avgtemp_f				:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+		data.forecast.forecastday[N].day.avgvis_km				:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+		data.forecast.forecastday[N].day.avgvis_miles			:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+		data.forecast.forecastday[N].day.condition.code			:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+		data.forecast.forecastday[N].day.condition.description	:= ""
+		data.forecast.forecastday[N].day.maxtemp_c				:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+		data.forecast.forecastday[N].day.maxtemp_f				:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+		data.forecast.forecastday[N].day.maxwind_kph			:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+		data.forecast.forecastday[N].day.maxwind_mph			:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+		data.forecast.forecastday[N].day.mintemp_c				:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+		data.forecast.forecastday[N].day.mintemp_f				:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+		data.forecast.forecastday[N].day.totalprecip_in			:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+		data.forecast.forecastday[N].day.totalprecip_mm			:= Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+	End For
+
+End Function
+
+
+End DeviceClass

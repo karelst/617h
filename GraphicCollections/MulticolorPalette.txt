@@ -1,0 +1,29 @@
+
+Public Const COLOR_BLUEDARK 				As Long		:= &HFF071f49
+Public Const COLOR_BLUEPASTEL 				As Long		:= &HFF5660bd
+Public Const COLOR_BLUEGREEN 				As Long		:= &HFF0e6249
+Public Const COLOR_BROWNDARK 				As Long		:= &HFF2a2001
+Public Const COLOR_GREENDARK 				As Long		:= &HFF08381e
+Public Const COLOR_GREENPASTEL 				As Long		:= &HFF61a93a
+Public Const COLOR_GREYDARK 				As Long		:= &HFF282828
+Public Const COLOR_ORANGE 					As Long		:= &HFFe59d2b
+Public Const COLOR_PINKDARK 				As Long		:= &HFFa01f65
+Public Const COLOR_PINKPASTEL 				As Long		:= &HFFff90cc
+Public Const COLOR_PURPLEDARK 				As Long		:= &HFF400c55
+Public Const COLOR_PURPLEPASTEL 			As Long		:= &HFF7e329d  
+Public Const COLOR_REDDARK 					As Long		:= &HFF550c0c
+Public Const COLOR_REDPASTEL 				As Long		:= &HFFc72e30
+Public Const COLOR_YELLOWPASTEL 			As Long		:= &HFFe5e487
+
+Public Const COLOR_BLACK	 				As Long		:= _COLOR_BLACK
+Public Const COLOR_BLUE	 					As Long		:= _COLOR_BLUE
+Public Const COLOR_BROWN	 				As Long		:= _COLOR_BROWN
+Public Const COLOR_CYAN	 					As Long		:= _COLOR_CYAN
+Public Const COLOR_GREEN	 				As Long		:= _COLOR_GREEN
+Public Const COLOR_GREY	 					As Long		:= _COLOR_GREY
+Public Const COLOR_MAGENTA 					As Long		:= _COLOR_MAGENTA
+Public Const COLOR_RED	 					As Long		:= _COLOR_RED
+Public Const COLOR_WHITE	 				As Long		:= _COLOR_WHITE
+Public Const COLOR_YELLOW 					As Long		:= _COLOR_YELLOW
+
+Public Const COLOR_GREYDARKTRANSPARENCY50 	As Long		:= &H7F282828

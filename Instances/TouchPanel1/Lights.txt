@@ -1,0 +1,116 @@
+
+
+//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// events
+
+Private Process GetRelay1_onOutputChange( changed As Byte ,outputState As Byte ) Link GetRelay1.onOutputChange
+	//DebugPrintFormat  ("CHANGED: {NB08} OUTPUT {NB08} RelayOn {L},{L},{L},{L},{L},{L},{L},{L}",changed,GetRelay1.Output,GetRelay1.RelayOn[8],GetRelay1.RelayOn[7],GetRelay1.RelayOn[6],GetRelay1.RelayOn[5],GetRelay1.RelayOn[4],GetRelay1.RelayOn[3],GetRelay1.RelayOn[2],GetRelay1.RelayOn[1])  
+	StopProcess watchLightState	
+	updateLightState( outputState )
+	StartProcess watchLightState	
+End Process
+
+Public Process watchLightState	()
+	Do 
+		Wait (TIMEOUT_UPDATE_LIGHTS)
+		updateLightState(GetRelay1.Output )
+	End Do
+End Process
+
+
+Private Function updateLightState( output As Byte )
+Var i 		As	Byte
+Var mask	As	Byte :=1
+
+	For i :=1 To 8
+		//If  (changed BitAnd mask) <> 0 Then setRelayState (i, (GetRelay1.Output BitAnd mask) <> 0 )  End If 
+		//setRelayState (i, GetRelay1.RelayOn[i] )  
+		setRelayState (i, (output BitAnd mask) <> 0 )  
+		mask <<= 1
+	End For
+
+
+End Function
+
+
+
+
+//
+//LIGHT_SLEEPING 		//As Byte :=  1
+//LIGHT_KITCHEN 		//As Byte :=  2
+//LIGHT_LIVING 		//As Byte :=  3
+//LIGHT_STAIRS 		//As Byte :=  4
+//LIGHT_KITCHEN2 		//As Byte :=  5
+//LIGHT_CHILDWEST 		//As Byte :=  6
+//LIGHT_CHILDEAST 		//As Byte :=  7
+//LIGHT_RESERVE		//As Byte :=  8
+
+
+Private Function setRelayState( rel As Byte , state As Boolean )
+Var butt 	As AddressOf Namespace "CUE.GraphicCollection.GenericObjects.3".TwoStatePushButton
+Var butt2 	As AddressOf Namespace "CUE.GraphicCollection.GenericObjects.3".TwoStatePushButton
+
+	butt2 := Nothing
+	Select rel
+		Case LIGHT_SLEEPING		butt := WinLights.LightSleeping
+		Case LIGHT_KITCHEN		butt := WinLights.LightKitchen
+		Case LIGHT_LIVING		butt := WinLights.LightLiving
+		Case LIGHT_STAIRS		butt := WinLights.LightStairs 
+								butt2 := WinLights.LightStairs1
+		Case LIGHT_KITCHEN2		butt := WinLights.LightKitchen2
+		Case LIGHT_CHILDWEST	butt := WinLights.LightChildWest
+		Case LIGHT_CHILDEAST	butt := WinLights.LightChildEast
+		Case Else Return
+	End Select
+	
+	If state Then 
+		butt.SetStateDown()
+		butt2.SetStateDown()
+	Else
+		butt.SetStateUp()
+		butt2.SetStateUp()
+	End If
+End Function
+
+//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// buttons
+
+
+Private Process WinLights_LightSleeping_OnPush(  ) Link WinLights.LightSleeping.OnPush
+	Controller1.Lights.LightSleeping(LEVEL_TOGGLE)
+End Process
+
+
+Private Process WinLights_LightStairs_OnPush(  ) Link WinLights.LightStairs.OnPush
+	Controller1.Lights.LightStairs(LEVEL_TOGGLE)
+End Process
+
+
+Private Process WinLights_LightChildWest_OnPush(  ) Link WinLights.LightChildWest.OnPush
+	Controller1.Lights.LightChildWest (LEVEL_TOGGLE)
+
+End Process
+
+
+Private Process WinLights_LightKitchen_OnPush(  ) Link WinLights.LightKitchen.OnPush
+	Controller1.Lights.LightKitchen (LEVEL_TOGGLE)
+End Process
+
+Private Process WinLights_LightKitchen2_OnPush(  ) Link WinLights.LightKitchen2.OnPush
+	Controller1.Lights.LightKitchen2 (LEVEL_TOGGLE)
+End Process
+
+
+Private Process WinLights_LightLiving_OnPush(  ) Link WinLights.LightLiving.OnPush
+	Controller1.Lights.LightLiving (LEVEL_TOGGLE)
+End Process
+
+
+Private Process WinLights_LightChildEast_OnPush(  ) Link WinLights.LightChildEast.OnPush
+	Controller1.Lights.LightChildEast (LEVEL_TOGGLE)
+End Process
+
+
+Private Process WinLights_LightStairs1_OnPush(  ) Link WinLights.LightStairs1.OnPush
+	Controller1.Lights.LightStairs(LEVEL_TOGGLE)
+End Process

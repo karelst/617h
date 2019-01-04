@@ -1,0 +1,1113 @@
+Structure TextTabId
+      Var start As Long
+      Var len As Long
+End Structure
+
+Structure		Line			//Inherits BaseGraphicClass
+	Public Var	LineText		As AddressOf Text
+	Public Var 	LineIconIndex	As Long
+	Public Var	LineTextBuffer	As Text[500]
+End Structure
+
+
+Global GraphicClass VerticalScrollListBox Inherits BaseScrollListBox WithAttributes {defaultwidth := 215, defaultheight := 295, designname := "Flat", groupname := "ListBoxes"}
+	
+	Protected Property HorizontalTextAlign As Long := _TEXT_ALIGNHCENTER WithAttributes
+	{	PropertyGroup := "Text",
+		EditMode := "Enum; 'Left' := _TEXT_ALIGNLEFT, 'Center' := _TEXT_ALIGNHCENTER, 'Right' := _TEXT_ALIGNRIGHT"
+	}
+
+	Protected Property LineSelectedItemAlign As Long := _TEXT_ALIGNRIGHT WithAttributes
+	{	PropertyGroup := "Appearance",
+		EditMode := "Enum; 'Left' := _TEXT_ALIGNLEFT, 'Right' := _TEXT_ALIGNRIGHT"
+	}
+	
+	Public Function SetLineSelectedItemAlign(newlineselectedItemAlign As Long)As Boolean
+		Select newlineselectedItemAlign
+		Case _TEXT_ALIGNLEFT,_TEXT_ALIGNRIGHT
+			LineSelectedItemAlign := newlineselectedItemAlign
+			Redraw()
+			Return Value True
+		End Select
+		Return Value False
+	End Function
+	
+	Public Function GetLineSelectedItemAlign()As Long
+		Return Value LineSelectedItemAlign
+	End Function
+	
+	Protected Function Init()		
+		FirstMaxPositionNum := 0
+		SetColorComponent()
+		VisibleLine := False
+		SetComponentPosition()
+	End Function
+	
+	Protected Function SetComponentPosition()
+		Var i As Long
+		Me.GetSize(ObjectWidth,ObjectHeight)
+	
+		LineHeight 		:=	(ObjectHeight - LineWeight) /	VisibleLines	
+		TextPosY[1] 	:= - LineHeight + LineWeight/2
+		
+		TextPosX 		:= HorizontalTextShift
+		AniPosX 		:= HorizontalIconShift
+
+		For i := 2 To VisibleLines+2
+			TextPosY[i]	:= TextPosY[i-1]+LineHeight
+		End For	
+		
+		ScrollWidth := CDouble(VisibleLines  * ObjectHeight / FirstMaxPositionNum)+1.9 
+	
+	End Function
+
+	Protected Function OnDraw()
+		Var i As Long
+		Var j As Long := 1
+		Var LinePosY As Long := - LineHeight
+		Var myindexupline As Long := indexupline
+		Var myVisibleLines As Long := VisibleLines
+		
+		DrawRectangle(BackgroundColorDraw)
+			
+		If VisibleLine Then
+			DrawRectangle(CellColor,0,TextPosY[ActiveL-myindexupline+2]+Offset,-1,LineHeight)
+		End If
+
+		If KeepSelected  And (ActualActiveLine-myindexupline <= myVisibleLines And ActualActiveLine-myindexupline >= -1) Or  (FirstMaxPositionNum <= myVisibleLines ) Then
+			DrawRectangle(SetColorComponentOpacity(SelectedLineColorDraw,GetColorComponentOpacity(SelectedLineColorDraw)*0.8),0,TextPosY[ActualActiveLine-myindexupline+2]+Offset,-1,LineHeight)	
+		End If	
+			
+		For i := 1 To myVisibleLines + 3
+			DrawRectangle (LineColorDraw,0,LinePosY + Offset,ObjectWidth,LineWeight)
+			LinePosY += LineHeight
+		End For	
+		
+		For i := myindexupline-1 To myindexupline + myVisibleLines 		
+			If i = ActualActiveLine Then
+				//pokud existuje ikona pro vybranou položku, zobrazím jí, jinak zobrazím ikonu pro nevybranou položku
+				If IconPictureSelectedItem[Lines[i].LineIconIndex] <> Nothing Then
+					AniOffsetPosY	:= (LineHeight - IconPictureSelectedItem[Lines[i].LineIconIndex].GetHeight())/2 + LineWeight/2
+					DrawPicture(IconPictureSelectedItem[Lines[i].LineIconIndex],HorizontalIconShift,TextPosY[j]+Offset+AniOffsetPosY+VerticalIconShift,-1,LineHeight,0,0,Opacity)				
+				Else
+					AniOffsetPosY	:= (LineHeight - IconPicture[Lines[i].LineIconIndex].GetHeight())/2 + LineWeight/2
+					DrawPicture(IconPicture[Lines[i].LineIconIndex],HorizontalIconShift,TextPosY[j]+Offset+AniOffsetPosY+VerticalIconShift,-1,LineHeight,0,0,Opacity)
+				End If
+				
+				Select LineSelectedItemAlign
+				Case _TEXT_ALIGNLEFT
+					DrawRectangle(LineSelectedItemColorDraw,0,TextPosY[ActiveL-myindexupline+2]+Offset + LineWeight,LineSelectedItemWeight,LineHeight-LineWeight)
+				Case _TEXT_ALIGNRIGHT
+					DrawRectangle(LineSelectedItemColorDraw,ObjectWidth - LineSelectedItemWeight,TextPosY[ActiveL-myindexupline+2]+Offset + LineWeight,LineSelectedItemWeight,LineHeight - LineWeight)
+				End Select
+				
+				DrawText(FontSelectedItem,Lines[i].LineText,FontColorDrawSelectedItem,HorizontalTextShift,TextPosY[j]+Offset+VerticalTextShift,-1,LineHeight,HorizontalTextAlign BitOr _TEXT_ALIGNVCENTER)					
+			Else
+				AniOffsetPosY	:= (LineHeight - IconPicture[Lines[i].LineIconIndex].GetHeight())/2 + LineWeight/2
+				DrawPicture(IconPicture[Lines[i].LineIconIndex],HorizontalIconShift,TextPosY[j]+Offset+AniOffsetPosY+VerticalIconShift,-1,LineHeight,0,0,Opacity)
+				DrawText(Font,Lines[i].LineText,FontColorDraw,HorizontalTextShift,TextPosY[j]+Offset+VerticalTextShift,-1,LineHeight,HorizontalTextAlign BitOr _TEXT_ALIGNVCENTER)	
+			End If
+			j += 1		
+		End For
+		
+		If OnMoving And FirstMaxPositionNum > myVisibleLines Then
+			DrawRectangle(SliderColorDraw,ObjectWidth-Font.GetHeight()/4, CDouble(ObjectHeight * (myindexupline-1) /FirstMaxPositionNum-(Offset*myVisibleLines/FirstMaxPositionNum))+0.9,Font.GetHeight()/4,ScrollWidth)
+		End If	
+	End Function
+	
+	Public Function SetHorizontalTextAlign(newhorizontaltextalign As Long)As Boolean
+		If newhorizontaltextalign = _TEXT_ALIGNLEFT Or newhorizontaltextalign = _TEXT_ALIGNHCENTER Or newhorizontaltextalign = _TEXT_ALIGNRIGHT Then
+			HorizontalTextAlign := newhorizontaltextalign
+			SetComponentPosition()
+			Redraw()
+			Return Value True
+		End If
+		Return Value False
+	End Function
+	
+	Public Function GetHorizontalTextAlign()As Long
+		Return Value HorizontalTextAlign
+	End Function
+	
+			
+End GraphicClass
+
+
+Global GraphicClass HorizontalScrollListBox Inherits BaseScrollListBox WithAttributes {defaultwidth := 500, defaultheight := 100, designname := "Flat", groupname := "ListBoxes"}
+
+		
+	Protected Property VerticalTextAlign As Long := _TEXT_ALIGNVCENTER WithAttributes
+	{	PropertyGroup := "Text",
+		EditMode := "Enum; 'Top' := _TEXT_ALIGNTOP, 'Center' := _TEXT_ALIGNVCENTER, 'Bottom' := _TEXT_ALIGNBOTTOM"
+	}
+	
+	Protected Property LineSelectedItemAlign As Long := _TEXT_ALIGNTOP WithAttributes
+	{	PropertyGroup := "Appearance",
+		EditMode := "Enum; 'Top' := _TEXT_ALIGNTOP, 'Bottom' := _TEXT_ALIGNBOTTOM"
+	}
+	
+	Public Function SetLineSelectedItemAlign(newlineselectedItemAlign As Long)As Boolean
+		Select newlineselectedItemAlign
+		Case _TEXT_ALIGNTOP,_TEXT_ALIGNBOTTOM
+			LineSelectedItemAlign := newlineselectedItemAlign
+			Redraw()
+			Return Value True
+		End Select
+		Return Value False
+	End Function
+	
+	Public Function GetLineSelectedItemAlign()As Long
+		Return Value LineSelectedItemAlign
+	End Function
+	
+	Protected Function Init()		
+		FirstMaxPositionNum := 0
+		SetColorComponent()
+		VisibleLine := False
+		SetComponentPosition()
+	End Function
+	
+	Protected Function SetComponentPosition()
+		Var i As Long
+		Me.GetSize(ObjectWidth,ObjectHeight)
+	
+		LineHeight 		:=	(ObjectWidth - LineWeight) /	VisibleLines	
+		TextPosY[1] 	:= - LineHeight + LineWeight/2
+		
+		TextPosX 		:= VerticalTextShift
+		AniPosX 		:= VerticalIconShift
+
+		For i := 2 To VisibleLines+2
+			TextPosY[i]	:= TextPosY[i-1]+LineHeight
+		End For
+		
+		ScrollWidth := CDouble(VisibleLines  * ObjectWidth / FirstMaxPositionNum)+1.9 	
+	
+	End Function
+	
+	Protected Function OnDown(x As Long,y As Long,eventtime As Time) As Boolean
+		If FirstMaxPositionNum > 0 Then
+			StopTimer(1)
+			StopTimer(2)
+			StopTimer(3)
+			StopTimer(4)
+			MyOnDown(x)	
+			Redraw()
+			Return Value True	
+		End If
+		Return Value False	
+	End Function
+		
+	Protected Function OnMove(x As Long,y As Long,eventtime As Time,isinside As Boolean)	
+		OnMovePos := x
+		MyOnMove(x)
+		Redraw()
+	End Function
+	
+	Protected Function OnUp(x As Long,y As Long,eventtime As Time,isinside As Boolean)
+		StopTimer(4)
+		OnUpPos := x		
+		MyOnUp()		
+		Redraw()
+	End Function
+	
+	Protected Function OnDraw()
+		Var i As Long
+		Var j As Long := 1
+		Var LinePosY As Long := - LineHeight
+		Var myindexupline As Long := indexupline
+		Var myVisibleLines As Long := VisibleLines
+				
+		DrawRectangle(BackgroundColorDraw)
+			
+		If VisibleLine Then
+			DrawRectangle(CellColor,TextPosY[ActiveL-myindexupline+2]+Offset,0,LineHeight,-1)
+		End If
+
+		If KeepSelected  And (ActualActiveLine-myindexupline <= myVisibleLines And ActualActiveLine-myindexupline >= -1) Or  (FirstMaxPositionNum <= myVisibleLines ) Then
+			DrawRectangle(SetColorComponentOpacity(SelectedLineColorDraw,GetColorComponentOpacity(SelectedLineColorDraw)*0.8),TextPosY[ActualActiveLine-myindexupline+2]+Offset,0,LineHeight,-1)	
+		End If	
+			
+		For i := 1 To myVisibleLines + 2
+			DrawRectangle (LineColorDraw,LinePosY + Offset,0,LineWeight,ObjectHeight)
+			LinePosY += LineHeight
+		End For	
+		
+		For i := myindexupline-1 To myindexupline + myVisibleLines 
+			
+			If i = ActualActiveLine Then
+				//pokud existuje ikona pro vybranou položku, zobrazím jí, jinak zobrazím ikonu pro nevybranou položku
+				If IconPictureSelectedItem[Lines[i].LineIconIndex] <> Nothing Then
+					AniOffsetPosY	:= (LineHeight - IconPictureSelectedItem[Lines[i].LineIconIndex].GetWidth())/2 + LineWeight/2
+					DrawPicture(IconPictureSelectedItem[Lines[i].LineIconIndex],TextPosY[j]+Offset+AniOffsetPosY+HorizontalIconShift,VerticalIconShift,LineHeight,-1,0,0,Opacity)				
+				Else
+					AniOffsetPosY	:= (LineHeight - IconPicture[Lines[i].LineIconIndex].GetWidth())/2 + LineWeight/2
+					DrawPicture(IconPicture[Lines[i].LineIconIndex],TextPosY[j]+Offset+AniOffsetPosY+HorizontalIconShift,VerticalIconShift,LineHeight,-1,0,0,Opacity)
+				End If
+				
+				Select LineSelectedItemAlign
+				Case _TEXT_ALIGNTOP
+					DrawRectangle(LineSelectedItemColorDraw,TextPosY[ActiveL-myindexupline+2]+Offset + LineWeight,0,LineHeight,LineSelectedItemWeight - LineWeight)
+				Case _TEXT_ALIGNBOTTOM
+					DrawRectangle(LineSelectedItemColorDraw,TextPosY[ActiveL-myindexupline+2]+Offset + LineWeight,ObjectHeight - LineSelectedItemWeight,LineHeight,LineSelectedItemWeight - LineWeight)				
+				End Select
+				
+				DrawText(FontSelectedItem,Lines[i].LineText,FontColorDrawSelectedItem,TextPosY[j]+Offset+HorizontalTextShift,VerticalTextShift,LineHeight,-1,VerticalTextAlign BitOr _TEXT_ALIGNHCENTER)	
+			Else
+				AniOffsetPosY	:= (LineHeight - IconPicture[Lines[i].LineIconIndex].GetWidth())/2 + LineWeight/2
+				DrawPicture(IconPicture[Lines[i].LineIconIndex],TextPosY[j]+Offset+AniOffsetPosY+HorizontalIconShift,VerticalIconShift,LineHeight,-1,0,0,Opacity)
+				DrawText(Font,Lines[i].LineText,FontColorDraw,TextPosY[j]+Offset+HorizontalTextShift,VerticalTextShift,LineHeight,-1,VerticalTextAlign BitOr _TEXT_ALIGNHCENTER)	
+			End If
+			j += 1		
+		End For
+		
+		If OnMoving And FirstMaxPositionNum > myVisibleLines Then
+			DrawRectangle(SliderColorDraw,CDouble(ObjectWidth * (myindexupline-1) /FirstMaxPositionNum-(Offset*myVisibleLines/FirstMaxPositionNum))+0.9,ObjectHeight-Font.GetHeight()/4,ScrollWidth,Font.GetHeight()/4)
+		End If
+	End Function
+		
+	Public Function SetVerticalTextAlign(newverticaltextalign As Long)As Boolean
+		If newverticaltextalign = _TEXT_ALIGNTOP Or newverticaltextalign = _TEXT_ALIGNVCENTER Or newverticaltextalign = _TEXT_ALIGNBOTTOM Then
+			VerticalTextAlign := newverticaltextalign
+			SetComponentPosition()
+			Redraw()
+			Return Value True
+		End If
+		Return Value False
+	End Function
+	
+	Public Function GetVerticalTextAlign()As Long
+		Return Value VerticalTextAlign
+	End Function
+	
+End GraphicClass
+
+
+Global GraphicClass BaseScrollListBox Inherits BaseGraphicClass WithAttributes {hiddeninide}
+	
+	Protected Property	BackgroundColor		As Long := &H00000000 WithAttributes {PropertyGroup := "Appearance",EditMode := "color"}
+	Protected Property	SelectedLineColor	As Long := &H33000000 WithAttributes {PropertyGroup := "Appearance",EditMode := "color",DisplayName := "SelectedItemColor"}
+	Protected Property	KeepSelected 		As Boolean := True WithAttributes {PropertyGroup := "Appearance", EditMode := "Boolean; 'Yes' := True, 'No' := False"}
+	Protected Property  VisibleLines		As Long := 5 WithAttributes{PropertyGroup := "Appearance",DisplayName := "VisibleItems"}
+	Protected Property  EnsureVisibleSelectedTimeout 		As Time := :0 WithAttributes{PropertyGroup := "Appearance"}
+
+	Protected Property  Opacity 			As Byte := 255 WithAttributes {PropertyGroup := "Appearance", EditMode := "time"}
+	Protected Property  ColorBreath 		As Boolean := True WithAttributes{PropertyGroup := "Appearance",EditMode := "Boolean; 'Yes' := True, 'No' := False"}
+
+	Protected Property LineSelectedItemWeight As Long := 0 WithAttributes
+	{	PropertyGroup := "Appearance"
+	}
+	Protected Property LineSelectedItemColor As Long := 0 WithAttributes
+	{	PropertyGroup := "Appearance",
+		EditMode := "color"
+	}
+	
+	Protected Property Font					As AddressOf _Font := fntSegoeUI23 WithAttributes{PropertyGroup := "Text"}
+	Protected Property FontColor 			As Long := _COLOR_BLACK WithAttributes {PropertyGroup := "Text",EditMode := "color"}
+	Protected Property FontSelectedItem			As AddressOf _Font := Font WithAttributes{PropertyGroup := "Text"}
+	Protected Property FontColorSelectedItem		As Long := FontColor WithAttributes {PropertyGroup := "Text",EditMode := "color"}
+	//Line
+	Protected Property LineColor 			As Long := _COLOR_WHITE WithAttributes{PropertyGroup := "Line",EditMode := "color"}	
+	Protected Property LineWeight 			As Long := 0 WithAttributes{PropertyGroup := "Line"}	
+
+	Protected Property VerticalTextShift 	As Long := 0 WithAttributes{PropertyGroup := "Text"}
+	Protected Property HorizontalTextShift 	As Long := 0 WithAttributes{PropertyGroup := "Text"}			
+	Protected Property VerticalIconShift 	As Long := 0 WithAttributes{PropertyGroup := "Icon"}
+	Protected Property HorizontalIconShift 	As Long := 0 WithAttributes{PropertyGroup := "Icon"}
+			
+	Protected Var		ActiveL				As Long
+	Protected Var		ActualActiveLine	As Long// vybraná řádka
+	Protected Var		OnDownActiveL		As Long
+	Protected Var		Lines[1000]			As Line 
+	
+	Protected Var 		OnDownindexupline	As Long
+	Protected Var 		indexupline			As Long := 1
+	
+	Protected Var 		TextFormat 			As Text[1]
+	Protected Var 		TextTab[1000] 		As TextTabId
+	Protected Var		FirstMaxPositionNum	As Long	
+	Protected Var		LineHeight			As Long
+	Protected Var		LinePosY			As Long
+	Protected Var		VisibleLine			As Boolean
+	Protected Var		Move				As Boolean
+
+	Protected Var 		ObjectWidth			As Long
+	Protected Var 		ObjectHeight		As Long
+		
+	Protected Var		TextPosX			As Long
+	Protected Var		TextPosY[1000]		As Long	
+	Protected Var		AniPosX				As Long
+	Protected Var		AniOffsetPosY		As Long
+	Protected Var 		OnDownPos 			As Long
+	Protected Var 		OnMovePos			As Long
+	Protected Var 		Offset	 			As Long	
+	Protected Var 		LineOffset			As Long
+	Protected Var 		OnUpPos				As Long
+	Protected Var 		NonActiveFontColor	As Long
+	Protected Var		NonActiveOpacity	As Byte := 179
+	
+	Protected Const 	MAXICONINDEX 				As Long := 50
+	Protected Var		IconPicture[MAXICONINDEX]	As AddressOf _Picture
+	Protected Var		IconPictureSelectedItem[MAXICONINDEX]	As AddressOf _Picture
+	
+	Protected Var		CellColor			As Long
+	Protected Var		CellColorOpacity	As Byte
+	Protected Var		SelectedLineColorDraw	As Long
+	Protected Var		BackgroundColorDraw		As Long
+	Protected Var		FontColorDraw		As Long
+	Protected Var		FontColorDrawSelectedItem As Long
+	Protected Var		LineColorDraw		As Long
+	Protected Var		LineSelectedItemColorDraw		As Long
+	Protected Var		OnMoving			As Boolean:= False
+	Protected Var		SliderColorDraw		As Long
+	Protected Var		SliderColorOpacityDraw		As Byte
+	Protected Var 		ScrollWidth 		As Long
+	
+	Protected Var 		RangeNext	 		As Boolean
+	
+	Protected Var		NextNumber			As Boolean
+	
+	Protected Var 		semaphore 			As _Semaphore
+	
+	Public Event OnSelect 	As Process (newselecteditem As Long) WithRaiseRemember
+
+	Public Function SetLineSelectedItemWeight(newwidth As Long) As Boolean
+		LineSelectedItemWeight := newwidth
+		redraw()
+		Return Value True
+	End Function
+	
+	Public Function GetLineSelectedItemWeight() As Long
+		Return Value LineSelectedItemWeight
+	End Function
+	
+	Public Function SetLineSelectedItemColor(newcolor As Long) As Boolean
+		LineSelectedItemColor := newcolor
+		SetColorComponent()
+		Redraw()
+		Return Value True
+	End Function
+	
+	Public Function GetLineSelectedItemColor() As Long
+		Return Value LineSelectedItemColor
+	End Function
+	
+	Public Function GetIconPicture(iconindex As Long)As AddressOf _Picture
+		Return Value IconPicture[iconindex]
+	End Function
+	
+	Public Function SetIconPicture(newpicture As AddressOf _Picture, iconindex As Long) As Boolean
+		If iconindex > 0 And iconindex <= MAXICONINDEX Then
+			semaphore.Lock()
+			IconPicture[iconindex] := newpicture
+			Redraw()
+			semaphore.Unlock()
+			Return Value True
+		End If
+		Return Value False
+	End Function
+	
+	Public Function GetIconPictureSelectedItem(iconindex As Long)As AddressOf _Picture
+		Return Value IconPictureSelectedItem[iconindex]
+	End Function
+	
+	Public Function SetIconPictureSelectedItem(newpicture As AddressOf _Picture, iconindex As Long) As Boolean
+		If iconindex > 0 And iconindex <= MAXICONINDEX Then
+			semaphore.Lock()
+			IconPictureSelectedItem[iconindex] := newpicture
+			Redraw()
+			semaphore.Unlock()
+			Return Value True
+		End If
+		Return Value False
+	End Function
+	
+	
+	Public Function AddItem (itemtext As Text, Optional iconindex As Long := 0)  As Boolean
+
+		If iconindex <= MAXICONINDEX And FirstMaxPositionNum+1 <= 1000 Then
+			semaphore.Lock()
+			
+			If FirstMaxPositionNum = 0 Then			
+				ActiveL := 1
+				indexupline := 1
+				ActualActiveLine := 1
+				OnDownActiveL := 1
+			End If
+			FirstMaxPositionNum += 1
+
+		If GetMemorySegment(itemtext) = _MSEG_RESOURCEDATA Then
+			Lines[FirstMaxPositionNum].LineText := itemtext
+		Else
+			Lines[FirstMaxPositionNum].LineTextBuffer := itemtext
+			Lines[FirstMaxPositionNum].LineText := Lines[FirstMaxPositionNum].LineTextBuffer
+		End If	
+						
+			Lines[FirstMaxPositionNum].LineIconIndex := iconindex
+			
+			SetComponentPosition()
+			Redraw()
+			semaphore.Unlock()
+			Return Value True
+		End If
+		Return Value False
+	End Function
+	
+	Public Function RemoveAllItems()
+		Var i As Long
+		semaphore.Lock()
+		
+		For i:= 1 To 1000
+			Lines[i].LineText := ""
+			Lines[i].LineTextBuffer := ""
+			Lines[i].LineIconIndex := 0
+		End For
+
+		FirstMaxPositionNum := 0
+
+		SetComponentPosition()
+		
+		ActiveL := 0
+		indexupline := 1
+		ActualActiveLine := 0	
+		OnDownActiveL := 0		
+
+		Redraw()
+		semaphore.Unlock()
+	End Function
+	
+	Public Function SetItemText(itemindex As Long, newitemtext As Text)As Boolean
+
+			If itemindex <= FirstMaxPositionNum Then
+				semaphore.Lock()
+				LockRedraw()	
+				
+				If GetMemorySegment(newitemtext) = _MSEG_RESOURCEDATA Then
+					Lines[itemindex].LineText := newitemtext
+				Else
+					Lines[itemindex].LineTextBuffer := newitemtext
+					Lines[itemindex].LineText := Lines[itemindex].LineTextBuffer
+				End If	
+
+				UnlockRedraw()
+				Redraw()
+				semaphore.Unlock()
+				Return Value True
+			End If
+			Return Value False
+			
+	End Function
+	
+	Public Function SetItemIcon(itemindex As Long, newitemicon As Long)As Boolean
+		If itemindex <= FirstMaxPositionNum Then
+			semaphore.Lock()
+			Lines[itemindex].LineIconIndex := newitemicon
+			Redraw()
+			semaphore.Unlock()	
+			Return Value True
+		End If
+		Return Value False
+	End Function
+	
+	Public Function GetItemText(itemindex As Long)As AddressOf Text
+		Return Value Lines[itemindex].LineText
+	End Function
+	
+	Public Function GetItemIcon(itemindex As Long)As Long
+		Return Value Lines[itemindex].LineIconIndex
+	End Function
+	
+	Public Function SetHorizontalIconShift(newhorizontaliconshift As Long)As Boolean
+		HorizontalIconShift := newhorizontaliconshift
+		SetComponentPosition()
+		Redraw()
+		Return Value True
+	End Function
+	
+	Public Function GetHorizontalIconShift()As Long
+		Return Value HorizontalIconShift
+	End Function
+	
+	Public Function SetVerticalIconShift(newverticaliconshift As Long)As Boolean
+		VerticalIconShift := newverticaliconshift
+		SetComponentPosition()
+		Redraw()
+		Return Value True
+	End Function
+	
+	Public Function GetVerticalIconShift()As Long
+		Return Value VerticalIconShift
+	End Function
+
+	Public Function SetHorizontalTextShift(newhorizontaltextshift As Long)As Boolean
+		HorizontalTextShift := newhorizontaltextshift
+		SetComponentPosition()
+		Redraw()
+		Return Value True
+	End Function
+	
+	Public Function GetHorizontalTextShift()As Long
+		Return Value HorizontalTextShift
+	End Function
+	
+	Public Function SetVerticalTextShift(newverticaltextshift As Long)As Boolean
+		VerticalTextShift := newverticaltextshift
+		SetComponentPosition()
+		Redraw()
+		Return Value True
+	End Function
+	
+	Public Function GetVerticalTextShift()As Long
+		Return Value HorizontalTextShift
+	End Function
+	
+	Public Function SetColorBreath(newcolorbreath As Boolean)As Boolean
+		ColorBreath := newcolorbreath
+		Return Value True	
+	End Function
+	
+	Public Function GetColorBreath()As Boolean
+		Return Value	ColorBreath 	
+	End Function
+				
+	Protected Function SetColorComponent()
+		SelectedLineColorDraw := SetColorComponentOpacity(SelectedLineColor, GetColorComponentOpacity(SelectedLineColor) * Opacity / 255)
+		CellColor := SetColorComponentOpacity(SelectedLineColor, GetColorComponentOpacity(SelectedLineColor) * Opacity / 255)
+		
+		CellColorOpacity := GetColorComponentOpacity(CellColor) * Opacity / 255	
+		
+		LineColorDraw := LineColor
+		FontColorDraw := FontColor
+		BackgroundColorDraw := BackgroundColor
+		FontColorDrawSelectedItem := FontColorSelectedItem
+		LineSelectedItemColorDraw := LineSelectedItemColor
+		
+		LineColorDraw := SetColorComponentOpacity(LineColorDraw, GetColorComponentOpacity(LineColorDraw) * Opacity / 255)
+		FontColorDraw := SetColorComponentOpacity(FontColorDraw, GetColorComponentOpacity(FontColorDraw) * Opacity / 255)
+		FontColorDrawSelectedItem := SetColorComponentOpacity(FontColorDrawSelectedItem, GetColorComponentOpacity(FontColorDrawSelectedItem) * Opacity / 255)
+		BackgroundColorDraw := SetColorComponentOpacity(BackgroundColorDraw, GetColorComponentOpacity(BackgroundColorDraw) * Opacity / 255)
+		SliderColorDraw := SetColorComponentOpacity(FontColorDraw,GetColorComponentOpacity(FontColorDraw)*0.3)
+		SliderColorOpacityDraw := GetColorComponentOpacity(SliderColorDraw)
+		LineSelectedItemColorDraw := SetColorComponentOpacity(LineSelectedItemColorDraw, GetColorComponentOpacity(LineSelectedItemColorDraw) * Opacity / 255)
+	End Function
+			
+	Public Function GetMaxItems()As Long
+		Return Value FirstMaxPositionNum
+	End Function
+	
+	Public Function SetSelectedItem(newselecteditem As Long)As Boolean	
+		If FirstMaxPositionNum > 0  And  newselecteditem <= FirstMaxPositionNum Then
+			LockRedraw()
+			ActiveL := newselecteditem
+			ActualActiveLine := newselecteditem
+			If FirstMaxPositionNum < VisibleLines  Then
+				ActiveL := 1
+				indexupline := 1
+				OnDownActiveL := 1
+			Else
+				indexupline := Min(ActiveL - VisibleLines/2,FirstMaxPositionNum - VisibleLines+1)
+				indexupline := Max(indexupline,1)
+			End If
+			SetActLine(ActiveL)
+			UnlockRedraw()
+			Redraw()
+			Return Value True
+		End If
+
+		Return Value False
+	End Function
+	
+	Public Function GetSelectedItem()As Long
+		Return Value ActualActiveLine
+	End Function
+	
+	Protected Function SetActLine(line As Long)		
+		If line > 0 Then
+			LinePosY := (line - indexupline)*LineHeight 
+			CellColorOpacity := GetColorComponentOpacity(SelectedLineColorDraw)	
+		End If
+	End Function
+				
+	Protected Function SetComponentPosition()
+	End Function
+
+	Protected Function OnDown(x As Long,y As Long,eventtime As Time) As Boolean
+		If FirstMaxPositionNum > 0 Then
+			StopTimer(1)
+			StopTimer(2)
+			StopTimer(3)
+			StopTimer(4)
+			MyOnDown(y)
+			Redraw()	
+			Return Value True	
+		End If
+		Return Value False	
+	End Function
+	
+	Protected Function MyOnDown(pos As Long)
+		Var i As Long
+		CellColorOpacity := GetColorComponentOpacity(SelectedLineColorDraw)	
+		CellColor := SetColorComponentOpacity(SelectedLineColorDraw,CellColorOpacity)
+		SliderColorDraw := SetColorComponentOpacity(FontColorDraw,GetColorComponentOpacity(FontColorDraw)*0.3)
+		SliderColorOpacityDraw := GetColorComponentOpacity(SliderColorDraw)
+		Offset := 0
+		LineOffset := 0
+			
+		OnDownPos := pos
+		OnMovePos := pos
+		OnDownindexupline := indexupline
+		Move := True
+		For i := 2 To VisibleLines+1
+			If pos >= TextPosY[i] And pos <= TextPosY[i] + LineHeight  And indexupline + i - 2 <= FirstMaxPositionNum Then
+				OnDownActiveL := indexupline + i - 2
+			End If
+		End For
+		
+		SetActLine(OnDownActiveL)
+		ActiveL := OnDownActiveL
+
+		StartTimer(4,0:0.5)	
+	End Function
+		
+	Protected Function OnMove(x As Long,y As Long,eventtime As Time,isinside As Boolean)	
+		OnMovePos := y
+		MyOnMove(y)
+		Redraw()
+	End Function
+	
+	Protected Function MyOnMove(pos As Long)
+		Var i As Long
+		OnMoving := True
+		i := (pos - OnDownPos)/LineHeight
+		
+		If (OnDownindexupline - i >= 1 And OnDownindexupline - i <= FirstMaxPositionNum - VisibleLines+1 And Not (pos - OnDownPos) > 0) Or (OnDownindexupline - i <= FirstMaxPositionNum - VisibleLines+1 And OnDownindexupline - i >= 1) Then	
+			If OnDownindexupline - i <= 1 And (pos - OnDownPos) Mod LineHeight > 0 Then
+				Offset := 0
+				indexupline := 1
+				LineOffset := ((ActiveL-indexupline)*LineHeight)-LinePosY			
+			ElseIf OnDownindexupline - i >= FirstMaxPositionNum - VisibleLines+1 And (pos - OnDownPos) Mod LineHeight < 0 Then
+				Offset := 0
+				indexupline := FirstMaxPositionNum - VisibleLines+1
+				LineOffset := ((ActiveL-indexupline)*LineHeight)-LinePosY			
+			Else
+				Offset := (pos - OnDownPos) Mod LineHeight
+				LineOffset :=  pos - OnDownPos
+				indexupline := OnDownindexupline - i	
+			End If
+		End If
+
+		If Abs(pos - OnDownPos) >= LineHeight/2 Then
+			Move := False
+			VisibleLine := False	
+		End If	
+	End Function
+	
+	Protected Function OnUp(x As Long,y As Long,eventtime As Time,isinside As Boolean)
+		StopTimer(4)	
+		OnUpPos := y	
+		MyOnUp()
+		Redraw()
+	End Function
+	
+	Protected Function MyOnUp()
+
+		Var i As Long
+
+		If Abs(Offset) > LineHeight/10 And Abs (LineOffset) > LineHeight/10 Then
+			If (Offset > 0 And Abs(Offset) >= LineHeight/2) Or (Offset < 0 And Abs(Offset) <= LineHeight/2)Then
+				RangeNext := False
+				StartTimer(1,0:0.02)
+			Else
+				RangeNext := True
+				StartTimer(1,0:0.02)
+			End If
+		Else
+			For i := 2 To VisibleLines+1
+				If OnUpPos >= TextPosY[i] And OnUpPos <= TextPosY[i] + LineHeight  Then		
+					If OnDownActiveL = indexupline + i - 2 And indexupline = OnDownindexupline And Move Then	
+						ActiveL := indexupline + i - 2
+						ActualActiveLine := ActiveL
+						RaiseEvent OnSelect(ActualActiveLine)
+						VisibleLine := True
+					End If		
+				End If
+			End For
+			RangeNext := True
+			StartTimer(1,0:0.02)
+		End If
+		
+		If KeepSelected And Not (EnsureVisibleSelectedTimeout = :0 Or EnsureVisibleSelectedTimeout = _TIME_INFINITE ) Then
+			StartTimer(2,EnsureVisibleSelectedTimeout)	
+		End If
+		
+	End Function
+		
+	Protected Function OnTimer(id As Long)
+		Var i As Long
+		Var opacity As Byte := 2
+
+		Select id
+		Case 1
+		If RangeNext Then
+			If Abs(Offset) > LineHeight/10 And Abs (LineOffset) > LineHeight/10 And Abs(Offset Mod LineHeight) > LineHeight/10 Then
+				If Abs(Offset) > LineHeight/2 Then
+					NextNumber := True
+				End If	
+				Offset -= LineHeight/10
+				LineOffset -= LineHeight/10	
+				
+				If OnMoving Then
+					If SliderColorOpacityDraw >= 10 Then
+						SliderColorOpacityDraw -= 10
+						SliderColorDraw := SetColorComponentOpacity(SliderColorDraw,SliderColorOpacityDraw)
+					Else
+						OnMoving := False
+						SliderColorDraw := SetColorComponentOpacity(FontColorDraw,GetColorComponentOpacity(FontColorDraw)*0.3)
+						SliderColorOpacityDraw := GetColorComponentOpacity(SliderColorDraw)
+					End If
+				End If
+				
+				StartTimer(1,0:0.02)
+			Else
+				If NextNumber Then
+					indexupline += 1
+					NextNumber := False
+				End If
+				Offset := 0
+				LineOffset := 0	
+
+				If OnMoving Then
+					If SliderColorOpacityDraw >= 10 Then
+						SliderColorOpacityDraw -= 10
+						SliderColorDraw := SetColorComponentOpacity(SliderColorDraw,SliderColorOpacityDraw)
+					Else
+						OnMoving := False
+						SliderColorDraw := SetColorComponentOpacity(FontColorDraw,GetColorComponentOpacity(FontColorDraw)*0.3)
+						SliderColorOpacityDraw := GetColorComponentOpacity(SliderColorDraw)
+					End If
+				End If
+				StartTimer(3,:0)
+				SetActLine(ActiveL)	
+			End If
+		
+		Else
+			
+			If Abs(Offset) > LineHeight/10 And Abs (LineOffset) > LineHeight/10 And Abs(Offset Mod LineHeight) > LineHeight/10 Then
+				If Abs(Offset) > LineHeight/2 Then
+					NextNumber := True
+				End If		 
+				Offset += LineHeight/10
+				LineOffset += LineHeight/10	
+				
+				If OnMoving Then
+					If SliderColorOpacityDraw >= 10 Then
+						SliderColorOpacityDraw -= 10
+						SliderColorDraw := SetColorComponentOpacity(SliderColorDraw,SliderColorOpacityDraw)
+					Else
+						OnMoving := False
+						SliderColorDraw := SetColorComponentOpacity(FontColorDraw,GetColorComponentOpacity(FontColorDraw)*0.3)
+						SliderColorOpacityDraw := GetColorComponentOpacity(SliderColorDraw)
+					End If
+				End If
+				StartTimer(1,0:0.02)
+			Else
+				If NextNumber Then
+					indexupline-=1
+					NextNumber := False
+				End If	
+				Offset := 0
+				LineOffset := 0	
+
+				StartTimer(3,:0)
+				SetActLine(ActiveL)					
+			End If
+		End If
+		Case 2
+			If ((ActualActiveLine > FirstMaxPositionNum - VisibleLines/2 And (VisibleLines Mod 2)=0)Or(ActualActiveLine >= FirstMaxPositionNum - VisibleLines/2 And (VisibleLines Mod 2)>0) )And indexupline <= FirstMaxPositionNum-VisibleLines Then
+				Offset -= LineHeight/10
+				LineOffset -= LineHeight/10
+				If Abs(Offset) < LineHeight Then	
+					StartTimer(2,:0.02)
+				Else
+					Offset := 0
+					LineOffset := 0	
+					indexupline += 1
+					StartTimer(2,:0.02)
+				End If
+			ElseIf (ActualActiveLine < FirstMaxPositionNum - VisibleLines/2 And ActualActiveLine > indexupline+VisibleLines/2) Then
+				Offset -= LineHeight/10
+				LineOffset -= LineHeight/10
+				If Abs(Offset) < LineHeight Then	
+					StartTimer(2,:0.02)
+				Else
+					Offset := 0
+					LineOffset := 0	
+					indexupline += 1
+					StartTimer(2,:0.02)
+				End If			
+			ElseIf ActualActiveLine <= VisibleLines/2 And (ActualActiveLine < indexupline Or (ActualActiveLine >= indexupline And indexupline > 1)) Then
+
+				Offset += LineHeight/10
+				LineOffset += LineHeight/10	
+					
+				If Abs(Offset) < LineHeight Then
+					StartTimer(2,:0.02)		
+				Else
+					Offset := 0
+					LineOffset := 0	
+					indexupline -= 1
+					StartTimer(2,:0.02)
+				End If
+			ElseIf (ActualActiveLine > VisibleLines/2 And ActualActiveLine < indexupline+VisibleLines/2) Then	
+				Offset += LineHeight/10
+				LineOffset += LineHeight/10	
+				If Abs(Offset) < LineHeight Then
+					StartTimer(2,:0.02)		
+				Else
+					Offset := 0
+					LineOffset := 0	
+					indexupline -= 1
+					StartTimer(2,:0.02)
+				End If			
+			Else
+				Offset := 0
+				LineOffset := 0	
+				EnsureVisible()
+			End If	
+		Case 3
+		If ColorBreath Then		
+		If VisibleLine  Then
+			If CellColorOpacity >= 2 Then
+				CellColor := SetColorComponentOpacity(SelectedLineColorDraw,CellColorOpacity)
+				CellColorOpacity -= opacity			
+				opacity += 2	
+				If OnMoving Then
+					If SliderColorOpacityDraw >= 10 Then
+						SliderColorOpacityDraw -= 10
+						SliderColorDraw := SetColorComponentOpacity(SliderColorDraw,SliderColorOpacityDraw)
+					Else
+						OnMoving := False
+						SliderColorDraw := SetColorComponentOpacity(FontColorDraw,GetColorComponentOpacity(FontColorDraw)*0.3)
+						SliderColorOpacityDraw := GetColorComponentOpacity(SliderColorDraw)
+					End If
+				End If	
+				StartTimer(3,:0.02)
+			Else
+				CellColorOpacity := GetColorComponentOpacity(SelectedLineColorDraw)
+				CellColor := SelectedLineColorDraw
+				VisibleLine := False
+				If OnMoving Then
+					If SliderColorOpacityDraw >= 10 Then
+						SliderColorOpacityDraw -= 10
+						SliderColorDraw := SetColorComponentOpacity(SliderColorDraw,SliderColorOpacityDraw)
+						StartTimer(3,:0.02)
+					Else
+						OnMoving := False
+						SliderColorDraw := SetColorComponentOpacity(FontColorDraw,GetColorComponentOpacity(FontColorDraw)*0.3)
+						SliderColorOpacityDraw := GetColorComponentOpacity(SliderColorDraw)
+					End If
+				End If
+			End If	
+	
+			Redraw()
+		Else
+			If OnMoving Then
+				If SliderColorOpacityDraw >= 10 Then
+					SliderColorOpacityDraw -= 10
+					SliderColorDraw := SetColorComponentOpacity(SliderColorDraw,SliderColorOpacityDraw)
+					StartTimer(3,:0.02)
+				Else
+					OnMoving := False
+					SliderColorDraw := SetColorComponentOpacity(FontColorDraw,GetColorComponentOpacity(FontColorDraw)*0.3)
+					SliderColorOpacityDraw := GetColorComponentOpacity(SliderColorDraw)
+				End If
+			End If	
+			Redraw()
+
+		End If
+		Else
+			OnMoving := False
+			Redraw()	
+		End If			
+		Case 4
+			If Abs(OnMovePos-OnDownPos) <= LineHeight Then
+				VisibleLine := True	
+			End If
+		End Select
+		Redraw()	
+	End Function
+	
+	Public Function SetOpacity(newopacity As Byte) As Boolean	
+		Opacity := newopacity
+		SetColorComponent()
+		Redraw()
+		Return Value True		
+	End Function
+		
+	Public Function GetOpacity() As Byte	
+		Return Value Opacity		
+	End Function
+	
+	Public Function SetBackgroundColor(newbackgroundcolor As Long)As Boolean
+		BackgroundColor := newbackgroundcolor
+		SetColorComponent()
+		Redraw()
+		Return Value True
+	End Function
+	
+	Public Function GetBackgroundColor()As Long
+		Return Value BackgroundColor
+	End Function
+	
+	Public Function SetSelectedItemColor(newselecteditemcolor As Long)As Boolean
+		SelectedLineColor := newselecteditemcolor
+		SetColorComponent()
+		Redraw()
+		Return Value True		
+	End Function
+	
+	Public Function GetSelectedItemColor() As Long
+		Return Value SelectedLineColor
+	End Function
+	
+	Public Function SetKeepSelected (newkeepselected  As Boolean)As Boolean
+		KeepSelected  := newkeepselected 
+		Redraw()
+		Return Value True
+	End Function
+
+	Public Function GetKeepSelected ()As Boolean
+		Return Value KeepSelected 
+	End Function
+	
+	Public Function SetEnsureVisibleSelectedTimeout(newensurevisibleselectedtimeout As Time)As Boolean
+		EnsureVisibleSelectedTimeout := newensurevisibleselectedtimeout
+		Return Value True
+	End Function
+
+	Public Function GetEnsureVisibleSelectedTimeout()As Time
+		Return Value EnsureVisibleSelectedTimeout
+	End Function
+	
+	Public Function EnsureVisible()
+		LockRedraw()
+		SetSelectedItem(ActualActiveLine)
+		UnlockRedraw()
+		Redraw()
+	End Function
+		
+	Public Function SetFont(newfont As AddressOf _Font)As Boolean
+		Font := newfont
+		Redraw()
+		Return Value True
+	End Function
+	
+	Public Function GetFont()As AddressOf _Font
+		Return Value Font
+	End Function
+
+	Public Function SetFontColor(newfontcolor As Long)As Boolean
+		FontColor := newfontcolor
+		SetColorComponent()
+		Redraw()
+		Return Value True		
+	End Function
+	
+	Public Function GetFontColor() As Long
+		Return Value FontColor
+	End Function
+	
+	Public Function SetFontSelectedItem(newfont As AddressOf _Font)As Boolean
+		FontSelectedItem := newfont
+		Redraw()
+		Return Value True
+	End Function
+	
+	Public Function GetFontSelectedItem()As AddressOf _Font
+		Return Value FontSelectedItem
+	End Function
+
+	Public Function SetFontColorSelectedItem(newfontcolor As Long)As Boolean
+		FontColorSelectedItem := newfontcolor
+		SetColorComponent()
+		Redraw()
+		Return Value True		
+	End Function
+	
+	Public Function GetFontColorSelectedItem() As Long
+		Return Value FontColorSelectedItem
+	End Function
+		
+
+	Public Function SetVisibleItems(newvisibleitems As Long)As Boolean
+		If newvisibleitems > 0 Then
+			VisibleLines := newvisibleitems
+			SetSelectedItem(ActualActiveLine)
+			SetComponentPosition()
+			Redraw()
+			Return Value True		
+		End If
+		Return Value False
+	End Function
+	
+	Public Function GetVisibleItems() As Long
+		Return Value VisibleLines
+	End Function
+
+	Public Function SetLineColor(newlinecolor As Long)As Boolean
+		LineColor := newlinecolor
+		SetColorComponent()
+		Redraw()
+		Return Value True		
+	End Function
+	
+	Public Function GetLineColor() As Long
+		Return Value LineColor
+	End Function
+
+	Public Function SetLineWeight(newlineweight As Long)As Boolean
+		If newlineweight >= 0 Then
+			LineWeight := newlineweight
+			SetComponentPosition()
+			Redraw()
+			Return Value True		
+		End If
+		Return Value False
+	End Function
+	
+	Public Function GetLineWeight() As Long
+		Return Value LineWeight
+	End Function
+
+	Public Function ShowObject()
+		Show()
+	End Function	
+
+	Public Function HideObject()
+		Hide()
+	End Function
+	
+	Public Function SetObjectPosition (newx As Long, newy As Long) As Boolean
+		Return Value SetPosition (newx, newy)	
+	End Function
+		
+	Public Function GetObjectPosition (ByRef currentx As Long, ByRef currenty As Long)	
+		GetPosition (currentx, currenty)	
+	End Function
+	
+	Public Function GetObjectDimensions (ByRef currentwidth As Long, ByRef currentheight As Long)	
+		GetSize (currentwidth, currentheight)	
+	End Function		
+
+	Public Function SetObjectDimensions (newwidth As Long, newheight As Long) As Boolean
+		LockRedraw()
+		SetSize(newwidth,newheight)
+		SetComponentPosition()
+		UnlockRedraw()
+		Redraw()	
+		Return Value True
+	End Function
+	
+
+	
+End GraphicClass

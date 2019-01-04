@@ -1,0 +1,3294 @@
+// Graphic Constants
+Private Const INVISIBLE_TOP_BACKGROUND_HEIGHT	As Long 	:= 130	//33**R
+Private Const CURRENT_CONDITIONS_HEIGHT			As Long 	:= 95
+Private Const CURRENT_CONDITIONS_HEIGHT_NEW		As Long 	:= 225
+Private Const IDLE_TIME							As Time 	:= 1:0.0
+
+Public	Const OBJECT_HAVEFOCUS					As Long 	:= 100000001
+Public	Const OBJECT_NOTHAVEFOCUS				As Long 	:= 100000000
+Private Const OBJECT_OFFSET						As Double	:= 0.5
+Private Const SHADOWOFFSET						As Double	:= 22
+
+Private Const MIN_OBJECT_WIDTH					As Long		:= 600
+Private Const MIN_OBJECT_HEIGHT					As Long		:= 400
+
+Private Const DAY_EXPANDED_WIDTH				As Double	:= 0.5
+Private Const DAY_EXPANDED_HEIGHT				As Double	:= 0.74
+
+Private Const DETAILS_LINE_SPACING				As Double 	:= 1.4
+Private Const FORECAST_DETAILS_LINE_SPACING		As Double 	:= 1.2
+
+Private Structure ErrorJsonStructure
+	Var Error							Alias "error"		[1]	As ErrorMsgStructure
+End Structure
+
+Private Structure ErrorMsgStructure
+	Var Msg 							Alias "msg"			As Text[Namespace "CUE.Applet.DailyWeatherFromApixu.1".TEXT_LONG_LENGHT]
+End Structure
+
+
+// Data structures
+Private Structure SettingsStructure
+	Var TemperatureUnits				As Long			//temperature units 1=C, 2=F
+	Var Units							As Long			//3=metric, 4=imperial
+	Var TimeFormat						As Long			//0=24 hour, 1=12 hour AM/PM
+	Var ShowLastUpdateTime				As Boolean
+	Var ShowTemperatureUnits			As Boolean
+	Var ShowFeelsLikeTemp				As Boolean
+End Structure
+
+
+// -----------------------------------------------------------------------------------------------------------
+// Common functions
+// -----------------------------------------------------------------------------------------------------------
+
+Private Function EpochTimeToTime (epochtime As Long) As Time
+	If epochtime < 0 Then
+		Return Value Namespace "CUE.Applet.DailyWeatherFromApixu.1".NO_TIME
+	Else
+		Return Value #01/01/1970 00:00:00.0# + epochtime * :1.0 + GetLocalToUTCTimeOffset()
+	End If
+End Function
+
+
+Private Function NumericDateTextToTime (numericdatetext As Text) As Time
+Private Var MyText As Text[Namespace "CUE.Applet.DailyWeatherFromApixu.1".TEXT_LENGHT]
+Private Var MyTimeStructure As _TimeStructure
+Private Var MyTime As Time
+
+	TrimText(numericdatetext, MyText)
+
+	If Not ParseText (MyText, "{n}:{n}",  MyTimeStructure.Hour, MyTimeStructure.Minute) Then
+		If Not ParseText (MyText, "{n}-{n}-{n} {n}:{n}",  MyTimeStructure.Year, MyTimeStructure.Month, MyTimeStructure.Day, MyTimeStructure.Hour, MyTimeStructure.Minute) Then
+			If ParseText (MyText, "{n}-{n}-{n}",  MyTimeStructure.Year, MyTimeStructure.Month, MyTimeStructure.Day) Then
+				MyTimeStructure.Hour 			:= 0
+				MyTimeStructure.Minute 			:= 0
+			Else
+				Return Value Namespace "CUE.Applet.DailyWeatherFromApixu.1".NO_TIME
+			End If
+		End If
+		If MyTimeStructure.Year < 100 Then 
+			MyTimeStructure.Year += 2000
+		End If
+	Else
+		MyTimeStructure.Year 		:= 2000
+  		MyTimeStructure.Month 		:= 01
+		MyTimeStructure.Day			:= 01
+	End If
+	
+	If GetSubTextPosition(numericdatetext, "PM") <> 0 And MyTimeStructure.Hour < 12	Then  
+		MyTimeStructure.Hour := MyTimeStructure.Hour + 12 
+	End If
+	
+	If GetSubTextPosition(numericdatetext, "AM") <> 0 And MyTimeStructure.Hour = 12	Then  
+		MyTimeStructure.Hour := 0 
+	End If
+	
+	MyTimeStructure.Second		:= 0
+	MyTimeStructure.MicroSecond	:= 0
+	
+	If TimeStructureToTime(MyTimeStructure, MyTime) Then
+		Return Value MyTime
+	Else
+		Return Value Namespace "CUE.Applet.DailyWeatherFromApixu.1".NO_TIME
+	End If
+
+End Function
+
+
+Private Function GetDayNameFromEpochTime (epochtime As Long) As AddressOf Text
+Private Var TS As _TimeStructure
+Private Var T As Time
+	
+	T := EpochTimeToTime(epochtime)
+	If T >= :.0 And TimeToTimeStructure(T, TS) Then
+		Select TS.DayOfWeek
+			Case 1
+				Return Value txtMonday
+			Case 2
+				Return Value txtTuesday
+			Case 3
+				Return Value txtWednesday
+			Case 4
+				Return Value txtThursday
+			Case 5
+				Return Value txtFriday
+			Case 6
+				Return Value txtSaturday
+			Case 7
+				Return Value txtSunday
+			Case Else
+				Return Value Nothing
+		End Select
+	Else
+		Return Value Nothing
+	End If
+	
+End Function
+
+
+Private Function GetWeatherIcon(iconfilename As Text) As AddressOf _Picture
+Private Var TmpText As Text[Namespace "CUE.Applet.DailyWeatherFromApixu.1".TEXT_LENGHT]
+Private Var N As Long
+Private Var IsDay As Boolean
+	
+	N := GetSubTextPosition(iconfilename, "day", 1, False)
+	If N > 0 Then
+		GetTextRight(iconfilename, GetTextActualLength(iconfilename) - N - 3, TmpText)
+		IsDay := True
+	Else
+		N := GetSubTextPosition(iconfilename, "night", 1, False)
+		If N > 0 Then
+			GetTextRight(iconfilename, GetTextActualLength(iconfilename) - N - 5, TmpText)
+			IsDay := False
+		Else
+			Return Value pic000d
+		End If
+	End If
+	
+	If Not ParseText(TmpText, "{n}.png", N) Then
+		Return Value pic000d
+	End If
+		
+	If IsDay Then
+		Select N
+		Case 113 Return Value pic113d
+		Case 116 Return Value pic116d
+		Case 119 Return Value pic119d
+		Case 122 Return Value pic122d
+		
+		Case 143 Return Value pic143d
+		
+		Case 176 Return Value pic176d
+		Case 179 Return Value pic179d
+		Case 182 Return Value pic182d
+		Case 185 Return Value pic185d
+		
+		Case 200 Return Value pic200d
+		
+		Case 227 Return Value pic227d
+		Case 230 Return Value pic230d
+		
+		Case 248 Return Value pic248d
+		
+		Case 260 Return Value pic260d
+		Case 263 Return Value pic263d
+		Case 266 Return Value pic266d
+		
+		Case 281 Return Value pic281d
+		Case 284 Return Value pic284d
+		
+		Case 293 Return Value pic293d
+		Case 296 Return Value pic296d
+		Case 299 Return Value pic299d
+		Case 302 Return Value pic302d
+		Case 305 Return Value pic305d
+		Case 308 Return Value pic308d
+		Case 311 Return Value pic311d
+		Case 314 Return Value pic314d
+		Case 317 Return Value pic317d
+		Case 320 Return Value pic320d
+		Case 323 Return Value pic323d
+		Case 326 Return Value pic326d
+		Case 329 Return Value pic329d
+		Case 332 Return Value pic332d
+		Case 335 Return Value pic335d
+		Case 338 Return Value pic338d
+		
+		Case 350 Return Value pic350d
+		Case 353 Return Value pic353d
+		Case 356 Return Value pic356d
+		Case 359 Return Value pic359d
+		Case 362 Return Value pic362d
+		Case 365 Return Value pic365d
+		Case 368 Return Value pic368d
+		Case 371 Return Value pic371d
+		Case 374 Return Value pic374d
+		Case 377 Return Value pic377d
+		
+		Case 386 Return Value pic386d
+		Case 389 Return Value pic389d
+		Case 392 Return Value pic392d
+		Case 395 Return Value pic395d
+		
+		Case Else Return Value pic000d
+		End Select
+		
+	Else
+		Select N
+		Case 113 Return Value pic113n
+		Case 116 Return Value pic116n
+		Case 119 Return Value pic119n
+		Case 122 Return Value pic122n
+		
+		Case 143 Return Value pic143n
+		
+		Case 176 Return Value pic176n
+		Case 179 Return Value pic179n
+		Case 182 Return Value pic182n
+		Case 185 Return Value pic185n
+		
+		Case 200 Return Value pic200n
+		
+		Case 227 Return Value pic227n
+		Case 230 Return Value pic230n
+		
+		Case 248 Return Value pic248n
+		
+		Case 260 Return Value pic260n
+		Case 263 Return Value pic263n
+		Case 266 Return Value pic266n
+		
+		Case 281 Return Value pic281n
+		Case 284 Return Value pic284n		
+		Case 293 Return Value pic293n
+		Case 296 Return Value pic296n
+		Case 299 Return Value pic299n
+		Case 302 Return Value pic302n
+		Case 305 Return Value pic305n
+		Case 308 Return Value pic308n
+		Case 311 Return Value pic311n
+		Case 314 Return Value pic314n
+		Case 317 Return Value pic317n
+		Case 320 Return Value pic320n
+		Case 323 Return Value pic323n
+		Case 326 Return Value pic326n
+		Case 329 Return Value pic329n
+		Case 332 Return Value pic332n
+		Case 335 Return Value pic335n
+		Case 338 Return Value pic338n
+		
+		Case 350 Return Value pic350n
+		Case 353 Return Value pic353n
+		Case 356 Return Value pic356n
+		Case 359 Return Value pic359n
+		Case 362 Return Value pic362n
+		Case 365 Return Value pic365n
+		Case 368 Return Value pic368n
+		Case 371 Return Value pic371n
+		Case 374 Return Value pic374n
+		Case 377 Return Value pic377n
+		
+		Case 386 Return Value pic386n
+		Case 389 Return Value pic389n
+		Case 392 Return Value pic392n
+		Case 395 Return Value pic395n
+		
+		Case Else Return Value pic000n
+		End Select
+		
+	End If
+	
+	Return Value pic000d
+
+End Function
+
+
+Global Function GetWeatherDescription (condition As Namespace "CUE.Applet.DailyWeatherFromApixu.1".WeatherConditionStructure, ByRef description As Text, Optional isday As Long := 1)
+
+	If condition.code = 1000 And isday = 0 Then
+		description := txtWeatherCode1000N
+		Return
+	End If
+	
+	Select condition.code
+	Case 1000 description := txtWeatherCode1000D
+	Case 1003 description := txtWeatherCode1003
+	Case 1006 description := txtWeatherCode1006
+	Case 1009 description := txtWeatherCode1009
+	Case 1030 description := txtWeatherCode1030
+	Case 1063 description := txtWeatherCode1063
+	Case 1066 description := txtWeatherCode1066
+	Case 1069 description := txtWeatherCode1069
+	Case 1072 description := txtWeatherCode1072
+	Case 1087 description := txtWeatherCode1087
+	Case 1114 description := txtWeatherCode1114
+	Case 1117 description := txtWeatherCode1117
+	Case 1135 description := txtWeatherCode1135
+	Case 1147 description := txtWeatherCode1147
+	Case 1150 description := txtWeatherCode1150
+	Case 1153 description := txtWeatherCode1153
+	Case 1168 description := txtWeatherCode1168
+	Case 1171 description := txtWeatherCode1171
+	Case 1180 description := txtWeatherCode1180
+	Case 1183 description := txtWeatherCode1183
+	Case 1186 description := txtWeatherCode1186
+	Case 1189 description := txtWeatherCode1189
+	Case 1192 description := txtWeatherCode1192
+	Case 1195 description := txtWeatherCode1195
+	Case 1198 description := txtWeatherCode1198
+	Case 1201 description := txtWeatherCode1201
+	Case 1204 description := txtWeatherCode1204
+	Case 1207 description := txtWeatherCode1207
+	Case 1210 description := txtWeatherCode1210
+	Case 1213 description := txtWeatherCode1213
+	Case 1216 description := txtWeatherCode1216
+	Case 1219 description := txtWeatherCode1219
+	Case 1222 description := txtWeatherCode1222
+	Case 1225 description := txtWeatherCode1225
+	Case 1237 description := txtWeatherCode1237
+	Case 1240 description := txtWeatherCode1240
+	Case 1243 description := txtWeatherCode1243
+	Case 1246 description := txtWeatherCode1246
+	Case 1249 description := txtWeatherCode1249
+	Case 1252 description := txtWeatherCode1252
+	Case 1255 description := txtWeatherCode1255
+	Case 1258 description := txtWeatherCode1258
+	Case 1261 description := txtWeatherCode1261
+	Case 1264 description := txtWeatherCode1264
+	Case 1273 description := txtWeatherCode1273
+	Case 1276 description := txtWeatherCode1276
+	Case 1279 description := txtWeatherCode1279
+	Case 1282 description := txtWeatherCode1282
+	Case Else description := condition.description
+	End Select
+	//description := txtWeatherCode1282
+End Function
+
+Global Function GetTxtDescription (index As Long) As AddressOf Text
+
+	Select index
+	Case 1 Return Value txtWeatherCode1000N
+	Case 2 Return Value txtWeatherCode1000D
+	Case 3 Return Value txtWeatherCode1003
+	Case 4 Return Value txtWeatherCode1006
+	Case 5 Return Value txtWeatherCode1009
+	Case 6 Return Value txtWeatherCode1030
+	Case 7 Return Value txtWeatherCode1063
+	Case 8 Return Value txtWeatherCode1066
+	Case 9 Return Value txtWeatherCode1069
+	Case 10 Return Value txtWeatherCode1072
+	Case 11 Return Value txtWeatherCode1087
+	Case 12 Return Value txtWeatherCode1114
+	Case 13 Return Value txtWeatherCode1117
+	Case 14 Return Value txtWeatherCode1135
+	Case 15 Return Value txtWeatherCode1147
+	Case 16 Return Value txtWeatherCode1150
+	Case 17 Return Value txtWeatherCode1153
+	Case 18 Return Value txtWeatherCode1168
+	Case 19 Return Value txtWeatherCode1171
+	Case 20 Return Value txtWeatherCode1180
+	Case 21 Return Value txtWeatherCode1183
+	Case 22 Return Value txtWeatherCode1186
+	Case 23 Return Value txtWeatherCode1189
+	Case 24 Return Value txtWeatherCode1192
+	Case 25 Return Value txtWeatherCode1195
+	Case 26 Return Value txtWeatherCode1198
+	Case 27 Return Value txtWeatherCode1201
+	Case 28 Return Value txtWeatherCode1204
+	Case 29 Return Value txtWeatherCode1207
+	Case 30 Return Value txtWeatherCode1210
+	Case 31 Return Value txtWeatherCode1213
+	Case 32 Return Value txtWeatherCode1216
+	Case 33 Return Value txtWeatherCode1219
+	Case 34 Return Value txtWeatherCode1222
+	Case 35 Return Value txtWeatherCode1225
+	Case 36 Return Value txtWeatherCode1237
+	Case 37 Return Value txtWeatherCode1240
+	Case 38 Return Value txtWeatherCode1243
+	Case 39 Return Value txtWeatherCode1246
+	Case 40 Return Value txtWeatherCode1249
+	Case 41 Return Value txtWeatherCode1252
+	Case 42 Return Value txtWeatherCode1255
+	Case 43 Return Value txtWeatherCode1258
+	Case 44 Return Value txtWeatherCode1261
+	Case 45 Return Value txtWeatherCode1264
+	Case 46 Return Value txtWeatherCode1273
+	Case 47 Return Value txtWeatherCode1276
+	Case 48 Return Value txtWeatherCode1279
+	Case 49 Return Value txtWeatherCode1282
+	Case Else Return Value Nothing
+	End Select
+End Function
+
+Private Function TextToNumber (newtext As Text) As Double
+Private Var V As Double
+Private Var MyText As Text[Namespace "CUE.Applet.DailyWeatherFromApixu.1".TEXT_LENGHT]
+
+	TrimText(newtext, MyText)
+
+	If ParseText (MyText, "{n}", V) Then
+		Return Value V
+	Else
+		Return Value Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE
+	End If
+	
+End Function
+
+
+Private Function GetDayInMonth (mytime As Time) As Byte
+Private Var MyTimeStruct As _TimeStructure
+
+	If TimeToTimeStructure(mytime, MyTimeStruct) Then
+		Return Value MyTimeStruct.Day
+	Else
+		Return Value 0
+	End If
+
+End Function
+
+
+// Format temperature
+Private Function FormatTemperature(ByRef outputtext As Text, newtemperaturec As Double, newtemperaturef As Double, newformat As SettingsStructure, Optional inittext As Text := "")
+
+	If newformat.TemperatureUnits = DailyWeatherFromApixuGUI.UNITS_CELSIUS Then
+		If newtemperaturec = Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE Then
+			outputtext := txtNotAvailable
+		Else
+			If newformat.ShowTemperatureUnits Then
+				FormatText (outputtext, "{n.1} °C", newtemperaturec)
+			Else
+				FormatText (outputtext, "{n.1}°", newtemperaturec)
+			End If
+		End If
+	ElseIf newformat.TemperatureUnits = DailyWeatherFromApixuGUI.UNITS_FAHRENHEIT Then
+		If newtemperaturef = Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE  Then
+			outputtext := txtNotAvailable
+		Else
+			If newformat.ShowTemperatureUnits Then
+				FormatText (outputtext, "{n.1} °F", newtemperaturef)
+			Else
+				FormatText (outputtext, "{n.1}°", newtemperaturef)
+			End If
+		End If
+	Else
+		outputtext := txtNotAvailable
+	End If
+	
+	AddInitText (outputtext, inittext)
+	
+End Function
+
+
+// Format humidity
+Private Function FormatPercent(ByRef outputtext As Text, newpercent As Double, Optional inittext As Text := "")
+
+	If newpercent = Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE Then
+		outputtext := txtNotAvailable
+	Else
+		FormatText (outputtext, "{n.0} %", newpercent)
+	End If
+	
+	AddInitText (outputtext, inittext)
+	
+End Function
+
+
+Private Function FormatPrecipitations(ByRef outputtext As Text, newprecipitationsmm As Double, newprecipitationsinch As Double, newformat As SettingsStructure, Optional inittext As Text := "")
+
+	If newformat.Units = DailyWeatherFromApixuGUI.UNITS_METRIC Then
+		If newprecipitationsmm = Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE Then
+			outputtext := txtNotAvailable
+		Else
+			FormatText (outputtext, "{n.0} {t}", newprecipitationsmm, txtMm)
+		End If
+	ElseIf newformat.Units = DailyWeatherFromApixuGUI.UNITS_IMPERIAL Then
+		If newprecipitationsinch = Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE Then
+			outputtext := txtNotAvailable
+		Else
+			FormatText (outputtext, "{n.1} {t}", newprecipitationsinch, txtInch)
+		End If
+	Else
+		outputtext := txtNotAvailable
+	End If
+	
+	AddInitText (outputtext, inittext)
+	
+End Function
+
+
+// Format pressure
+Private Function FormatPressure(ByRef outputtext As Text, newpressuremb As Double, newpressurein As Double, newformat As SettingsStructure, Optional inittext As Text := "")
+
+	If newformat.Units = DailyWeatherFromApixuGUI.UNITS_METRIC Then
+		If newpressuremb = Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE Then
+			outputtext := txtNotAvailable
+		Else
+			FormatText (outputtext, "{n2.1} {t}", newpressuremb, txtMBar)
+		End If
+	ElseIf newformat.Units = DailyWeatherFromApixuGUI.UNITS_IMPERIAL Then
+		If newpressurein = Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE Then
+			outputtext := txtNotAvailable
+		Else
+			FormatText (outputtext, "{n2.2} {t}", newpressurein, txtInHg)
+		End If
+	Else
+		outputtext := txtNotAvailable
+	End If
+	
+	AddInitText (outputtext, inittext)
+	
+End Function
+
+
+// Format wind text
+Private Function FormatWindText (ByRef outputtext As Text, newwindkph As Double, newwindmph As Double, newwinddir As Text, newformat As SettingsStructure, Optional inittext As Text := "")
+Private Var TmpText As Text [Namespace "CUE.Applet.DailyWeatherFromApixu.1".TEXT_LENGHT] := ""
+
+	If newformat.Units = DailyWeatherFromApixuGUI.UNITS_METRIC Then
+		If newwindkph = 0 Then
+			outputtext := txtCalm
+			Return
+		End If
+	ElseIf newformat.Units = DailyWeatherFromApixuGUI.UNITS_IMPERIAL Then
+		If newwindmph = 0 Then
+			outputtext := txtCalm
+			Return
+		End If
+	End If
+
+	If GetTextActualLength(newwinddir) > 0 Then
+		TranslateText(newwinddir, TmpText)
+	End If
+	
+	If newformat.Units = DailyWeatherFromApixuGUI.UNITS_METRIC Then
+		If newwindkph = Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE Then
+			outputtext := txtNotAvailable
+		Else
+			FormatText (outputtext, "{n.0} {t}", newwindkph, txtKmh)
+		End If
+	ElseIf newformat.Units = DailyWeatherFromApixuGUI.UNITS_IMPERIAL Then
+		If newwindmph = Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE Then
+			outputtext := txtNotAvailable
+		Else
+			FormatText (outputtext, "{n.0} {t}", newwindmph, txtMph)
+		End If
+	Else
+		outputtext := txtNotAvailable
+	End If
+	
+	If TmpText <> txtNotAvailable And GetTextActualLength(TmpText) > 0 Then
+		ConcatenateText(outputtext, outputtext, ", ", TmpText)
+	End If
+
+	AddInitText (outputtext, inittext)
+	
+End Function
+
+
+// Format distance
+Private Function FormatDistance(ByRef outputtext As Text, newdistancekm As Double, newdistancemiles As Double, newformat As SettingsStructure, Optional inittext As Text := "")
+
+	If newformat.Units = DailyWeatherFromApixuGUI.UNITS_METRIC Then
+		If newdistancekm = Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE Then
+			outputtext := txtNotAvailable
+		Else
+			FormatText (outputtext, "{n.1} {t}", newdistancekm, txtKm)
+		End If
+	ElseIf newformat.Units = DailyWeatherFromApixuGUI.UNITS_IMPERIAL Then
+		If newdistancemiles = Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE Then
+			outputtext := txtNotAvailable
+		Else
+			FormatText (outputtext, "{n.1} {t}", newdistancemiles, txtMi)
+		End If
+	Else
+		outputtext := txtNotAvailable
+	End If
+	
+	AddInitText (outputtext, inittext)
+	
+End Function
+
+
+Private Function TimeTextToTime (timetext As Text) As Time
+//05:01 AM
+Private Var M As Long
+Private Var H As Long
+Private Var AMPM As Long := 0
+
+	If GetSubTextPosition(timetext, "PM", 1, False) > 0 Then
+		AMPM := 2
+	ElseIf 
+		GetSubTextPosition(timetext, "AM", 1, False) > 0Then
+		AMPM := 1
+	End If
+	
+	If ParseText(timetext, "{n}:{n}", H, M) Then
+	
+		Select AMPM
+		Case 0
+			Return Value H * 1:0:0.0 + M * 1:0.0
+			
+		Case 1
+			If H = 12 Then
+				H := 0
+			End If
+			Return Value H * 1:0:0.0 + M * 1:0.0
+		
+		Case 2
+			If H = 12 Then
+				H := 0
+			End If
+			Return Value 12:0:0.0 + H * 1:0:0.0 + M * 1:0.0
+		
+		End Select
+		
+	End If
+	
+	Return Value Namespace "CUE.Applet.DailyWeatherFromApixu.1".NO_TIME
+		
+End Function
+
+
+// Format time
+Private Function FormatTime (ByRef outputtext As Text, mytime As Time, newformat As SettingsStructure, Optional inittext As Text := "")
+Private Var TS As _TimeStructure
+
+	If mytime = Namespace "CUE.Applet.DailyWeatherFromApixu.1".NO_TIME Then
+		outputtext := txtNotAvailable
+	ElseIf Not TimeToTimeStructure(mytime, TS) Then
+		outputtext := txtNotAvailable	
+	Else
+	
+		Select newformat.TimeFormat
+			Case DailyWeatherFromApixuGUI.TIME_MODE_24HOUR
+					FormatText (outputtext, "{n}:{n02}", TS.Hour, TS.Minute)
+	
+			Case DailyWeatherFromApixuGUI.TIME_MODE_12HOUR
+				If TS.Hour < 12 Then
+					If TS.Hour = 0 Then
+						FormatText (outputtext, "{n}:{n02} {t}", 12, TS.Minute, txtAM)
+					Else
+						FormatText (outputtext, "{n}:{n02} {t}", TS.Hour, TS.Minute, txtAM)
+					End If
+				Else
+					If TS.Hour > 12 Then
+						FormatText (outputtext, "{n}:{n02} {t}", TS.Hour - 12, TS.Minute, txtPM)
+					Else
+						FormatText (outputtext, "{n}:{n02} {t}", TS.Hour, TS.Minute, txtPM)
+					End If
+				End If
+	
+			Case Else
+				outputtext := txtNotAvailable
+	
+		End Select
+		
+	End If
+	AddInitText (outputtext, inittext)
+	
+End Function
+
+
+Private Function AddInitText (ByRef mytext As Text, inittext As Text)
+Private Var MyInitText As Text [Namespace "CUE.Applet.DailyWeatherFromApixu.1".TEXT_LENGHT]
+
+	TrimText(inittext, MyInitText)
+	
+	If GetTextActualLength(MyInitText) > 0 Then
+		ConcatenateText(mytext, MyInitText, " ", mytext)
+	End If
+
+End Function
+
+
+Private Const MIN_FONT_INDEX As Long := 1
+Private Const MAX_FONT_INDEX As Long := 10
+
+Private Function GetFontIndex (myfont As AddressOf _Font) As Long
+	
+	If myfont = fntDefault56 Then
+		Return Value 1
+	ElseIf myfont = fntDefault44 Then
+		Return Value 2
+	ElseIf myfont = fntDefault37 Then
+		Return Value 3
+	ElseIf myfont = fntDefault32 Then
+		Return Value 4
+	ElseIf myfont = fntDefault28 Then
+		Return Value 5
+	ElseIf myfont = fntDefault23 Then
+		Return Value 6
+	ElseIf myfont = fntDefault20 Then
+		Return Value 7
+	ElseIf myfont = fntDefault18 Then
+		Return Value 8
+	ElseIf myfont = fntDefault16 Then
+		Return Value 8
+	ElseIf myfont = fntDefault14 Then
+		Return Value 8
+	Else
+		Return Value 0
+	End If
+
+End Function
+
+
+Private Function GetFontFromIndex (index As Long) As AddressOf _Font
+		
+	Select index
+		Case 1
+			Return Value fntDefault56
+		Case 2
+			Return Value fntDefault44
+		Case 3
+			Return Value fntDefault37
+		Case 4
+			Return Value fntDefault32
+		Case 5
+			Return Value fntDefault28
+		Case 6
+			Return Value fntDefault23
+		Case 7
+			Return Value fntDefault20
+		Case 8
+			Return Value fntDefault18
+		Case 9
+			Return Value fntDefault16
+		Case 10
+			Return Value fntDefault14
+		Case Else
+			Return Value Nothing
+	End Select
+
+End Function
+
+
+Private Function GetDayText (dayindex As Long) As AddressOf Text
+
+	Select dayindex
+	Case 1	Return Value txtMonday
+	Case 2	Return Value txtTuesday
+	Case 3	Return Value txtWednesday
+	Case 4	Return Value txtThursday
+	Case 5	Return Value txtFriday
+	Case 6	Return Value txtSaturday
+	Case 7	Return Value txtSunday
+	Case Else	Return Value Nothing
+	End Select
+	
+End Function
+
+
+//CalcMaxFontSize
+Private Function GetMaxFont (maxfont As AddressOf _Font, requiredwidth As Long, mytext As Text, Optional minfont As  AddressOf _Font := fntDefault18) As AddressOf _Font
+Private Var Index As Long
+Private Var MinFontIndex As Long
+	
+	Index := GetFontIndex (maxfont)
+	If Index = 0 Then
+		Return Value Nothing
+	End If
+	
+	MinFontIndex := GetFontIndex (minfont)
+	If MinFontIndex = 0 Then
+		MinFontIndex := 10
+	End If
+
+	For Index := Index To MinFontIndex
+		If GetFontFromIndex(Index).CalculateTextWidth (mytext) <= requiredwidth Then
+			Exit For
+		End If
+	End For
+	
+	Index := Min (Index, MinFontIndex)
+	Return Value GetFontFromIndex(Index)
+
+End Function
+
+Private Function GetDefaultFontIndex(RequiredWidth As Long, RequiredHeight As Long, MyText As Text, isOneLine As Boolean, Optional MinRequiredFontIndex As Long := 1) As Long
+Private Var Index As Long
+Private Var i As Long
+	
+	Index := 0
+	For i := MinRequiredFontIndex To MAX_FONT_INDEX
+		If isOneLine  Then
+			If GetFontFromIndex(i).CalculateTextWidth(MyText) <= RequiredWidth And GetFontFromIndex(i).CalculateTextHeight(MyText, RequiredWidth, FORECAST_DETAILS_LINE_SPACING) <= RequiredHeight Then
+				Index := i
+				Exit For
+			End If
+		Else
+			If GetFontFromIndex(i).CalculateTextHeight(MyText, RequiredWidth, FORECAST_DETAILS_LINE_SPACING) <= RequiredHeight Then
+				Index := i
+				Exit For
+			End If
+		End If
+		i += 1
+	End For
+	
+	If Index = 0 Then
+		Return Value MAX_FONT_INDEX
+	Else 
+		Return Value Index
+	End If
+End Function
+
+Private Function GetBestDescFontIndex(RequiredWidth As Long, RequiredHeight As Long, MinRequiredFontIndex As Long) As Long
+Private Var Index As Long
+Private Var TmpIndex As Long
+Private Var i As Long
+	
+	Index := 0
+	For i := 1 To 49
+		TmpIndex := GetDefaultFontIndex(RequiredWidth, RequiredHeight, GetTxtDescription(i), False, MinRequiredFontIndex)
+		
+		If TmpIndex > Index Then
+			Index := TmpIndex
+		End If
+		i += 1
+	End For
+	
+	If Index = 0 Then
+		Return Value Nothing
+	Else 
+		Return Value Index
+	End If
+End Function
+
+Private Function FormatIPAddress (locationtype As Text, ByRef locationname As Text)
+	If CompareText(locationtype, "IP", _COMPARE_CASEINSENSITIVE) = _COMPARE_EQUAL Then
+		ConcatenateText(locationname, "IP ", locationname)
+	End If
+End Function
+
+
+Private Function FormatLocationName (locationname As Text, ByRef formatedlocationname As Text)
+Private Var TempText As Text[Namespace "CUE.Applet.DailyWeatherFromApixu.1".TEXT_LENGHT]
+Private Var Pos1 As Long := 1
+Private Var Pos2 As Long
+Private Var N As Long
+Private Var Lat As Double
+Private Var Lon As Double
+Private Var A1 As Long
+Private Var A2 As Long
+Private Var A3 As Long
+Private Var A4 As Long
+
+	formatedlocationname := ""
+	
+	//Lat and Lon format from WWOL
+	If ParseText (locationname, "Lat {n} and Lon {n}", Lat, Lon) Then
+		FormatText(formatedlocationname, "{n.04},{n.04}", Lat, Lon)
+		Return
+	End If
+	
+	//IP address from stored location name
+	If ParseText (locationname, "IP {n}.{n}.{n}.{n}", A1, A2, A3, A4) Then
+		FormatText(formatedlocationname, "{n}.{n}.{n}.{n}", A1, A2, A3, A4)
+		Return
+	End If
+	
+	//Lat and Lon format from search box with space
+	If ParseText (locationname, "{n},{n}", Lat, Lon) Then
+		FormatText(formatedlocationname, "{n.04},{n.04}", Lat, Lon)
+		Return
+	End If
+	
+	Do
+		Pos2 := GetSubTextPosition(locationname, ",", Pos1, False)
+		If Pos2 > 0 Then
+			GetTextMiddle(locationname, Pos1, Pos2 - Pos1, TempText)
+		Else
+			GetTextRight(locationname, GetTextActualLength(locationname) - Pos1 + 1,  TempText)
+		End If
+		
+		TrimInternalSpaces(TempText)
+		
+		Pos1 := Pos2 + 1
+		ConcatenateText(formatedlocationname, formatedlocationname, TempText)
+		If Pos2 > 0 Then
+			ConcatenateText(formatedlocationname, formatedlocationname, ",")
+		End If
+		
+	Loop While Pos2 > 0
+
+	N := GetTextActualLength(formatedlocationname)
+	If N > 0 Then
+		// replace spaced(ASCII 32 dec) with + sign (ASCII 43 dec)
+		For N := 1 To N
+			If formatedlocationname[N] = 32 Then
+				formatedlocationname[N] := 43
+			End If
+		End For
+	End If
+
+End Function
+
+
+Private Function TrimInternalSpaces (ByRef mytext As Text)
+Private Var In As Long := 1
+Private Var Out As Long := 1
+Private Var OneChar As Text[1]
+Private Var CharCount As Long
+
+	TrimText (mytext, mytext)
+	
+	CharCount := GetTextActualLength(mytext)
+
+	If CharCount = 0 Then
+		Return
+	End If
+	
+	Do 
+		GetTextMiddle(mytext, In, 1, OneChar)
+		If OneChar <> " " Then
+			mytext[Out] := mytext[In]
+			Out += 1
+			In += 1
+		Else
+			mytext[Out] := mytext[In]
+			Out += 1
+			In += 1
+			GetTextMiddle(mytext, In, 1, OneChar)
+			Do While OneChar = " "
+				In += 1
+				GetTextMiddle(mytext, In, 1, OneChar)
+			End Do
+			mytext[Out] := mytext[In]
+			Out += 1
+			In += 1
+		End If
+			
+	Loop While In <= CharCount
+
+	SetTextActualLength(mytext, Out - 1)
+	
+End Function
+
+
+Private Function GetErrorText(newerror As Long) As AddressOf Text
+	Select newerror
+		Case Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_WRONG_CONNECTION_PARAMETERS
+			Return Value txtErrorWrongConnectionParameters
+		Case Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_WRONG_CONNECTION_TIMEOUT
+			Return Value txtErrorWrongConnectionTimeout
+		Case Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_CONNECTION_FAILED
+			Return Value txtErrorConnectionFailed
+		Case Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_DATA_TOO_LONG
+			Return Value txtErrorBufferOverflow
+		Case Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_UNSUPPORTED_FORMAT
+			Return Value txtErrorUnsupportedFormat
+		Case Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_400_BAD_REQUEST
+			Return Value txtError400BadRequest
+		Case Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_401_UNAUTHORIZED
+			Return Value txtError401Unauthorized
+		Case Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_WRONG_SERVER_ANSWER
+			Return Value txtErrorWrongServerAnswer
+		Case Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_WRONG_PARAMETERS
+			Return Value txtErrorWrongParameters
+		Case Namespace "CUE.Applet.DailyWeatherFromApixu.1".ERROR_LOCATION_NOT_SPECIFIED
+			Return Value txtErrorLocationNotSpecified
+		Case Else
+			Return Value txtErrorUnknown
+	End Select
+
+End Function
+
+
+Private Function TranslateText (texttotranslate As Text, ByRef translatedtext As Text)
+Private Var TempText As Text[Namespace "CUE.Applet.DailyWeatherFromApixu.1".TEXT_LENGHT]
+Private Var Pos1 As Long := 1
+Private Var Pos2 As Long
+
+	translatedtext := ""
+
+	Do
+		Pos2 := GetSubTextPosition(texttotranslate, " / ", Pos1, False)
+		If Pos2 > 0 Then
+			GetTextMiddle(texttotranslate, Pos1, Pos2 - Pos1, TempText)
+		Else
+			GetTextRight(texttotranslate, GetTextActualLength(texttotranslate) - Pos1 + 1,  TempText)
+		End If
+		
+		Pos1 := Pos2 + 3
+		ConcatenateText(translatedtext, translatedtext, TranslateTextInt(TempText))
+		If Pos2 > 0 Then
+			ConcatenateText(translatedtext, translatedtext, " / ")
+		End If
+		
+	Loop While Pos2 > 0
+
+End Function
+
+
+
+Private Function TranslateTextInt (texttotranslate As Text) As AddressOf Text
+Private Var MyTrimText As Text[100]
+	
+	TextToLowercase(texttotranslate, MyTrimText)
+	TrimInternalSpaces(MyTrimText)
+	
+	Select MyTrimText
+		Case "n/a"								Return Value txtNotAvailable
+		Case "n"								Return Value txtN
+		Case "nne"								Return Value txtNNE
+		Case "ne"								Return Value txtNE
+		Case "ene"								Return Value txtENE
+		Case "e"								Return Value txtE
+		Case "ese"								Return Value txtESE
+		Case "se"								Return Value txtSE
+		Case "sse"								Return Value txtSSE
+		Case "s"								Return Value txtS
+		Case "ssw"								Return Value txtSSW
+		Case "sw"								Return Value txtSW
+		Case "wsw"								Return Value txtWSW
+		Case "w"								Return Value txtW
+		Case "wnw"								Return Value txtWNW
+		Case "nw"								Return Value txtNW
+		Case "nnw"								Return Value txtNNW
+		Case Else 								Return Value texttotranslate
+	End Select
+
+End Function
+
+
+// ------------------------------------------------------------------------------------------------
+// Day class
+// ------------------------------------------------------------------------------------------------
+
+Private GraphicClass c_DayForecast Inherits BaseGraphicClass
+
+// Objects for main view
+Private Var DayName 		As c_Text
+Private Var Hi 				As c_Temperature
+Private Var Low 			As c_Temperature
+Private Var Average			As c_Temperature
+Private Var LowLabel		As c_Text
+Private Var HiLabel			As c_Text
+Private Var AvgLabel		As c_Text
+
+// Additional objects for detail view
+Private Var DetailDayName	As c_Text
+Private Var DetailDesc		As c_Text
+Private Var DetailOther		As c_LongText
+Private Var DetailOtherLeft	As c_LongText
+Private Var DetailOtherRight As c_LongText
+Private Var DetailHi 		As c_Temperature
+Private Var DetailLow 		As c_Temperature
+Private Var DetailAverage	As c_Temperature
+Private Var DetailLowLabel	As c_Text
+Private Var DetailHiLabel	As c_Text
+Private Var DetailAvgLabel	As c_Text
+
+// Image of weather
+Private Var Icon 			As AddressOf _Picture := Nothing
+Private Var IconX 			As Long
+Private Var IconY 			As Long
+Private Var IconWidth		As Long
+Private Var IconHeight		As Long
+
+Private Var DetailIconX 		As Long
+Private Var DetailIconY 		As Long
+Private Var DetailIconWidth		As Long
+Private Var DetailIconHeight	As Long
+
+// Helpers for detail view
+Private Var DetailShown			As Boolean := False	
+Private Var Click				As Boolean := False 
+Private Var OtherTwoColumn		As Boolean := False
+
+// Day object parameters
+Private Var WeatherWidth 		As Long	
+Private Var WeatherHeight 		As Long	
+Private Var ObjectWidth 		As Long
+Private Var ObjectHeight 		As Long
+Private Var ObjectExpandedWidth As Long
+Private Var ObjectExpandedHeight As Long
+Private Var PositionX 			As Long
+Private Var PositionY 			As Long
+Private Var PositionExpandedX 	As Long	
+Private Var PositionExpandedY 	As Long
+
+// Fonts
+Private Var DayFont 				As AddressOf _Font
+Private Var TempFont 				As AddressOf _Font
+Private Var TempLabelFont 			As AddressOf _Font
+
+Private Var DetailDayFont 			As AddressOf _Font
+Private Var DetailDescFont 			As AddressOf _Font
+Private Var DetailTempFont 			As AddressOf _Font
+Private Var DetailTempLabelFont 	As AddressOf _Font
+Private Var DetailOtherFont 		As AddressOf _Font
+
+// Variables
+//Private Var LoHiY				As Long
+Private Var DayHeight 			As Long
+Private Var TempWidth 			As Long
+Private Var TempHeight 			As Long
+Private Var TempLabelHeight 			As Long
+
+Private Var DetailDayHeight 	As Long
+Private Var SpaceInside			As Long
+// Set up data into all objects
+Public Function SetData(newdata As Namespace "CUE.Applet.DailyWeatherFromApixu.1".WeatherForecastDayStructure, newsettings As SettingsStructure)
+Private Var MyText As Text[Namespace "CUE.Applet.DailyWeatherFromApixu.1".TEXT_LONG_LENGHT] := ""
+Private Var TmpText As Text[Namespace "CUE.Applet.DailyWeatherFromApixu.1".TEXT_LONG_LENGHT] := ""
+Private Var WeatherDescriptionText As Text[Namespace "CUE.Applet.DailyWeatherFromApixu.1".TEXT_LONG_LENGHT] := ""
+
+	LockRedraw()
+		DayName.SetText(GetDayNameFromEpochTime(newdata.date_epoch))
+		DetailDayName.SetText(GetDayNameFromEpochTime(newdata.date_epoch))
+		Icon := GetWeatherIcon(newdata.day.condition.icon)
+		
+		Hi.SetTemperature(newdata.day.maxtemp_c, newdata.day.maxtemp_f, newsettings)
+		Low.SetTemperature(newdata.day.mintemp_c, newdata.day.mintemp_f, newsettings)
+		Average.SetTemperature(newdata.day.avgtemp_c, newdata.day.avgtemp_f, newsettings)
+		HiLabel.SetText(txtMax)
+		LowLabel.SetText(txtMin)
+		AvgLabel.SetText(txtAvg)
+		
+		// Detail weather description
+		GetWeatherDescription(newdata.day.condition, WeatherDescriptionText)
+		//DetailDescFont := GetMaxFont(DefaultWeatherDescriptionFont, WeatherDescriptionWidth, WeatherDescriptionText, GetFontFromIndex(GetFontIndex(DefaultWeatherDescriptionFont) + 3))
+		DetailDesc.SetText(WeatherDescriptionText)
+		
+		// Temperatures in detail
+		DetailHi.SetTemperature(newdata.day.maxtemp_c, newdata.day.maxtemp_f, newsettings)
+		DetailLow.SetTemperature(newdata.day.mintemp_c, newdata.day.mintemp_f, newsettings)
+		DetailAverage.SetTemperature(newdata.day.avgtemp_c, newdata.day.avgtemp_f, newsettings)
+		DetailHiLabel.SetText(txtMax)
+		DetailLowLabel.SetText(txtMin)
+		DetailAvgLabel.SetText(txtAvg)
+		
+		//If OtherTwoColumn Then
+			//wind
+			If newdata.day.maxwind_kph <> Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE And newdata.day.maxwind_mph <> Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE Then
+				FormatWindText (TmpText, newdata.day.maxwind_kph, newdata.day.maxwind_mph, "", newsettings, txtWindLabel)
+				ConcatenateText(MyText, TmpText, "\000D\000A")
+			End If
+			
+			//humidity
+			If newdata.day.avghumidity <> Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE Then
+				FormatPercent(TmpText, newdata.day.avghumidity, txtHumidity)
+				ConcatenateText(MyText, MyText, TmpText, "\000D\000A")
+			End If
+			
+			//visibility
+			If newdata.day.avgvis_km <> Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE And newdata.day.avgvis_miles <> Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE Then
+				FormatDistance(TmpText, newdata.day.avgvis_km, newdata.day.avgvis_miles, newsettings, txtVisibility)
+				ConcatenateText(MyText, MyText, TmpText, "\000D\000A")
+			End If
+				
+			//precipitations
+			If newdata.day.totalprecip_mm <> Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE And newdata.day.totalprecip_in <> Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE Then
+				FormatPrecipitations(TmpText, newdata.day.totalprecip_mm, newdata.day.totalprecip_in, newsettings, txtPrecipitations)
+				ConcatenateText(MyText, MyText, TmpText, "\000D\000A")
+			End If
+			
+			DetailOther.SetText(MyText)
+			MyText := ""
+		//Else
+			//wind
+			If newdata.day.maxwind_kph <> Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE And newdata.day.maxwind_mph <> Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE Then
+				FormatWindText (TmpText, newdata.day.maxwind_kph, newdata.day.maxwind_mph, "", newsettings, txtWindLabel)
+				ConcatenateText(MyText, TmpText, "\000D\000A")
+			End If
+			
+			//humidity
+			If newdata.day.avghumidity <> Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE Then
+				FormatPercent(TmpText, newdata.day.avghumidity, txtHumidity)
+				ConcatenateText(MyText, MyText, TmpText, "\000D\000A")
+			End If
+			
+			DetailOtherLeft.SetText(MyText)
+			MyText := ""
+			
+			//visibility
+			If newdata.day.avgvis_km <> Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE And newdata.day.avgvis_miles <> Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE Then
+				FormatDistance(TmpText, newdata.day.avgvis_km, newdata.day.avgvis_miles, newsettings, txtVisibility)
+				ConcatenateText(MyText, TmpText, "\000D\000A")
+			End If
+				
+			//precipitations
+			If newdata.day.totalprecip_mm <> Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE And newdata.day.totalprecip_in <> Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE Then
+				FormatPrecipitations(TmpText, newdata.day.totalprecip_mm, newdata.day.totalprecip_in, newsettings, txtPrecipitations)
+				ConcatenateText(MyText, MyText, TmpText, "\000D\000A")
+			End If
+				
+			DetailOtherRight.SetText(MyText)
+			MyText := ""
+		//End If
+		
+	UnlockRedraw()	
+	Redraw()
+	
+End Function
+
+// Draw shadow around detail view
+Protected Function DrawShadow()
+	DrawPicture(picShadow_LU, 0, 0, -1, -1, 0, 0)
+	DrawPicture(picShadow_LD, 0, ObjectExpandedHeight - picShadow_LD.GetHeight(), -1, -1, 0, 0)
+	DrawPicture(picShadow_RU, ObjectExpandedWidth - picShadow_RU.GetWidth(), 0, -1, -1, 0, 0)
+	DrawPicture(picShadow_RD, ObjectExpandedWidth - picShadow_RD.GetWidth(), ObjectExpandedHeight - picShadow_LD.GetHeight(), -1, -1, 0, 0)
+	DrawStretchedPicture(picShadow_L, 0, picShadow_LU.GetHeight(), picShadow_L.GetWidth(), ObjectExpandedHeight - 2 * picShadow_LU.GetHeight(), 0, 0, -1, -1)
+	DrawStretchedPicture(picShadow_R, ObjectExpandedWidth - picShadow_R.GetWidth(), picShadow_LU.GetHeight(), picShadow_R.GetWidth(), ObjectExpandedHeight - 2 * picShadow_LU.GetHeight(), 0, 0, -1, -1)
+	DrawStretchedPicture(picShadow_U, picShadow_LU.GetWidth(), 0, ObjectExpandedWidth - 2 * picShadow_LU.GetWidth(), picShadow_U.GetHeight(), 0, 0, -1, -1)
+	DrawStretchedPicture(picShadow_D, picShadow_LU.GetWidth(), ObjectExpandedHeight - picShadow_D.GetHeight(), ObjectExpandedWidth - 2 * picShadow_LU.GetWidth(), picShadow_U.GetHeight(), 0, 0, -1, -1)
+End Function
+
+
+// calculate position of detail object
+Public Function CalculateExpandedPosition()
+Private Var CenterPositionX As Long
+
+	CenterPositionX := PositionX - ObjectExpandedWidth / 2 + ObjectWidth /2
+	If CenterPositionX < 0 Then
+		PositionExpandedX := 0
+	ElseIf CenterPositionX > WeatherWidth - ObjectExpandedWidth Then
+		PositionExpandedX := WeatherWidth - ObjectExpandedWidth
+	Else
+		PositionExpandedX := CenterPositionX
+	End If
+	
+	PositionExpandedY := WeatherHeight - ObjectExpandedHeight
+End Function
+
+
+Public Function SetExpandedParameters(newDetailDayHeight As Long, RowWeatherY As Long, RowTempY As Long, RowOtherY As Long, RowHeightKoef As Long, TempHeight As Long, TempWidth As Long, TempVSpace As Long, OtherWidth As Long, newOtherTwoColumn As Boolean)
+
+	OtherTwoColumn := newOtherTwoColumn
+	
+	// Day name
+	DetailDayHeight := newDetailDayHeight
+	DetailDayName.SetParameters(
+		SHADOWOFFSET, SHADOWOFFSET, ObjectExpandedWidth - 2 * SHADOWOFFSET, DetailDayHeight,
+		DetailDayFont, clrStandardText, _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER BitOr _TEXT_SINGLELINE)
+	
+	// weather row
+	DetailIconWidth := TempWidth
+	DetailIconHeight := DetailIconWidth * (CDouble (pic000d.GetHeight()) / pic000d.GetWidth())
+	If DetailIconHeight > (3 * RowHeightKoef) Then
+		DetailIconHeight := 3 * RowHeightKoef
+		DetailIconWidth := DetailIconHeight * (CDouble (pic000d.GetWidth()) / pic000d.GetHeight())
+	End If
+	
+	DetailIconX := SHADOWOFFSET + SpaceInside + (CDouble(TempWidth / 2)) - (CDouble(DetailIconWidth / 2)) + (DetailIconWidth / 6)
+	DetailIconY := DetailDayHeight + SHADOWOFFSET + SpaceInside + (3 * RowHeightKoef / 2) - (DetailIconHeight / 2) + (DetailIconHeight / 8)
+	
+	DetailDesc.SetParameters(
+		SHADOWOFFSET + TempWidth + 2 * SpaceInside, RowWeatherY - SpaceInside,
+		2 * TempWidth + SpaceInside, 3 * RowHeightKoef + 2 * SpaceInside,
+		DetailDescFont, clrStandardText,
+		_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER BitOr _TEXT_WORDWRAP, FORECAST_DETAILS_LINE_SPACING)
+	
+	// temperatures
+	DetailLow.SetParameters(
+		SHADOWOFFSET + SpaceInside, RowTempY,
+		TempWidth, TempHeight,
+		DetailTempFont, clrLowTemperatureFont,
+		_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNBOTTOM BitOr _TEXT_SINGLELINE)
+
+	DetailAverage.SetParameters(
+		TempWidth + SHADOWOFFSET + 2 * SpaceInside, RowTempY,
+		TempWidth, TempHeight,
+		DetailTempFont, clrAvgTemperatureFont,
+		_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNBOTTOM BitOr _TEXT_SINGLELINE)
+		
+	DetailHi.SetParameters(
+		2 * TempWidth + SHADOWOFFSET + 3 * SpaceInside, RowTempY,
+		TempWidth, TempHeight,
+		DetailTempFont, clrHiTemperatureFont,
+		_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNBOTTOM BitOr _TEXT_SINGLELINE)
+	
+	// temperature labels
+	DetailLowLabel.SetParameters(
+		SHADOWOFFSET + SpaceInside, RowTempY + TempHeight + TempVSpace,
+		TempWidth, TempHeight - TempVSpace,
+		DetailTempLabelFont, clrLowTemperatureFont,
+		_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNTOP BitOr _TEXT_SINGLELINE)
+	
+	DetailAvgLabel.SetParameters(
+		TempWidth + SHADOWOFFSET + 2 * SpaceInside, RowTempY + TempHeight + TempVSpace,
+		TempWidth, TempHeight - TempVSpace,
+		DetailTempLabelFont, clrAvgTemperatureFont,
+		_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNTOP BitOr _TEXT_SINGLELINE)
+		
+	DetailHiLabel.SetParameters(
+		2 * TempWidth + SHADOWOFFSET + 3 * SpaceInside, RowTempY + TempHeight + TempVSpace,
+		TempWidth, TempHeight - TempVSpace,
+		DetailTempLabelFont, clrHiTemperatureFont,
+		_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNTOP BitOr _TEXT_SINGLELINE)
+	
+	// other values
+	If OtherTwoColumn Then
+		DetailOtherLeft.SetParameters(
+			SHADOWOFFSET + SpaceInside, RowOtherY,
+			OtherWidth, 3 * RowHeightKoef,
+			DetailOtherFont, clrDetailsFont,
+			_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER, FORECAST_DETAILS_LINE_SPACING)
+			
+		DetailOtherRight.SetParameters(
+			SHADOWOFFSET + 2 * SpaceInside + OtherWidth, RowOtherY,
+			OtherWidth, 3 * RowHeightKoef,
+			DetailOtherFont, clrDetailsFont,
+			_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER, FORECAST_DETAILS_LINE_SPACING)
+	Else
+		DetailOther.SetParameters(
+			SHADOWOFFSET + SpaceInside, RowOtherY,
+			OtherWidth, 4 * RowHeightKoef,
+			DetailOtherFont, clrDetailsFont,
+			_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER, FORECAST_DETAILS_LINE_SPACING)
+	End If
+	
+	SetShowDetails(False)
+	
+End Function
+
+Public Function SetDayParameters(newDayHeight As Long, newTempWidth As Long, newTempHeight As Long, newTempLabelHeight As Long)
+Private Var isAvgShown As Boolean := False
+
+	DetailShown := False
+	Click := False
+
+	DayHeight := newDayHeight
+	TempWidth := newTempWidth
+	TempHeight := newTempHeight
+	TempLabelHeight := newTempLabelHeight
+	
+	// day name
+	DayName.SetParameters(
+		0, 0,
+		ObjectWidth, DayHeight,
+		DayFont, clrStandardText,
+		_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER BitOr _TEXT_SINGLELINE)
+	
+	IconWidth := ObjectWidth
+	IconHeight := IconWidth * (CDouble (pic000d.GetHeight()) / pic000d.GetWidth())
+	If IconHeight > (ObjectHeight - DayHeight - TempHeight - TempLabelHeight - SpaceInside) Then
+		IconHeight := (ObjectHeight - DayHeight - TempHeight - TempLabelHeight - SpaceInside)
+		IconWidth := IconHeight * (CDouble (pic000d.GetWidth()) / pic000d.GetHeight())
+	End If
+	
+	IconX := (ObjectWidth / 2) - (IconWidth / 2) + (IconWidth / 6)
+	
+	If (ObjectHeight - DayHeight - IconHeight - 2 * TempHeight - 2 * TempLabelHeight - 3 * SpaceInside) > (TempHeight + TempLabelHeight + SpaceInside) Then
+			
+		IconY := DayHeight + ((ObjectHeight - DayHeight - 3 * TempHeight - 3 * TempLabelHeight - 3 * SpaceInside)/2 - IconHeight/2) + (IconHeight / 8)
+		
+		// temperature
+		Low.SetParameters(
+			0, ObjectHeight - 4 * SpaceInside - 3 * TempHeight - 3 * TempLabelHeight,
+			ObjectWidth, TempHeight,
+			TempFont, clrLowTemperatureFont,
+			_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER BitOr _TEXT_SINGLELINE)
+	
+		Hi.SetParameters(
+			0, ObjectHeight - 3 * SpaceInside - 2 * TempHeight - 2 * TempLabelHeight,
+			ObjectWidth, TempHeight,
+			TempFont, clrHiTemperatureFont,
+			_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER BitOr _TEXT_SINGLELINE)
+			
+		Average.SetParameters(
+			0, ObjectHeight - SpaceInside - TempLabelHeight - TempHeight,
+			ObjectWidth, TempHeight,
+			TempFont, clrHiTemperatureFont,
+			_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER BitOr _TEXT_SINGLELINE)
+			
+		// labels
+		LowLabel.SetParameters(
+			0, ObjectHeight - 4 * SpaceInside - 3 * TempLabelHeight - 2 * TempHeight,
+			ObjectWidth, TempLabelHeight,
+			TempLabelFont, clrLowTemperatureFont,
+			_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER BitOr _TEXT_SINGLELINE)
+			
+		HiLabel.SetParameters(
+			0, ObjectHeight - 3 * SpaceInside - 2 * TempLabelHeight - TempHeight,
+			ObjectWidth, TempLabelHeight,
+			TempLabelFont, clrHiTemperatureFont,
+			_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER BitOr _TEXT_SINGLELINE)
+			
+		AvgLabel.SetParameters(
+			0, ObjectHeight - SpaceInside - TempLabelHeight,
+			ObjectWidth, TempLabelHeight,
+			TempLabelFont, clrHiTemperatureFont,
+			_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER BitOr _TEXT_SINGLELINE)
+			
+	ElseIf (ObjectHeight - DayHeight - IconHeight - TempHeight - TempLabelHeight - SpaceInside) > (TempHeight + TempLabelHeight + 2* SpaceInside) Then
+			
+		IconY := DayHeight + ((ObjectHeight - DayHeight - 2 * TempHeight - 2 * TempLabelHeight - 3 * SpaceInside)/2 - IconHeight/2) + (IconHeight / 8)
+		
+		// temperature
+		Low.SetParameters(
+			0, ObjectHeight - SpaceInside - TempHeight - TempLabelHeight - (TempHeight + TempLabelHeight + 2* SpaceInside),
+			TempWidth, TempHeight,
+			TempFont, clrLowTemperatureFont,
+			_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER BitOr _TEXT_SINGLELINE)
+	
+		Hi.SetParameters(
+			TempWidth, ObjectHeight - SpaceInside - TempHeight - TempLabelHeight - (TempHeight + TempLabelHeight + 2* SpaceInside),
+			TempWidth, TempHeight,
+			TempFont, clrHiTemperatureFont,
+			_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER BitOr _TEXT_SINGLELINE)
+			
+		Average.SetParameters(
+			0, ObjectHeight - SpaceInside - TempHeight - TempLabelHeight,
+			ObjectWidth, TempHeight,
+			TempFont, clrHiTemperatureFont,
+			_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER BitOr _TEXT_SINGLELINE)
+			
+		// labels
+		LowLabel.SetParameters(
+			0, ObjectHeight - SpaceInside - TempLabelHeight - (TempHeight + TempLabelHeight + 2* SpaceInside),
+			TempWidth, TempLabelHeight,
+			TempLabelFont, clrLowTemperatureFont,
+			_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER BitOr _TEXT_SINGLELINE)
+			
+		HiLabel.SetParameters(
+			TempWidth, ObjectHeight - SpaceInside - TempLabelHeight - (TempHeight + TempLabelHeight + 2* SpaceInside),
+			TempWidth, TempLabelHeight,
+			TempLabelFont, clrHiTemperatureFont,
+			_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER BitOr _TEXT_SINGLELINE)
+			
+		AvgLabel.SetParameters(
+			0, ObjectHeight - SpaceInside - TempLabelHeight,
+			ObjectWidth, TempLabelHeight,
+			TempLabelFont, clrHiTemperatureFont,
+			_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER BitOr _TEXT_SINGLELINE)
+			
+	Else
+		IconY := DayHeight + ((ObjectHeight - DayHeight - TempHeight - TempLabelHeight - SpaceInside)/2 - IconHeight/2) + (IconHeight / 8)
+		
+		// temperature
+		Low.SetParameters(
+			0, ObjectHeight - SpaceInside - TempHeight - TempLabelHeight,
+			TempWidth, TempHeight,
+			TempFont, clrLowTemperatureFont,
+			_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER BitOr _TEXT_SINGLELINE)
+	
+		Hi.SetParameters(
+			TempWidth, ObjectHeight - SpaceInside - TempHeight - TempLabelHeight,
+			TempWidth, TempHeight,
+			TempFont, clrHiTemperatureFont,
+			_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER BitOr _TEXT_SINGLELINE)
+			
+		// labels
+		LowLabel.SetParameters(
+			0, ObjectHeight - SpaceInside - TempLabelHeight,
+			TempWidth, TempLabelHeight,
+			TempLabelFont, clrLowTemperatureFont,
+			_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER BitOr _TEXT_SINGLELINE)
+			
+		HiLabel.SetParameters(
+			TempWidth, ObjectHeight - SpaceInside - TempLabelHeight,
+			TempWidth, TempLabelHeight,
+			TempLabelFont, clrHiTemperatureFont,
+			_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER BitOr _TEXT_SINGLELINE)
+	End If
+	ShowOverview()
+End Function
+
+
+// Set size, position and fonts. Call CalculateDimensions.
+Public Function SetObjectDimensions(newwidth As Long, newheight As Long, expandedWidth As Long, expandedHeight As Long, space As Long)
+
+	SetSize(newwidth, newheight)
+	
+	GetSize(ObjectWidth, ObjectHeight)
+	GetParent().GetSize(WeatherWidth, WeatherHeight)
+	GetPosition(PositionX, PositionY)
+	
+	ObjectExpandedWidth := expandedWidth
+	ObjectExpandedHeight := expandedHeight
+	SpaceInside := space
+	
+	CalculateExpandedPosition()
+	
+End Function
+
+Public Function SetDayFonts(newDayFont As AddressOf _Font, newTempFont As AddressOf _Font, newTempLabelFont As AddressOf _Font) 	
+	DayFont 				:= newDayFont
+	TempFont				:= newTempFont
+	TempLabelFont			:= newTempLabelFont
+End Function
+
+Public Function SetExtendedDayFonts (newDetailDayFont As AddressOf _Font, newDetailDescFont As AddressOf _Font, newDetailTempFont  As AddressOf _Font, newDetailTempLabelFont As AddressOf _Font, newDetailOtherFont As AddressOf _Font) 
+	DetailDayFont 			:= newDetailDayFont
+	DetailDescFont			:= newDetailDescFont
+	DetailTempFont			:= newDetailTempFont
+	DetailTempLabelFont		:= newDetailTempLabelFont
+	DetailOtherFont			:= newDetailOtherFont
+End Function
+
+
+// Set object parameters
+Private Function DrawObject(X As Long, Y As Long, Width As Long, Height As Long)
+	SetPosition(X, Y)
+	SetSize(Width, Height)
+End Function
+
+Private Function ShowDetail ()
+	DrawObject(PositionExpandedX, PositionExpandedY, ObjectExpandedWidth, ObjectExpandedHeight)
+	
+	DetailDayName.Show()
+	DetailDesc.Show()
+	DetailHi.Show()
+	DetailLow.Show()
+	DetailAverage.Show()
+	DetailLowLabel.Show()
+	DetailHiLabel.Show()
+	DetailAvgLabel.Show()
+	
+	If OtherTwoColumn Then
+		DetailOtherLeft.Show()
+		DetailOtherRight.Show()
+	Else
+		DetailOther.Show()
+	End If
+	
+	Me.BringToFront()
+End Function
+
+Private Function ShowOverview ()
+	DrawObject(PositionX, PositionY, ObjectWidth, ObjectHeight)
+	
+	DayName.Show()
+	Hi.Show()
+	HiLabel.Show()
+	Low.Show()
+	LowLabel.Show()
+	Average.Show()
+	AvgLabel.Show()
+	Me.SendToDefault()
+End Function
+
+Private Function HideDetail ()
+	DetailDayName.Hide()
+	DetailDesc.Hide()
+	DetailHi.Hide()
+	DetailLow.Hide()
+	DetailAverage.Hide()
+	DetailLowLabel.Hide()
+	DetailHiLabel.Hide()
+	DetailAvgLabel.Hide()
+	If OtherTwoColumn Then
+		DetailOtherLeft.Hide()
+		DetailOtherRight.Hide()
+	Else
+		DetailOther.Hide()
+	End If
+End Function
+
+Private Function HideOverview ()
+	DayName.Hide()
+	Hi.Hide()
+	HiLabel.Hide()
+	Low.Hide()
+	LowLabel.Hide()
+	Average.Hide()
+	AvgLabel.Hide()
+End Function
+
+// Call to show or hide detail of the day
+Public Function SetShowDetails(state As Boolean)
+
+	DetailShown := state
+	If state Then
+		HideOverview()
+		ShowDetail()
+	Else
+		HideDetail()
+		ShowOverview()
+	End If
+	
+End Function
+
+// Draw background (with or without shadow) and weather icon
+Protected Function OnDraw ()
+
+	If DetailShown Then
+		DrawRectangle(clrBackground, SHADOWOFFSET, SHADOWOFFSET, ObjectExpandedWidth - 2 * SHADOWOFFSET, ObjectExpandedHeight - 2 * SHADOWOFFSET)
+		DrawStretchedPicture(Icon, DetailIconX, DetailIconY, DetailIconWidth, DetailIconHeight)
+		DrawShadow()
+	Else
+		DrawRectangle(clrBackground)
+		DrawStretchedPicture(Icon, IconX, IconY, IconWidth, IconHeight)
+	End If
+		
+End Function
+
+// Click on the object of the day call process in main weather object
+Protected Function OnDown(x As Long, y As Long, eventtime As Time) As Boolean
+	Click := True
+	Return Value False		// This will call OnDown in main weather object
+End Function
+
+
+// SET and GET for some variables
+Public Function getDetailShown() As Boolean
+	Return Value DetailShown
+End Function
+
+Public Function setDetailShown(State As Boolean)
+	DetailShown := State
+End Function
+
+Public Function getClick() As Boolean
+	Return Value Click
+End Function
+
+Public Function setClick(State As Boolean)
+	Click := State
+End Function
+
+End GraphicClass
+
+
+// ------------------------------------------------------------------------------------------------
+// Current weather class
+// ------------------------------------------------------------------------------------------------
+
+Private GraphicClass c_CurrentWeather Inherits BaseGraphicClass
+
+// Objects
+Private Var Temperature 			As c_Temperature
+Private Var FeelsLikeTemperature 	As c_Temperature
+Private Var Location 				As c_Text
+Private Var LocationRegion 			As c_Text
+Private Var LocationCountry			As c_Text
+Private Var WeatherDescription		As c_Text
+Private Var Updated 				As c_Time
+Private Var WeatherDetails1			As c_LongText
+Private Var WeatherDetails2			As c_LongText
+
+// Variables
+Private Var ObjectWidth 				As Long
+Private Var ObjectHeight 				As Long
+Private Var ObjectExpandedHeight 		As Long
+Private Var BorderWidth					As Long
+
+Private Var BackgroundWidth 			As Long
+Private Var BackgroundHeight 			As Long
+
+Private Var Icon 							As AddressOf _Picture := pic000d
+Private Var DefaultLocationFont 			As AddressOf _Font
+Private Var DefaultWeatherDescriptionFont 	As AddressOf _Font
+Private Var LocationFont					As AddressOf _Font
+Private Var LocationDetailsFont				As AddressOf _Font
+Private Var WeatherDescriptionFont 			As AddressOf _Font
+
+Private Var LogoX					As Long
+Private Var LogoY					As Long
+Private Var LogoWidth				As Long
+Private Var LogoHeight				As Long
+Private Var LogoStretched			As Boolean
+
+Private Var LocationX 				As Long
+Private Var LocationY 				As Long
+Private Var LocationWidth 			As Long
+Private Var LocationHeight 			As Long
+Private Var LocationRegionY 		As Long
+Private Var LocationCountryY 		As Long
+Private Var LocationDetailsHeight	As Long
+
+Private Var WeatherDescriptionX 		As Long
+Private Var WeatherDescriptionY 		As Long
+Private Var WeatherDescriptionWidth		As Long
+Private Var WeatherDescriptionHeight	As Long
+
+Private Var IconX 				As Long
+Private Var IconY 				As Long
+Private Var IconWidth 			As Long
+Private Var IconHeight 			As Long
+
+Private Var TemperatureFont 	As AddressOf _Font
+Private Var TemperatureX 		As Long
+Private Var TemperatureY 		As Long
+Private Var TemperatureYFL		As Long
+Private Var TemperatureWidth 	As Long
+Private Var TemperatureHeight 	As Long
+
+Private Var MoonIconIndex 		As Long
+Private Var MoonIcons 			As AddressOf _Animation := aniMoonW65H65
+Private Var MoonIconX 			As Long
+Private Var MoonIconY 			As Long
+Private Var MoonIconWidth 		As Long
+Private Var MoonIconHeight 		As Long
+
+Private Var OptionalValuesFont	As AddressOf _Font := fntDefault18
+
+Private Var DetailShown			As Boolean := False
+Private Var Click				As Boolean := False
+
+Private Function Init ()
+	
+	LocationRegion.Hide()
+	LocationCountry.Hide()
+	WeatherDetails1.Hide()
+	WeatherDetails2.Hide()
+	DetailShown := False
+	Click := False
+	
+End Function
+
+
+Public Function SetObjectDimensions(newwidth As Long, newheight As Long, newborderwidth As Long)
+
+	SetSize(newwidth,newheight)
+	GetSize (ObjectWidth, ObjectHeight)
+	
+	BorderWidth := newborderwidth
+	
+	SetFontByDimensions()
+	CalculateDimensions()
+	
+End Function
+
+
+Protected Function SetFontByDimensions()
+Private Var ClearHeight As Long := ObjectHeight - 2 * BorderWidth
+
+	If ClearHeight > 220 Then
+		TemperatureFont := fntTemperatureX
+		DefaultLocationFont := fntDefault56
+		OptionalValuesFont := fntDefault23
+	ElseIf ClearHeight > 180 Then
+		TemperatureFont := fntTemperatureM
+		DefaultLocationFont := fntDefault44
+		OptionalValuesFont := fntDefault20
+	Else
+		TemperatureFont := fntTemperatureS
+		DefaultLocationFont := fntDefault37
+		OptionalValuesFont := fntDefault18
+	End If
+	
+	DefaultWeatherDescriptionFont := DefaultLocationFont
+	
+End Function
+
+
+Private Function CalculateDimensions()
+Private Var OptionalValuesHeight As Long
+Private Var UpdatedWidth As Long
+Private Var OptionalValuesY As Long
+Private Var FeelsLikeTemperatureX 		As Long
+Private Var FeelsLikeTemperatureWidth 	As Long
+Private Var DetailsHeight As Long
+Private Var DetailsY As Long
+
+	DetailsHeight := OptionalValuesFont.GetHeight() * DETAILS_LINE_SPACING * 6
+
+	ObjectExpandedHeight := ObjectHeight * 1.4 + BorderWidth
+	
+	BackgroundWidth := ObjectWidth - 2 * BorderWidth
+	BackgroundHeight := ObjectHeight - BorderWidth
+
+	LogoWidth := Min (ObjectWidth * 0.16, picWeatherLogo.GetWidth())
+	LogoHeight := LogoWidth * (CDouble (picWeatherLogo.GetHeight()) / picWeatherLogo.GetWidth())
+	LogoX := 2 * BorderWidth
+	LogoY := BackgroundHeight - 0.85 * LogoHeight
+	LogoStretched := LogoWidth < picWeatherLogo.GetWidth()
+	
+	IconHeight := BackgroundHeight * 0.65
+	IconWidth := IconHeight * (CDouble(Icon.GetWidth())/Icon.GetHeight())
+	IconX := (BackgroundWidth * 0.5) - (IconWidth * 0.28) + BorderWidth
+	IconY := BackgroundHeight * 0.08 + BorderWidth
+	
+	LocationY := SHADOWOFFSET * 1.25 + BorderWidth - DefaultLocationFont.GetHeight() * 0.16
+	LocationHeight := DefaultLocationFont.GetHeight() * 1.1
+	LocationWidth := BackgroundWidth * 0.45 - SHADOWOFFSET * 1.25
+	LocationX := BorderWidth + BackgroundWidth - LocationWidth - SHADOWOFFSET * 1.25
+	
+	LocationDetailsHeight := OptionalValuesFont.GetHeight() * DETAILS_LINE_SPACING
+	LocationRegionY := LocationY + LocationHeight
+	LocationCountryY :=LocationRegionY + LocationDetailsHeight
+	
+	WeatherDescriptionX := SHADOWOFFSET * 1.25 + BorderWidth
+	WeatherDescriptionY := LocationY
+	WeatherDescriptionHeight := BackgroundHeight / 2
+	WeatherDescriptionWidth := BackgroundWidth * 0.4 - SHADOWOFFSET * 1.25
+
+	TemperatureX	:= ObjectWidth * 0.4
+	TemperatureWidth := ObjectWidth - 2 * TemperatureX
+	
+	TemperatureHeight := TemperatureFont.GetHeight() * 1.8
+	TemperatureY	:= BackgroundHeight + BorderWidth - TemperatureHeight - SHADOWOFFSET * 1.25 + TemperatureFont.GetHeight() * 0.20
+	
+	FeelsLikeTemperatureWidth := BackgroundWidth * 0.4
+	FeelsLikeTemperatureX := (ObjectWidth - FeelsLikeTemperatureWidth) / 2
+	
+	OptionalValuesHeight := OptionalValuesFont.GetHeight() * 2
+	OptionalValuesY := BackgroundHeight + BorderWidth - OptionalValuesHeight - SHADOWOFFSET * 1.25 + OptionalValuesFont.GetHeight() * 0.20
+	
+	TemperatureYFL 	:= TemperatureY - OptionalValuesHeight * 0.8
+	
+	DetailsY :=  ObjectExpandedHeight - SHADOWOFFSET * 1.25 - BorderWidth - DetailsHeight + OptionalValuesFont.GetHeight() * 0.20
+
+	Updated.SetParameters(
+		LocationX, OptionalValuesY,
+		LocationWidth, OptionalValuesHeight,
+		OptionalValuesFont, clrDetailsFont,
+		_TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNBOTTOM BitOr _TEXT_SINGLELINE)
+		
+	FeelsLikeTemperature.SetParameters(
+		FeelsLikeTemperatureX, OptionalValuesY,
+		FeelsLikeTemperatureWidth, OptionalValuesHeight,
+		OptionalValuesFont, clrDetailsFont,
+		_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNBOTTOM BitOr _TEXT_SINGLELINE)
+		
+	WeatherDetails1.SetParameters(
+		WeatherDescriptionX, DetailsY,
+		BackgroundWidth / 2, DetailsHeight,
+		OptionalValuesFont, clrDetailsFont,
+		_TEXT_ALIGNLEFT BitOr _TEXT_ALIGNBOTTOM,
+		DETAILS_LINE_SPACING)
+		
+	WeatherDetails2.SetParameters(
+		LocationX - 150, DetailsY,
+		LocationWidth + 150, DetailsHeight,
+		OptionalValuesFont, clrDetailsFont,
+		_TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNBOTTOM,
+		DETAILS_LINE_SPACING)
+		
+	MoonIconHeight := ObjectExpandedHeight * 0.13
+	MoonIconWidth := MoonIconHeight * (CDouble(MoonIcons.GetWidth())/MoonIcons.GetHeight())
+	MoonIconX := LocationX + LocationWidth - DetailsHeight * 0.88 - MoonIconWidth//ObjectWidth * 0.6
+	MoonIconY := DetailsY + 0.53 * DetailsHeight
+	
+End Function
+
+
+Public Function SetShowDetails (State As Boolean)
+
+	DetailShown := State
+	
+	If State Then
+		SetSize(ObjectWidth, ObjectExpandedHeight)
+		LocationRegion.Show()
+		LocationCountry.Show()
+		WeatherDetails1.Show()
+		WeatherDetails2.Show()
+		Me.BringToFront()
+	Else
+		SetSize(ObjectWidth, ObjectHeight)
+		LocationRegion.Hide()
+		LocationCountry.Hide()
+		WeatherDetails1.Hide()
+		WeatherDetails2.Hide()
+		Me.SendToDefault()
+	End If
+	
+//	Redraw()
+
+End Function
+
+
+Protected Function DrawShadow()
+
+	DrawPicture(picShadow_LU, 0, 0, -1, -1, 0, 0)
+	DrawPicture(picShadow_LD, 0, ObjectExpandedHeight - picShadow_LD.GetHeight(), -1, -1, 0, 0)
+	DrawPicture(picShadow_RU, ObjectWidth - picShadow_RU.GetWidth(), 0, -1, -1, 0, 0)
+	DrawPicture(picShadow_RD, ObjectWidth - picShadow_RD.GetWidth(), ObjectExpandedHeight - picShadow_LD.GetHeight(), -1, -1, 0, 0)
+	DrawStretchedPicture(picShadow_L, 0, picShadow_LU.GetHeight(), picShadow_L.GetWidth(), ObjectExpandedHeight - 2 * picShadow_LU.GetHeight(), 0, 0, -1, -1)
+	DrawStretchedPicture(picShadow_R, ObjectWidth - picShadow_R.GetWidth(), picShadow_LU.GetHeight(), picShadow_R.GetWidth(), ObjectExpandedHeight - 2 * picShadow_LU.GetHeight(), 0, 0, -1, -1)
+	DrawStretchedPicture(picShadow_U,picShadow_LU.GetWidth(), 0, ObjectWidth - 2 * picShadow_LU.GetWidth(), picShadow_U.GetHeight(), 0, 0, -1, -1)
+	DrawStretchedPicture(picShadow_D,picShadow_LU.GetWidth(), ObjectExpandedHeight - picShadow_D.GetHeight(), ObjectWidth - 2 * picShadow_LU.GetWidth(), picShadow_U.GetHeight(), 0, 0, -1, -1)
+
+End Function
+
+
+Protected Function OnDown(x As Long, y As Long, eventtime As Time) As Boolean
+	Click := True
+	Return Value False
+End Function
+
+Public Function getDetailShown() As Boolean
+	Return Value DetailShown
+End Function
+
+Public Function setDetailShown(State As Boolean)
+	DetailShown := State
+End Function
+
+Public Function getClick() As Boolean
+	Return Value Click
+End Function
+
+Public Function setClick(State As Boolean)
+	Click := State
+End Function
+
+Private Function OnDraw()
+
+	If DetailShown Then
+		DrawRectangle(clrBackground, SHADOWOFFSET, SHADOWOFFSET, ObjectWidth - 2 * SHADOWOFFSET, ObjectExpandedHeight - 2 * SHADOWOFFSET)
+		DrawShadow()
+		DrawStretchedAnimationFrame(MoonIcons, MoonIconIndex, MoonIconX, MoonIconY, MoonIconWidth, MoonIconHeight)
+
+	Else
+		DrawRectangle(clrBackground, BorderWidth, BorderWidth, BackgroundWidth, BackgroundHeight)
+		
+		If LogoStretched Then
+			DrawStretchedPicture(picWeatherLogo, LogoX, LogoY, LogoWidth, LogoHeight)
+		Else
+			DrawPicture (picWeatherLogo, LogoX, LogoY)
+		End If
+	End If
+	
+	DrawStretchedPicture(Icon, IconX, IconY, IconWidth, IconHeight)
+	
+End Function
+
+
+Public Function TranslateLocation(translations As AddressOf Text, ByRef locationnametotranslate As Text)
+Private Var Line As Text[100]
+Private Var PosStart As Long := 1
+Private Var PosEnd As Long
+
+	If GetTextActualLength(locationnametotranslate) = 0 Then
+		Return
+	End If
+	
+	Do While True
+		PosEnd := GetSubTextPosition(translations, "\000A", PosStart, True)
+		If PosEnd > PosStart Then //nasel jsem radek
+			GetTextMiddle(translations, PosStart, PosEnd - PosStart, Line)
+			TrimText(Line, Line, " \000D\000A")
+			If GetSubTextPosition(Line, locationnametotranslate, 1, False) = 1 Then
+				GetTextRight(Line, GetTextActualLength(Line) - GetTextActualLength(locationnametotranslate), Line)
+				TrimTextLeft(Line, Line, " \000D\000A")
+				GetTextRight(Line, GetTextActualLength(Line) - 1, Line)
+				TrimTextLeft(Line, Line, " \000D\000A")
+				If GetTextActualLength(Line) > 0 Then
+					locationnametotranslate := Line
+					Exit Do
+				End If
+			End If
+			
+			PosStart := PosEnd + 1
+		Else
+			Exit Do
+		End If
+	
+	End Do
+	
+End Function
+
+
+Public Function SetData(
+	newcurrentconditions As Namespace "CUE.Applet.DailyWeatherFromApixu.1".CurrentWeatherStructure,
+	newdayforecast As Namespace "CUE.Applet.DailyWeatherFromApixu.1".WeatherForecastDayStructure,
+	newlocation As Namespace "CUE.Applet.DailyWeatherFromApixu.1".LocationStructure,
+	newsettings As SettingsStructure,
+	newlocationtranslations As AddressOf Text)
+	
+Private Var ShortLocationName As Text[Namespace "CUE.Applet.DailyWeatherFromApixu.1".TEXT_LENGHT]
+Private Var ShortRegionName As Text[Namespace "CUE.Applet.DailyWeatherFromApixu.1".TEXT_LENGHT]
+Private Var ShortCountryName As Text[Namespace "CUE.Applet.DailyWeatherFromApixu.1".TEXT_LENGHT]
+Private Var WeatherDescriptionText As Text[Namespace "CUE.Applet.DailyWeatherFromApixu.1".TEXT_LENGHT]
+Private Var I As Long
+
+Private Var MyText As Text[Namespace "CUE.Applet.DailyWeatherFromApixu.1".TEXT_LONG_LENGHT] := ""
+Private Var TmpText As Text [Namespace "CUE.Applet.DailyWeatherFromApixu.1".TEXT_LENGHT] := ""
+Private Var Sunrise As Time
+Private Var Sunset As Time
+Private Var SunriseSunsetError As Long
+
+	LockRedraw()
+	
+	Icon := GetWeatherIcon(newcurrentconditions.condition.icon)
+	Temperature.SetTemperature(newcurrentconditions.temp_c, newcurrentconditions.temp_f, newsettings, "")
+	
+	ShortLocationName := newlocation.name
+	TranslateLocation(newlocationtranslations, ShortLocationName)
+	
+	GetWeatherDescription(newcurrentconditions.condition, WeatherDescriptionText, newcurrentconditions.is_day)
+	LocationFont := GetMaxFont(DefaultLocationFont, LocationWidth, ShortLocationName, GetFontFromIndex(GetFontIndex(DefaultLocationFont) + 3))
+	WeatherDescriptionFont := GetMaxFont(DefaultWeatherDescriptionFont, WeatherDescriptionWidth, WeatherDescriptionText, GetFontFromIndex(GetFontIndex(DefaultWeatherDescriptionFont) + 3))
+
+	Location.SetParameters	(
+		LocationX, LocationY,
+		LocationWidth, LocationHeight,
+		LocationFont, clrStandardText,
+		_TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNTOP BitOr _TEXT_SINGLELINE)
+				
+	Location.SetText(ShortLocationName)
+	
+	ShortRegionName := newlocation.region
+	TranslateLocation(newlocationtranslations, ShortRegionName)
+	
+	I := GetFontIndex(GetMaxFont(OptionalValuesFont, LocationWidth, ShortRegionName, GetFontFromIndex(GetFontIndex(OptionalValuesFont) + 3)))
+	
+	ShortCountryName := newlocation.country
+	TranslateLocation(newlocationtranslations, ShortCountryName)
+	
+	I := Max(I, GetFontIndex(GetMaxFont(OptionalValuesFont, LocationWidth, ShortCountryName, GetFontFromIndex(GetFontIndex(OptionalValuesFont) + 3))))
+	
+	LocationDetailsFont := GetFontFromIndex(I)
+	
+	LocationRegion.SetParameters(
+		LocationX, LocationRegionY,
+		LocationWidth, LocationDetailsHeight,
+		LocationDetailsFont, clrDetailsFont,
+		_TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNTOP BitOr _TEXT_SINGLELINE)
+	
+	LocationRegion.SetText(ShortRegionName)
+	
+	LocationCountry.SetParameters(
+		LocationX, LocationCountryY,
+		LocationWidth, LocationDetailsHeight,
+		LocationDetailsFont, clrDetailsFont,
+		_TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNTOP BitOr _TEXT_SINGLELINE)
+	
+	LocationCountry.SetText(ShortCountryName)
+	
+	WeatherDescription.SetParameters(
+		WeatherDescriptionX, WeatherDescriptionY,
+		WeatherDescriptionWidth, WeatherDescriptionHeight,
+		WeatherDescriptionFont, clrStandardText,
+		_TEXT_ALIGNLEFT BitOr _TEXT_ALIGNTOP BitOr _TEXT_WORDWRAP,
+		1.2)
+		
+	WeatherDescription.SetText(WeatherDescriptionText)
+	
+	If newsettings.ShowFeelsLikeTemp Then
+		FeelsLikeTemperature.Show()
+		FeelsLikeTemperature.SetTemperature(newcurrentconditions.feelslike_c, newcurrentconditions.feelslike_f, newsettings, txtFeelsLike)
+		Temperature.SetParameters(
+			TemperatureX, TemperatureYFL,
+			TemperatureWidth, TemperatureHeight,
+			TemperatureFont, clrStandardText,
+			_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNBOTTOM BitOr _TEXT_SINGLELINE)
+	Else
+		FeelsLikeTemperature.Hide()
+		Temperature.SetParameters(
+			TemperatureX, TemperatureY,
+			TemperatureWidth, TemperatureHeight,
+			TemperatureFont, clrStandardText,
+			_TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNBOTTOM BitOr _TEXT_SINGLELINE)
+	End If
+	
+	If newsettings.ShowLastUpdateTime Then
+		Updated.Show()
+	Else
+		Updated.Hide()
+	End If
+		
+	Updated.SetValue (EpochTimeToTime(newcurrentconditions.last_updated_epoch), newsettings, txtLastUpdate)
+	
+	//pressure
+	FormatPressure(MyText, newcurrentconditions.pressure_mb, newcurrentconditions.pressure_in, newsettings, txtPressure)
+	
+	//wind
+	FormatWindText (TmpText, newcurrentconditions.wind_kph, newcurrentconditions.wind_mph, newcurrentconditions.wind_dir, newsettings, txtWindLabel)
+	ConcatenateText(MyText, MyText, "\000D\000A", TmpText, "\000D\000A")
+	
+	//humidity
+	If newcurrentconditions.humidity <> Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE Then
+		FormatPercent(TmpText, newcurrentconditions.humidity, txtHumidity)
+		ConcatenateText(MyText, MyText, TmpText, "\000D\000A")
+	End If
+	
+	//visibility
+	If newcurrentconditions.vis_km <> Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE And newcurrentconditions.vis_miles <> Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE Then
+		FormatDistance(TmpText, newcurrentconditions.vis_km, newcurrentconditions.vis_miles, newsettings, txtVisibility)
+		ConcatenateText(MyText, MyText, TmpText, "\000D\000A")
+	End If
+		
+	//precipitations
+	If newcurrentconditions.precip_mm <> Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE And newcurrentconditions.precip_in <> Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE Then
+		FormatPrecipitations(TmpText, newcurrentconditions.precip_mm, newcurrentconditions.precip_in, newsettings, txtPrecipitations)
+		ConcatenateText(MyText, MyText, TmpText, "\000D\000A")
+	End If
+	
+	//cloud cover
+	If newcurrentconditions.cloud <> Namespace "CUE.Applet.DailyWeatherFromApixu.1".VALUE_NOT_AVAILABLE Then
+		FormatPercent(TmpText, newcurrentconditions.cloud, txtCloudCover)
+		ConcatenateText(MyText, MyText, TmpText, "\000D\000A")
+	End If
+		
+	WeatherDetails1.SetText(MyText)
+	MyText := ""
+	
+	//sunrise and sunset
+	If newcurrentconditions.last_updated_epoch > 0 Then
+
+		Sunrise := TimeTextToTime(newdayforecast.astro.sunrise)
+		If Sunrise <> Namespace "CUE.Applet.DailyWeatherFromApixu.1".NO_TIME Then
+			FormatTime(MyText, Sunrise, newsettings, txtSunrise)
+			ConcatenateText(MyText, MyText, "\000D\000A")
+		End If
+		
+		Sunset := TimeTextToTime(newdayforecast.astro.sunset)
+		If Sunset <> Namespace "CUE.Applet.DailyWeatherFromApixu.1".NO_TIME Then
+			FormatTime(TmpText, Sunset, newsettings, txtSunset)
+			ConcatenateText(MyText, MyText, TmpText, "\000D\000A")
+		End If
+					
+	End If
+	
+	//moon phase
+	If GetMoonPhase(GetUTCTime(), MoonIconIndex, TmpText) Then
+		ConcatenateText(MyText, MyText, txtMoonPhase, " ", TmpText, "\000D\000A")	
+	End If
+	
+	WeatherDetails2.SetText(MyText)
+	
+	UnlockRedraw()
+	Redraw()
+	
+End Function
+
+Public Function getDefaultLocationFontIndex() As Long
+	Return Value GetFontIndex(DefaultLocationFont)
+End Function
+
+Public Function getOptionalValuesFontIndex() As Long
+	Return Value GetFontIndex(OptionalValuesFont)
+End Function
+
+End GraphicClass
+
+
+// ------------------------------------------------------------------------------------------------------------------
+// Main Class
+// ------------------------------------------------------------------------------------------------------------------
+
+Public GraphicClass DailyWeatherFromApixuGUI Inherits BaseGraphicClass WithAttributes
+{
+	ObjectCode := "OB0069-001",
+	DefaultWidth := 800,
+	DefaultHeight := 500
+}
+
+Public Property LocationID As Long := 1 WithAttributes
+{
+	PropertyGroup := "Behavior",
+	DisplayName := "DefaultLocation",
+	EditMode := "ENUM; 'Location1' := 1, 'Location2' := 2, 'Location3' := 3, 'Location4' := 4, 'Location5' := 5"
+}
+
+Public Property LocationTranslations As Text[Namespace "CUE.Applet.DailyWeatherFromApixu.1".TEXT_LONG_LENGHT] := "" WithAttributes
+{
+	PropertyGroup := "Appearance"
+}
+
+Public Property ShowFeelsLikeTemperature As Boolean := True WithAttributes
+{
+	PropertyGroup := "Appearance"
+}
+
+Public Property ShowLastUpdateTime As Boolean := True WithAttributes
+{
+	PropertyGroup := "Appearance"
+}
+
+Public Property ShowTemperatureUnits As Boolean := False WithAttributes
+{
+	PropertyGroup := "Appearance",
+	EditMode := "ENUM; 'No' := false, 'Yes' := true"
+}
+
+Public Property TemperatureUnits As Long := UNITS_CELSIUS WithAttributes
+{
+	PropertyGroup := "Appearance",
+	EditMode := "ENUM; 'Celsius' := 1, 'Fahrenheit' := 2"
+}
+
+Public Property TimeMode As Long := TIME_MODE_24HOUR WithAttributes
+{
+	PropertyGroup := "Appearance",
+	EditMode := "ENUM; '24 Hour' := 0, '12 Hour' := 1"
+}
+
+Public Property Units As Long := UNITS_METRIC WithAttributes
+{
+	PropertyGroup := "Appearance",
+	EditMode := "ENUM; 'Metric' := 3, 'Imperial' := 4"
+}
+
+Public Const UNITS_CELSIUS 						As Long := 1
+Public Const UNITS_FAHRENHEIT 					As Long := 2
+Public Const UNITS_METRIC 						As Long := 3
+Public Const UNITS_IMPERIAL 					As Long := 4
+Public Const TIME_MODE_24HOUR 					As Long := 0
+Public Const TIME_MODE_12HOUR 					As Long := 1
+Private Const UPDATE_TIMER	 					As Long := 1
+Private Const IDLE_TIMER	 					As Long := 2
+Private Const MAX_DAY_NAME_HIGHT 				As Long := 200
+
+// Objects
+Private Var CurrentWeather																As c_CurrentWeather
+Private Var DayForecast[Namespace "CUE.Applet.DailyWeatherFromApixu.1".MAX_FORECAST_DAYS]				As c_DayForecast
+Private Var MyErrorMessage 																As c_Text
+
+// Variables
+Private Var MySettings 				As SettingsStructure
+
+Private Var ObjectWidth 			As Long
+Private Var ObjectHeight 			As Long
+
+Private Var ShowLogo 				As Boolean := True
+Private Var LogoX					As Long
+Private Var LogoY					As Long
+Private Var LogoWidth				As Long
+Private Var LogoHeight				As Long
+Private Var LogoStretched			As Boolean
+
+Private Var ErrorState	 			As Boolean := False
+
+Private Var Weather 				As Namespace "CUE.Applet.DailyWeatherFromApixu.1".AllWeatherStructure
+
+Private Var BorderWidth 			As Long
+Private Var ForcastSpace 			As Double
+
+Private Var CurrentWeatherWidth		As Long
+Private Var CurrentWeatherHeight	As Long
+Private Var ForecastWidth 			As Long
+Private Var ForecastHeight 			As Long
+Private Var ForecastY 				As Long
+
+Private Var ErrorFont 				As AddressOf _Font := fntDefault37
+
+Private Var EnableApiKeyEdit 		As Boolean
+Private Var EnableSettings 			As Boolean
+
+Private Var DataLock 				As _Semaphore
+
+Public Event OnGetWeather 			As Function (locationid As Long, ByRef weatherforecast As Namespace "CUE.Applet.DailyWeatherFromApixu.1".AllWeatherStructure) As Boolean
+
+Private Var GetWeatherLoopRunning	As Boolean := False
+
+Private Var SomeDetailShown			As Boolean := False
+
+// font indexes of current weather
+Private Var LocationFontIndex 		As Long
+Private Var OptionalValuesFontIndex	As Long
+
+Protected Function Init ()
+	
+	TrimText(LocationTranslations, LocationTranslations, " \000A\000D")
+	ConcatenateText(LocationTranslations, LocationTranslations, "\000A")
+	
+	MyErrorMessage.Hide()
+	HideAllWeather(True)
+	
+	DataLock.Lock()
+	
+	MySettings.ShowLastUpdateTime 	:= ShowLastUpdateTime
+	MySettings.TemperatureUnits	 	:= TemperatureUnits
+	MySettings.TimeFormat			:= TimeMode
+	MySettings.Units				:= Units
+	MySettings.ShowTemperatureUnits	:= ShowTemperatureUnits
+	MySettings.ShowFeelsLikeTemp	:= ShowFeelsLikeTemperature
+	
+	CalculateDimensions()
+	
+	DataLock.Unlock()
+	SetFocus()
+	StartProcess GetWeatherLoop ()
+	
+End Function
+
+
+// call under DataLock
+Private Function HideAllDetails ()
+Private Var DayIndex As Long
+
+	LockRedraw()
+
+	processDetailView(False)
+	UnlockRedraw()
+	Redraw()
+	
+End Function
+
+
+Private Function HideAllWeather (detailsonly As Boolean)
+Private Var I As Long
+
+	LockRedraw()
+
+	CurrentWeather.SetShowDetails(False)
+	If detailsonly Then
+		CurrentWeather.Show()
+	Else
+		CurrentWeather.Hide()
+	End If
+	
+	For I := 1 To Namespace "CUE.Applet.DailyWeatherFromApixu.1".MAX_FORECAST_DAYS
+		If detailsonly Then
+			DayForecast[I].Show()
+		Else
+			DayForecast[I].Hide()
+		End If
+	End For
+	
+	UnlockRedraw()
+	Redraw()
+	
+End Function
+
+Protected Function OnTimer (timerid As Long)
+	If timerid = IDLE_TIMER Then
+		processDetailView(True)
+	End If
+	
+	If timerid = UPDATE_TIMER Then
+		StartProcess GetAndShowWeatherProcess ()
+	End If
+End Function
+
+Protected Function HideEverything()
+Private Var I As Long
+	If CurrentWeather.getDetailShown() Then
+		CurrentWeather.SetShowDetails(False)
+	End If
+	CurrentWeather.setClick(False)
+	
+	For I := 1 To Namespace "CUE.Applet.DailyWeatherFromApixu.1".MAX_FORECAST_DAYS
+		If DayForecast[I].getDetailShown() Then
+			DayForecast[I].SetShowDetails(False)
+		End If
+		DayForecast[I].setClick(False)
+	End For
+	SomeDetailShown := False
+End Function
+
+// proccess showing or hiding detail of weather
+Protected Function processDetailView(TimerStop As Boolean) As Boolean
+Private Var I As Long := 1
+Private Var J As Long := 1
+	
+	If SomeDetailShown And TimerStop Then
+		HideEverything()
+		StopTimer(IDLE_TIMER)
+		Return Value True
+	End If
+	
+	If SomeDetailShown Then
+		If CurrentWeather.getDetailShown() Then
+			If CurrentWeather.getClick() Then
+				HideEverything()
+				StopTimer(IDLE_TIMER)
+				Return Value True
+			End If
+			
+			For I := 1 To Namespace "CUE.Applet.DailyWeatherFromApixu.1".MAX_FORECAST_DAYS
+				If DayForecast[I].getClick() Then
+					HideEverything()
+					StopTimer(IDLE_TIMER)
+					
+					DayForecast[I].SetShowDetails(True)
+					DayForecast[I].setClick(False)
+					SomeDetailShown := True
+					StartTimer(IDLE_TIMER, IDLE_TIME)
+					Return Value True
+				End If
+			End For
+		End If
+		
+		For I := 1 To Namespace "CUE.Applet.DailyWeatherFromApixu.1".MAX_FORECAST_DAYS
+			If DayForecast[I].getDetailShown() Then
+				If DayForecast[I].getClick() Then
+					HideEverything()
+					StopTimer(IDLE_TIMER)
+					Return Value True
+				End If
+				
+				If CurrentWeather.getClick() Then
+					HideEverything()
+					StopTimer(IDLE_TIMER)
+					
+					CurrentWeather.SetShowDetails(True)
+					CurrentWeather.setClick(False)
+					SomeDetailShown := True
+					StartTimer(IDLE_TIMER, IDLE_TIME)
+					Return Value True
+				End If
+				
+				For J := 1 To Namespace "CUE.Applet.DailyWeatherFromApixu.1".MAX_FORECAST_DAYS
+					If DayForecast[J].getClick() Then
+						HideEverything()
+						StopTimer(IDLE_TIMER)
+						
+						DayForecast[J].SetShowDetails(True)
+						DayForecast[J].setClick(False)
+						SomeDetailShown := True
+						StartTimer(IDLE_TIMER, IDLE_TIME)
+						Return Value True
+					End If
+				End For
+				
+			End If
+		End For
+	Else
+		If CurrentWeather.getClick() Then
+			CurrentWeather.SetShowDetails(True)
+			CurrentWeather.setClick(False)
+			SomeDetailShown := True
+			StartTimer(IDLE_TIMER, IDLE_TIME)
+			Return Value True
+		End If
+		
+		For I := 1 To Namespace "CUE.Applet.DailyWeatherFromApixu.1".MAX_FORECAST_DAYS
+			If DayForecast[I].getClick() Then
+				DayForecast[I].SetShowDetails(True)
+				DayForecast[I].setClick(False)
+				SomeDetailShown := True
+				StartTimer(IDLE_TIMER, IDLE_TIME)
+				Return Value True
+			End If
+		End For
+	End If
+	
+	HideEverything()
+	StopTimer(IDLE_TIMER)
+	Return Value False
+End Function
+
+Protected Function OnDown(x As Long, y As Long, eventtime As Time) As Boolean
+	processDetailView(False)
+	Return Value True
+End Function
+
+
+// Update data loop
+Private Process GetWeatherLoop ()
+Private Var Now As _TimeStructure
+
+	Wait (0:05.00)
+
+	GetWeatherLoopRunning := True
+	
+	DataLock.Lock()
+	GetAndShowWeather(LocationID, Weather, MySettings)
+	DataLock.Unlock()
+	
+	GetLocalTimeStructure(Now)
+	Wait ((61 - Now.Second) * :1.0)
+		
+	StartTimer(UPDATE_TIMER, 1:0.0, _TIMER_PERIODIC)
+	StartProcess GetAndShowWeatherProcess ()
+	
+End Process
+
+Private Process GetAndShowWeatherProcess ()
+
+	DataLock.Lock()
+	GetAndShowWeather(LocationID, Weather, MySettings)
+	DataLock.Unlock()
+	
+End Process
+
+
+// call under DataLock
+Private Function GetAndShowWeather (locationid As Long, ByRef weatherforecast As Namespace "CUE.Applet.DailyWeatherFromApixu.1".AllWeatherStructure, ByRef settings As SettingsStructure)
+Private Var MyReturn As Boolean
+Private Var MyError As Long
+
+	MyReturn := RaiseEvent OnGetWeather (locationid, weatherforecast)
+	MyError := GetLastError()
+	If MyReturn Then
+		//DebugPrint ("Počasí přečteno v GUI", weatherforecast.current.temp_c, weatherforecast.location.name, weatherforecast.location.region, weatherforecast.location.country)
+		ShowWeather(weatherforecast, MySettings)
+	Else	
+		ShowError(MyError)
+	End If
+	
+	SetLastError(MyError)
+	
+End Function
+
+Private Function CalculateDayExpandedFonts(ObjectExpandedWidth As Long, ObjectExpandedHeight As Long)
+
+Private Var DayNameHeight As Long
+Private Var RowWeatherY As Long
+Private Var RowTempY As Long
+Private Var RowOtherY As Long
+Private Var RowHeightKoef As Long
+Private Var TempHeight As Long
+Private Var TempWidth As Long
+Private Var TempVSpace As Long
+Private Var OtherTwoColumn As Boolean
+Private Var OtherWidth As Long
+Private Var I As Long
+
+Private Var BaseFont As AddressOf _Font
+Private Var MaxText As Text[1000]
+Private Var MaxText2 As Text[1000]
+Private Var TmpText As Text[1000]
+Private Var MaxLength As Long
+Private Var TmpLength As Long
+
+Private Var DetailDayFontIndex 			As Long
+Private Var DetailDescFontIndex 		As Long
+Private Var DetailTempFontIndex 		As Long
+Private Var DetailTempLabelFontIndex 	As Long
+Private Var DetailOtherFontIndex 		As Long
+
+Private Var DetailDayFont 				As AddressOf _Font
+Private Var DetailDescFont 				As AddressOf _Font
+Private Var DetailTempFont 				As AddressOf _Font
+Private Var DetailTempLabelFont 		As AddressOf _Font
+Private Var DetailOtherFont 			As AddressOf _Font
+
+	BaseFont := GetFontFromIndex(1)
+	
+	If ObjectExpandedWidth >= ObjectExpandedHeight Then
+		OtherTwoColumn := True
+		OtherWidth := (ObjectExpandedWidth - 2 * SHADOWOFFSET - 3 * ForcastSpace) / 2
+	Else
+		OtherTwoColumn := False	
+		OtherWidth := ObjectExpandedWidth - 2 * SHADOWOFFSET - 2 * ForcastSpace
+	End If
+	
+	// font of the day name
+	DayNameHeight := Min(MAX_DAY_NAME_HIGHT, (ObjectExpandedHeight - 2 * SHADOWOFFSET) / 8)
+	MaxLength := 0
+	MaxText := " "
+	For I := 1 To 7
+		TmpText := GetDayText(I)
+		TmpLength := BaseFont.CalculateTextWidth(TmpText)
+		If TmpLength > MaxLength Then
+			MaxLength := TmpLength
+			MaxText := TmpText
+		End If
+	End For
+	
+	DetailDayFontIndex := GetDefaultFontIndex(ObjectExpandedWidth, DayNameHeight, MaxText, True, LocationFontIndex)
+	DetailDayFont := GetFontFromIndex(DetailDayFontIndex)
+	
+	// positions and dimensions
+	DayNameHeight 	:= 1.5 * DetailDayFont.GetHeight()
+	RowHeightKoef 	:= (ObjectExpandedHeight - DayNameHeight - 2 * SHADOWOFFSET - 4 * ForcastSpace) / 10
+	RowWeatherY 	:= DayNameHeight + SHADOWOFFSET + ForcastSpace
+	RowTempY 		:= RowWeatherY + ForcastSpace + (3 * RowHeightKoef)
+	
+	If OtherTwoColumn Then
+		RowOtherY 	:= RowTempY + ForcastSpace + (4 * RowHeightKoef)
+		TempHeight 	:= 4 * RowHeightKoef / 2
+	Else
+		RowOtherY 	:= RowTempY + ForcastSpace + (3 * RowHeightKoef)
+		TempHeight 	:= 3 * RowHeightKoef / 2
+	End If
+	TempWidth 	:= (ObjectExpandedWidth - 2 * SHADOWOFFSET - 4 * ForcastSpace) / 3
+	
+	// font of the day name
+	DetailDescFontIndex := GetBestDescFontIndex(2 * TempWidth + ForcastSpace, 3 * RowHeightKoef, DetailDayFontIndex)
+	DetailDescFont := GetFontFromIndex(DetailDescFontIndex)
+	
+	// font of temp
+	TmpText := ""
+	FormatTemperature(TmpText, -88.8, -88.8, MySettings)
+	DetailTempFontIndex := GetDefaultFontIndex(TempWidth, TempHeight, TmpText, True, LocationFontIndex)
+	DetailTempFont := GetFontFromIndex(DetailTempFontIndex)
+	TempVSpace 	:= Min(0.4 * DetailTempFont.GetHeight(), ForcastSpace)
+	
+	TmpText := ""
+	DetailTempLabelFontIndex := Max(GetDefaultFontIndex(TempWidth, TempHeight - TempVSpace, txtMin, True, Max(OptionalValuesFontIndex, DetailTempFontIndex + 1)), 
+									GetDefaultFontIndex(TempWidth, TempHeight - TempVSpace, txtMax, True, Max(OptionalValuesFontIndex, DetailTempFontIndex + 1)), 
+									GetDefaultFontIndex(TempWidth, TempHeight - TempVSpace, txtAvg, True, Max(OptionalValuesFontIndex, DetailTempFontIndex + 1)))
+	DetailTempLabelFont := GetFontFromIndex(DetailTempLabelFontIndex)
+	
+	// font of other
+	If OtherTwoColumn Then
+		MaxText := ""
+		FormatWindText (TmpText, 888, 888, "", MySettings, txtWindLabel)
+		ConcatenateText(MaxText, TmpText, "\000D\000A")
+		
+		FormatPercent(TmpText, 100, txtHumidity)
+		ConcatenateText(MaxText, MaxText, TmpText, "\000D\000A")
+		
+		MaxText2 := ""
+		FormatDistance(TmpText, 888.8, 888.8, MySettings, txtVisibility)
+		ConcatenateText(MaxText2, MaxText2, TmpText, "\000D\000A")
+		
+		FormatPrecipitations(TmpText, 99, 99, MySettings, txtPrecipitations)
+		ConcatenateText(MaxText2, MaxText2, TmpText, "\000D\000A")
+		
+		DetailOtherFontIndex := Max(GetDefaultFontIndex(OtherWidth, 3 * RowHeightKoef, MaxText, False, Max(DetailDayFontIndex, OptionalValuesFontIndex)), 
+									GetDefaultFontIndex(OtherWidth, 4 * RowHeightKoef, MaxText2, False, Max(DetailDayFontIndex, OptionalValuesFontIndex)))
+	Else
+		MaxText := ""
+		FormatWindText (TmpText, 888, 888, "", MySettings, txtWindLabel)
+		ConcatenateText(MaxText, TmpText, "\000D\000A")
+		
+		FormatPercent(TmpText, 100, txtHumidity)
+		ConcatenateText(MaxText, MaxText, TmpText, "\000D\000A")
+		
+		FormatDistance(TmpText, 888.8, 888.8, MySettings, txtVisibility)
+		ConcatenateText(MaxText, MaxText, TmpText, "\000D\000A")
+		
+		FormatPrecipitations(TmpText, 99, 99, MySettings, txtPrecipitations)
+		ConcatenateText(MaxText, MaxText, TmpText, "\000D\000A")
+		
+		DetailOtherFontIndex := GetDefaultFontIndex(OtherWidth, 4 * RowHeightKoef, MaxText, False, Max(DetailDayFontIndex, OptionalValuesFontIndex))
+	End If
+	DetailOtherFont := GetFontFromIndex(DetailOtherFontIndex)
+	
+	// set for every day
+	For I := 1 To Namespace"CUE.Applet.DailyWeatherFromApixu.1".MAX_FORECAST_DAYS
+		DayForecast[I].SetExtendedDayFonts(DetailDayFont, DetailDescFont, DetailTempFont, DetailTempLabelFont, DetailOtherFont)
+	End For
+	
+	For I := 1 To Namespace"CUE.Applet.DailyWeatherFromApixu.1".MAX_FORECAST_DAYS
+		DayForecast[I].SetExpandedParameters(DayNameHeight, RowWeatherY, RowTempY, RowOtherY, RowHeightKoef, TempHeight, TempWidth, TempVSpace, OtherWidth, OtherTwoColumn)
+	End For
+	
+End Function
+
+// Calculate dimensions for all objects inside day object
+Private Function CalculateDaysDimensions()
+
+Private Var DayNameHeight As Long
+Private Var TempWidth As Long
+Private Var TempHeight As Long
+Private Var TempLabelHeight As Long
+
+// day fonts
+Private Var DayFont 				As AddressOf _Font
+Private Var TempFont 				As AddressOf _Font
+Private Var TempLabelFont 			As AddressOf _Font
+Private Var DayFontIndex 			As Long
+Private Var TempFontIndex 			As Long
+Private Var TempLabelFontIndex 		As Long
+
+// for expanded
+Private Var I						As Long
+Private Var TmpX 					As Long
+Private Var ForecastExpandedWidth 	As Long
+Private Var ForecastExpandedHeight	As Long
+
+// helpers
+Private Var BaseFont 	As AddressOf _Font
+Private Var MaxText 	As Text[1000]
+Private Var MaxText2 	As Text[1000]
+Private Var TmpText 	As Text[1000]
+Private Var MaxLength 	As Long
+Private Var TmpLength 	As Long
+	
+	BaseFont := GetFontFromIndex(1)
+	
+	LocationFontIndex := CurrentWeather.getDefaultLocationFontIndex()
+	OptionalValuesFontIndex := CurrentWeather.getOptionalValuesFontIndex()
+	
+	// Calculation
+	ForecastY		:= BorderWidth + CurrentWeatherHeight + ForcastSpace
+	ForecastHeight	:= ObjectHeight - ForecastY - BorderWidth
+	ForecastWidth	:= CDouble(ObjectWidth - 2 * BorderWidth - CDouble ((Namespace"CUE.Applet.DailyWeatherFromApixu.1".MAX_FORECAST_DAYS - 1) * ForcastSpace)) / Namespace"CUE.Applet.DailyWeatherFromApixu.1".MAX_FORECAST_DAYS
+	
+	ForecastExpandedWidth := ObjectWidth * DAY_EXPANDED_WIDTH
+	ForecastExpandedHeight := ObjectHeight * DAY_EXPANDED_HEIGHT
+	
+	For I := 1 To Namespace"CUE.Applet.DailyWeatherFromApixu.1".MAX_FORECAST_DAYS - 1
+		TmpX := BorderWidth + (ForecastWidth + ForcastSpace) * (I - 1)
+		DayForecast[I].SetPosition(TmpX, ForecastY)
+		DayForecast[I].SetObjectDimensions(ForecastWidth, ForecastHeight, ForecastExpandedWidth, ForecastExpandedHeight, ForcastSpace)
+	End For
+	
+	// right most day can be wider (because of dividing)
+	I := Namespace"CUE.Applet.DailyWeatherFromApixu.1".MAX_FORECAST_DAYS
+	TmpX := CurrentWeatherWidth + BorderWidth - CLong (ForecastWidth)
+	DayForecast[I].SetPosition(TmpX, ForecastY)
+	DayForecast[I].SetObjectDimensions(ForecastWidth, ForecastHeight, ForecastExpandedWidth, ForecastExpandedHeight, ForcastSpace) 
+	
+	// font of the day name
+	DayNameHeight := Min(MAX_DAY_NAME_HIGHT, ForecastHeight / 6)
+	TmpLength := 0
+	MaxLength := 0
+	MaxText := ""
+	For I := 1 To 7
+		TmpText := GetDayText(I)
+		TmpLength := BaseFont.CalculateTextWidth(TmpText)
+		If TmpLength > MaxLength Then
+			MaxLength := TmpLength
+			MaxText := TmpText
+		End If
+	End For
+	
+	DayFontIndex := GetDefaultFontIndex(ForecastWidth - 2 * ForcastSpace, DayNameHeight, MaxText, False, LocationFontIndex)
+	DayFont := GetFontFromIndex(DayFontIndex)
+	
+	DayNameHeight := 1.5 * DayFont.GetHeight()
+	
+	// temperature
+	TempWidth := ForecastWidth / 2
+	TempHeight := (ForecastHeight - DayNameHeight - ForcastSpace) / 4
+	TmpText := ""
+	FormatTemperature(TmpText, -88.8, -88.8, MySettings)
+	TempFontIndex := GetDefaultFontIndex(TempWidth - 4, TempHeight, TmpText, True, LocationFontIndex)
+	TempFont := GetFontFromIndex(TempFontIndex)
+	TempHeight := Min(TempHeight, 1.4 * TempFont.GetHeight())
+	
+	// label temperature
+	TempLabelHeight := (ForecastHeight - DayNameHeight - ForcastSpace) / 4
+	TmpText := ""
+	TempLabelFontIndex := Max(	GetDefaultFontIndex(TempWidth - 4, TempLabelHeight, txtMin, True, Max(OptionalValuesFontIndex, TempFontIndex + 1)), 
+								GetDefaultFontIndex(TempWidth - 4, TempLabelHeight, txtMax, True, Max(OptionalValuesFontIndex, TempFontIndex + 1)), 
+								GetDefaultFontIndex(TempWidth - 4, TempLabelHeight, txtAvg, True, Max(OptionalValuesFontIndex, TempFontIndex + 1)))
+	TempLabelFont := GetFontFromIndex(TempLabelFontIndex)
+	TempLabelHeight := Min(TempLabelHeight, 1.2 * TempLabelFont.GetHeight())
+	
+	// set for every day
+	For I := 1 To Namespace"CUE.Applet.DailyWeatherFromApixu.1".MAX_FORECAST_DAYS
+		DayForecast[I].SetDayFonts(DayFont, TempFont, TempLabelFont)
+		DayForecast[I].SetDayParameters(DayNameHeight, TempWidth, TempHeight, TempLabelHeight)
+	End For
+	
+	CalculateDayExpandedFonts(ForecastExpandedWidth, ForecastExpandedHeight)
+
+End Function
+
+Private Function CalculateDimensions()
+Private Var I As Long
+Var ForcastOffset As Double
+Var ForecastWidthFocus As Double
+Var ForecastWidth As Double
+Var TmpX As Double
+
+	BorderWidth := SHADOWOFFSET * 1.25
+	ForcastSpace := CDouble(SHADOWOFFSET) / 2
+
+	GetSize (ObjectWidth, ObjectHeight)
+	ObjectWidth := Max (ObjectWidth, MIN_OBJECT_WIDTH)
+	ObjectHeight := Max (ObjectHeight, MIN_OBJECT_HEIGHT)
+	SetSize (ObjectWidth, ObjectHeight)
+	
+	CurrentWeatherWidth := ObjectWidth - 2 * BorderWidth
+	
+	CurrentWeatherHeight := (CurrentWeatherWidth) / 3
+	CurrentWeatherHeight := Max (CurrentWeatherHeight, (ObjectHeight -  2 * BorderWidth - CLong (ForcastSpace)) / 2.5)
+	CurrentWeatherHeight := Min (CurrentWeatherHeight, (ObjectHeight -  2 * BorderWidth - CLong (ForcastSpace)) / 2)
+	
+	CurrentWeather.SetPosition(0, 0)
+	CurrentWeather.SetObjectDimensions(CurrentWeatherWidth + 2 * BorderWidth, CurrentWeatherHeight + BorderWidth, BorderWidth)
+	
+	LogoWidth := Min (ObjectWidth * 0.16, picWeatherLogo.GetWidth())
+	LogoHeight := LogoWidth * (CDouble (picWeatherLogo.GetHeight()) / picWeatherLogo.GetWidth())
+	LogoX := 2 * BorderWidth
+	LogoY := CurrentWeatherHeight - 0.85 * LogoHeight
+	LogoStretched := LogoWidth < picWeatherLogo.GetWidth()
+		
+	MyErrorMessage.SetParameters (
+		30, INVISIBLE_TOP_BACKGROUND_HEIGHT,
+		(ObjectWidth * 0.8) - ErrorFont.GetHeight(), CURRENT_CONDITIONS_HEIGHT,
+		ErrorFont, clrStandardText,
+		_TEXT_ALIGNLEFT BitOr _TEXT_ALIGNVCENTER BitOr _TEXT_WORDWRAP)
+	
+	CalculateDaysDimensions()
+	
+End Function
+
+
+Function OnSetLanguage(languageid As Long)
+	
+	LockRedraw()
+	
+	DataLock.Lock()
+	CalculateDimensions()
+	
+	If ErrorState Or (Not GetWeatherLoopRunning) Then
+		HideAllWeather(False)
+	Else
+		HideAllDetails()
+		ShowWeather (Weather, MySettings)
+	End If
+	
+	DataLock.Unlock()
+	UnlockRedraw()
+		
+End Function
+
+
+Protected Function OnDraw()
+
+	If IsDebugEnable() Then
+		DrawRectangle(Color(0, 0, 0, 120))
+	End If
+	
+End Function
+
+// call under DataLock
+Private Function ShowWeather (ByRef weatherforecast As Namespace "CUE.Applet.DailyWeatherFromApixu.1".AllWeatherStructure, ByRef settings As SettingsStructure)
+Private Var I As Long
+	
+	MyErrorMessage.Hide()
+	ErrorState := False
+	CurrentWeather.SetData(weatherforecast.current, weatherforecast.forecast.forecastday[1], weatherforecast.location, settings, AddressOf LocationTranslations)
+	CurrentWeather.Show()
+	
+	For I := 1 To Namespace "CUE.Applet.DailyWeatherFromApixu.1".MAX_FORECAST_DAYS
+		DayForecast[I].SetData(weatherforecast.forecast.forecastday[I], settings)
+		DayForecast[I].Show()
+	End For
+
+End Function
+
+
+Private Function ShowError(myerror As Long)
+
+	HideAllWeather (False)
+	
+	MyErrorMessage.SetText(GetErrorText(myerror))
+	MyErrorMessage.Show()
+	ErrorState := True
+
+End Function
+
+
+Public Function ShowObject ()
+
+	Show()
+	
+End Function
+
+
+Public Function HideObject ()
+
+	Hide()
+	
+End Function
+
+
+Public Function SetTimeMode (newtimemode As Long) As Boolean
+
+	If newtimemode <> TIME_MODE_12HOUR And newtimemode <> TIME_MODE_24HOUR Then
+		Return Value False
+	End If
+	
+	DataLock.Lock()
+	If MySettings.TimeFormat = newtimemode Then
+		DataLock.Unlock()
+		Return Value True
+	End If
+	MySettings.TimeFormat := newtimemode
+	DataLock.Unlock()
+	
+	UpdateSettings ()
+	
+	Return Value True
+
+End Function
+
+
+Public Function GetTimeMode () As Long
+
+	Return Value MySettings.TimeFormat
+	
+End Function
+
+
+Public Function SetUnits (newunits As Long) As Boolean
+
+	If newunits <> UNITS_IMPERIAL And newunits <> UNITS_METRIC Then
+		Return Value False
+	End If
+	
+	DataLock.Lock()
+	If MySettings.Units = newunits Then
+		DataLock.Unlock()
+		Return Value True
+	End If
+	MySettings.Units := newunits
+	DataLock.Unlock()
+	
+	UpdateSettings ()
+	
+	Return Value True
+
+End Function
+
+
+Public Function GetUnits () As Long
+
+	Return Value MySettings.Units
+	
+End Function
+
+
+Public Function SetTemperatureUnits (newtemperatureunits As Long) As Boolean
+
+	If newtemperatureunits <> UNITS_CELSIUS And newtemperatureunits <> UNITS_FAHRENHEIT Then
+		Return Value False
+	End If
+	
+	DataLock.Lock()
+	If MySettings.TemperatureUnits = newtemperatureunits Then
+		DataLock.Unlock()
+		Return Value True
+	End If
+	MySettings.TemperatureUnits := newtemperatureunits
+	DataLock.Unlock()
+	
+	UpdateSettings ()
+
+	Return Value True
+
+End Function
+
+
+Public Function GetTemperatureUnits () As Long
+
+	Return Value MySettings.TemperatureUnits
+	
+End Function
+
+
+Public Function SetShowLastUpdateTime (newshowlastupdatetime As Boolean) As Boolean
+
+	DataLock.Lock()
+	If MySettings.ShowLastUpdateTime = newshowlastupdatetime Then
+		DataLock.Unlock()
+		Return Value True
+	End If
+	MySettings.ShowLastUpdateTime := newshowlastupdatetime
+	DataLock.Unlock()
+	
+	UpdateSettings ()
+
+	Return Value True
+
+End Function
+
+
+Public Function GetShowLastUpdateTime () As Boolean
+
+	Return Value MySettings.ShowLastUpdateTime
+	
+End Function
+
+
+Public Function SetShowFeelsLikeTemperature (newshowfeelsliketemperature As Boolean) As Boolean
+
+	DataLock.Lock()
+	If MySettings.ShowFeelsLikeTemp = newshowfeelsliketemperature Then
+		DataLock.Unlock()
+		Return Value True
+	End If
+	MySettings.ShowFeelsLikeTemp := newshowfeelsliketemperature
+	DataLock.Unlock()
+	
+	UpdateSettings ()
+
+	Return Value True
+
+End Function
+
+
+Public Function GetShowFeelsLikeTemperature () As Boolean
+
+	Return Value MySettings.ShowFeelsLikeTemp
+	
+End Function
+
+
+Private Function UpdateSettings ()
+	
+	DataLock.Lock()
+	GetAndShowWeather(LocationID, Weather, MySettings)
+	DataLock.Unlock()
+	Redraw()
+	
+End Function
+
+
+Public Function SetAppearance(
+	newshowlastupdatetime As Boolean,
+	newshowfeelsliketemperature As Boolean,
+	newtemperatureunits As Long,
+	newtimemode As Long,
+	newunits As Long) As Boolean
+	
+	If newtemperatureunits <> UNITS_CELSIUS And newtemperatureunits <> UNITS_FAHRENHEIT Then
+		Return Value False
+	End If
+
+	If newtimemode <> TIME_MODE_12HOUR And newtimemode <> TIME_MODE_24HOUR Then
+		Return Value False
+	End If
+	
+	If newtemperatureunits <> UNITS_CELSIUS And newtemperatureunits <> UNITS_FAHRENHEIT Then
+		Return Value False
+	End If
+
+	DataLock.Lock()
+	MySettings.ShowLastUpdateTime 	:= newshowlastupdatetime
+	MySettings.ShowFeelsLikeTemp 	:= ShowFeelsLikeTemperature
+	MySettings.TemperatureUnits 	:= newtemperatureunits
+	MySettings.TimeFormat 			:= newtimemode
+	MySettings.Units 				:= newunits
+	DataLock.Unlock()
+	
+	UpdateSettings ()
+
+	Return Value True
+
+End Function
+
+
+// call under DataLock
+Private Function SetDefaultProperties ()
+//Private Var N As Long
+
+	MySettings.TemperatureUnits			:= TemperatureUnits
+	MySettings.TimeFormat				:= TimeMode
+	MySettings.Units					:= Units
+	MySettings.ShowLastUpdateTime		:= ShowLastUpdateTime
+	MySettings.ShowFeelsLikeTemp		:= ShowFeelsLikeTemperature
+//	MySettings.LocationName[1]			:= DefaultLocation
+//	
+//	For N := 2 To MAX_LOCATIONS
+//		MySettings.LocationName[N]		:= ""
+//	End For
+
+End Function
+
+
+Public Function SetDefaultState () As Boolean
+Private Var MyError As Long
+
+	DataLock.Lock()
+	
+	MyErrorMessage.Hide()
+	HideAllWeather(True)
+	SetDefaultProperties()
+
+	GetAndShowWeather(LocationID, Weather, MySettings)
+	MyError := GetLastError()
+	
+	DataLock.Unlock()
+	Redraw()
+	
+	SetLastError(MyError)
+	Return Value MyError = Namespace "CUE.Applet.DailyWeatherFromApixu.1".COMMAND_OK
+	
+End Function
+
+
+Public Function SetLocationID (newlocationid As Long) As Boolean
+Private Var MyError As Long
+
+	If newlocationid < 1 Or newlocationid > Namespace "CUE.Applet.DailyWeatherFromApixu.1".MAX_LOCATIONS Then
+		Return Value False
+	End If
+	
+	DataLock.Lock()
+	LocationID := newlocationid
+	GetAndShowWeather(LocationID, Weather, MySettings)
+	MyError := GetLastError()
+	DataLock.Unlock()
+	Redraw()
+	
+	SetLastError(MyError)
+	Return Value MyError = Namespace "CUE.Applet.DailyWeatherFromApixu.1".COMMAND_OK
+
+End Function
+
+
+Public Function GetLocationID () As Long
+
+	Return Value LocationID
+
+End Function
+
+
+End GraphicClass
+
+
+// -------------------------------------------------------------------------------------------------
+// 	Static Text
+// -------------------------------------------------------------------------------------------------
+
+Private GraphicClass c_Text Inherits BaseGraphicClass
+	
+Protected Var ObjectWidth 		As Long
+Protected Var ObjectHeight 		As Long
+Protected Var MyFont 			As AddressOf _Font
+Protected Var FontColor 		As Long
+Protected Var MyTextBuffer 		As Text[Namespace "CUE.Applet.DailyWeatherFromApixu.1".TEXT_LENGHT] := ""
+Private	  Var MyText 			As AddressOf Text := MyTextBuffer
+Protected Var Align 			As Long := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER
+Protected Var LineSpacing 		As Double
+
+
+Protected Function OnDraw()
+
+//	If IsDebugEnable() Then
+//		DrawRectangle(Color(0, 0, 0, 50))
+//	End If
+	DrawText(MyFont, MyText, FontColor, 0, 0, ObjectWidth, ObjectHeight, Align, LineSpacing)
+
+End Function
+
+
+Public Function SetParameters(
+	newx As Long, newy As Long, 
+	newwidth As Long, newheight As Long,
+	newfont As AddressOf _Font, newfontcolor As Long, 
+	newalign As Long,
+	Optional newlinespacing As Double := 1.2)
+	
+	LockRedraw()
+	MyFont := newfont
+	FontColor := newfontcolor
+	
+	SetPosition(newx, newy)
+	SetSize(newwidth, newheight)
+	GetSize(ObjectWidth, ObjectHeight)
+	
+	Align := newalign
+	LineSpacing := newlinespacing
+	UnlockRedraw()
+	Redraw()
+	
+End Function
+
+Public Function SetText(newtext As Text)
+	
+	LockRedraw()
+	
+	If GetMemorySegment(newtext) = _MSEG_RESOURCEDATA Then
+		MyText := newtext
+	Else
+		MyTextBuffer := newtext
+		MyText := MyTextBuffer
+	End If
+	
+	UnlockRedraw()
+	Redraw()
+
+End Function
+
+
+Public Function GetText() As AddressOf Text
+
+	Return Value MyText
+
+End Function
+
+Public Function GetWidth() As Long
+
+	Return Value ObjectWidth
+
+End Function
+
+Public Function GetHeight() As Long
+
+	Return Value ObjectHeight
+
+End Function
+
+
+End GraphicClass
+
+
+// -------------------------------------------------------------------------------------------------
+// 	Static Long Text
+// -------------------------------------------------------------------------------------------------
+
+Private GraphicClass c_LongText Inherits c_Text
+
+Protected Var MyLongTextBuffer	As Text[Namespace "CUE.Applet.DailyWeatherFromApixu.1".TEXT_LONG_LENGHT] := ""
+Private Var MyLongText 			As AddressOf Text := MyLongTextBuffer
+
+
+Protected Function OnDraw()
+
+//	If IsDebugEnable() Then
+//		DrawRectangle(Color(0, 0, 0, 50))
+//	End If
+	DrawText(MyFont, MyLongText, FontColor, 0, 0, ObjectWidth, ObjectHeight, Align,LineSpacing)
+
+End Function
+
+
+Public Function SetText(newtext As Text)
+	
+	LockRedraw()
+	
+	If GetMemorySegment(newtext) = _MSEG_RESOURCEDATA Then
+		MyLongText := newtext
+	Else
+		MyLongTextBuffer := newtext
+		MyLongText := MyLongTextBuffer
+	End If
+	
+	UnlockRedraw()
+	Redraw()
+
+End Function
+
+End GraphicClass
+
+
+
+// -----------------------------------------------------------------------------------
+// Static Date Time
+// -----------------------------------------------------------------------------------
+
+Private GraphicClass c_Time Inherits c_Text
+	
+Private Var MyTime As Time
+
+
+Public Function SetValue(newtime As Time, newsettings As SettingsStructure, Optional inittext As Text := "")
+Private Var TempText As Text [Namespace "CUE.Applet.DailyWeatherFromApixu.1".TEXT_LENGHT]
+
+	LockRedraw()
+	MyTime := newtime
+	FormatTime (TempText, MyTime, newsettings, inittext)
+	SetText(TempText)
+	UnlockRedraw()
+	Redraw()
+	
+End Function
+
+
+End GraphicClass
+
+
+// -----------------------------------------------------------------------------------
+// Temperature class
+// -----------------------------------------------------------------------------------
+
+Private GraphicClass c_Temperature Inherits c_Text
+
+
+Public Function SetTemperature(newtemperaturec As Double, newtemperaturef As Double, newformat As SettingsStructure, Optional inittext As Text := "")
+Private Var TempText As Text [Namespace "CUE.Applet.DailyWeatherFromApixu.1".TEXT_LENGHT]
+
+	LockRedraw()
+	FormatTemperature(TempText, newtemperaturec, newtemperaturef, newformat, inittext)
+	SetText(TempText)
+	UnlockRedraw()
+	Redraw()
+	
+End Function
+
+
+End GraphicClass
+
+
+//Moon Phase calculations
+Private Const MOON_CIRCLE_LENGHT As Time := 29:12:44:2.876899
+Private Const FIRST_NEW_MOON As Time := #01/06/2000 18:14:00.0#
+
+Private Function GetMoonPhase (newutctime As Time, ByRef mooniconindex As Long, ByRef moonphasedescription As Text) As Boolean
+Private Var MD As Time
+
+	// date is out of valid range for given algorithm
+	If newutctime < FIRST_NEW_MOON  Or newutctime >= #01/01/2100 00:00:00.0# Then
+		mooniconindex := 0
+		moonphasedescription := txtNotAvailable
+		Return Value False
+	End If
+	
+	MD := (newutctime - FIRST_NEW_MOON) Mod MOON_CIRCLE_LENGHT
+	mooniconindex := CLong ((MD * 30) / MOON_CIRCLE_LENGHT) + 1
+	
+	Select mooniconindex
+		Case 1, 30
+			moonphasedescription := txtNew
+		Case 2 To 7
+			moonphasedescription := txtWaxingCrescent
+		Case 8
+			moonphasedescription := txtFirstQuarter
+		Case 9 To 14
+			moonphasedescription := txtWaxingGibbous
+		Case 15 To 16
+			moonphasedescription := txtFull
+		Case 17 To 22
+			moonphasedescription := txtWaningGibbous
+		Case 23
+			moonphasedescription := txtLastQuarter
+		Case 24 To 29
+			moonphasedescription := txtWaningCrescent
+		Case Else 
+			moonphasedescription := txtNotAvailable
+			mooniconindex := 0
+			Return Value False
+	End Select
+	
+	Return Value True
+
+End Function

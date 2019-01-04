@@ -1,0 +1,414 @@
+
+Global DeviceClass Klima
+
+Connector IrConnector
+
+Global Function On()
+	IrConnector.IrSend(irdOn)
+End Function
+
+Global Function Off()
+	IrConnector.IrSend(irdOff)
+End Function
+
+Global Function Nr17C()
+	IrConnector.IrSend(ird17C)
+End Function
+
+Global Function Nr18C()
+	IrConnector.IrSend(ird18C)
+End Function
+
+Global Function Nr19C()
+	IrConnector.IrSend(ird19C)
+End Function
+
+Global Function Nr20C()
+	IrConnector.IrSend(ird20C)
+End Function
+
+Global Function Nr21C()
+	IrConnector.IrSend(ird21C)
+End Function
+
+Global Function Nr22C()
+	IrConnector.IrSend(ird22C)
+End Function
+
+Global Function Nr23C()
+	IrConnector.IrSend(ird23C)
+End Function
+
+Global Function Nr24C()
+	IrConnector.IrSend(ird24C)
+End Function
+
+Global Function Nr25C()
+	IrConnector.IrSend(ird25C)
+End Function
+
+Global Function Nr26C()
+	IrConnector.IrSend(ird26C)
+End Function
+
+Global Function Nr27C()
+	IrConnector.IrSend(ird27C)
+End Function
+
+Global Function Nr28C()
+	IrConnector.IrSend(ird28C)
+End Function
+
+Global Function Nr29C()
+	IrConnector.IrSend(ird29C)
+End Function
+
+Global Function Nr30C()
+	IrConnector.IrSend(ird30C)
+End Function
+
+Global Function ModeAuto()
+	IrConnector.IrSend(irdModeAuto)
+End Function
+
+Global Function ModeCool()
+	IrConnector.IrSend(irdModeCool)
+End Function
+
+Global Function ModeDry()
+	IrConnector.IrSend(irdModeDry)
+End Function
+
+Global Function ModeHeat()
+	IrConnector.IrSend(irdModeHeat)
+End Function
+
+Global Function ModeFan()
+	IrConnector.IrSend(irdModeFan)
+End Function
+
+Global Function FamLow()
+	IrConnector.IrSend(irdFamLow)
+End Function
+
+Global Function FanMed()
+	IrConnector.IrSend(irdFanMed)
+End Function
+
+Global Function FanHigh()
+	IrConnector.IrSend(irdFanHigh)
+End Function
+
+Global Function FanOff()
+	IrConnector.IrSend(irdFanOff)
+End Function
+
+Global Function Swing()
+	IrConnector.IrSend(irdSwing)
+End Function
+
+Global Function Swing2()
+	IrConnector.IrSend(irdSwing2)
+End Function
+
+Global Function Sleep()
+	IrConnector.IrSend(irdSleep)
+End Function
+
+Global Function TimerOn00h00m()
+	IrConnector.IrSend(irdTimerOn00h00m)
+End Function
+
+Global Function TimerOn00h30m()
+	IrConnector.IrSend(irdTimerOn00h30m)
+End Function
+
+Global Function TimerOn01h00m()
+	IrConnector.IrSend(irdTimerOn01h00m)
+End Function
+
+Global Function TimerOn01h30m()
+	IrConnector.IrSend(irdTimerOn01h30m)
+End Function
+
+Global Function TimerOn02h00m()
+	IrConnector.IrSend(irdTimerOn02h00m)
+End Function
+
+Global Function TimerOn02h30m()
+	IrConnector.IrSend(irdTimerOn02h30m)
+End Function
+
+Global Function TimerOn03h00m()
+	IrConnector.IrSend(irdTimerOn03h00m)
+End Function
+
+Global Function AirDirection()
+	IrConnector.IrSend(irdAirDirection)
+End Function
+
+Global Function LedDisplay()
+	IrConnector.IrSend(irdLedDisplay)
+End Function
+
+Global Function Turbo()
+	IrConnector.IrSend(irdTurbo)
+End Function
+
+Global Function Turbo2()
+	IrConnector.IrSend(irdTurbo2)
+End Function
+
+Global Function TimerOff00h00m()
+	IrConnector.IrSend(irdTimerOff00h00m)
+End Function
+
+Global Function TimerOff00h30m()
+	IrConnector.IrSend(irdTimerOff00h30m)
+End Function
+
+Global Function TimerOff01h00m()
+	IrConnector.IrSend(irdTimerOff01h00m)
+End Function
+
+Global Function TimerOff01h30m()
+	IrConnector.IrSend(irdTimerOff01h30m)
+End Function
+
+Global Function TimerOff02h00m()
+	IrConnector.IrSend(irdTimerOff02h00m)
+End Function
+
+Global Function TimerOff02h30m()
+	IrConnector.IrSend(irdTimerOff02h30m)
+End Function
+
+Global Function TimerOff03h00m()
+	IrConnector.IrSend(irdTimerOff03h00m)
+End Function
+
+Global Function TimerOff03h30m()
+	IrConnector.IrSend(irdTimerOff03h30m)
+End Function
+
+Global Function TimerOff04h00m()
+	IrConnector.IrSend(irdTimerOff04h00m)
+End Function
+
+Global Function TimerOff04h30m()
+	IrConnector.IrSend(irdTimerOff04h30m)
+End Function
+
+Global Function TimerOff05h00m()
+	IrConnector.IrSend(irdTimerOff05h00m)
+End Function
+
+Global Function TimerOff05h30m()
+	IrConnector.IrSend(irdTimerOff05h30m)
+End Function
+
+Global Function TimerOff06h00m()
+	IrConnector.IrSend(irdTimerOff06h00m)
+End Function
+
+Global Function TimerOff06h30m()
+	IrConnector.IrSend(irdTimerOff06h30m)
+End Function
+
+Global Function TimerOff07h00m()
+	IrConnector.IrSend(irdTimerOff07h00m)
+End Function
+
+Global Function TimerOff07h30m()
+	IrConnector.IrSend(irdTimerOff07h30m)
+End Function
+
+Global Function TimerOff08h00m()
+	IrConnector.IrSend(irdTimerOff08h00m)
+End Function
+
+Global Function TimerOff08h30m()
+	IrConnector.IrSend(irdTimerOff08h30m)
+End Function
+
+Global Function TimerOff09h00m()
+	IrConnector.IrSend(irdTimerOff09h00m)
+End Function
+
+Global Function TimerOff09h30m()
+	IrConnector.IrSend(irdTimerOff09h30m)
+End Function
+
+Global Function TimerOff10h00m()
+	IrConnector.IrSend(irdTimerOff10h00m)
+End Function
+
+Global Function TimerOff11h00m()
+	IrConnector.IrSend(irdTimerOff11h00m)
+End Function
+
+Global Function TimerOff12h00m()
+	IrConnector.IrSend(irdTimerOff12h00m)
+End Function
+
+Global Function TimerOff13h00m()
+	IrConnector.IrSend(irdTimerOff13h00m)
+End Function
+
+Global Function TimerOff14h00m()
+	IrConnector.IrSend(irdTimerOff14h00m)
+End Function
+
+Global Function TimerOff15h00m()
+	IrConnector.IrSend(irdTimerOff15h00m)
+End Function
+
+Global Function TimerOff16h00m()
+	IrConnector.IrSend(irdTimerOff16h00m)
+End Function
+
+Global Function TimerOff17h00m()
+	IrConnector.IrSend(irdTimerOff17h00m)
+End Function
+
+Global Function TimerOff18h00m()
+	IrConnector.IrSend(irdTimerOff18h00m)
+End Function
+
+Global Function TimerOff19h00m()
+	IrConnector.IrSend(irdTimerOff19h00m)
+End Function
+
+Global Function TimerOff20h00m()
+	IrConnector.IrSend(irdTimerOff20h00m)
+End Function
+
+Global Function TimerOff21h00m()
+	IrConnector.IrSend(irdTimerOff21h00m)
+End Function
+
+Global Function TimerOff22h00m()
+	IrConnector.IrSend(irdTimerOff22h00m)
+End Function
+
+Global Function TimerOff24h00m()
+	IrConnector.IrSend(irdTimerOff24h00m)
+End Function
+
+Global Function TimerOff23h00m()
+	IrConnector.IrSend(irdTimerOff23h00m)
+End Function
+
+Global Function TimerOn03h30m()
+	IrConnector.IrSend(irdTimerOn03h30m)
+End Function
+
+Global Function TimerOn04h00m()
+	IrConnector.IrSend(irdTimerOn04h00m)
+End Function
+
+Global Function TimerOn04h30m()
+	IrConnector.IrSend(irdTimerOn04h30m)
+End Function
+
+Global Function TimerOn05h00m()
+	IrConnector.IrSend(irdTimerOn05h00m)
+End Function
+
+Global Function TimerOn05h30m()
+	IrConnector.IrSend(irdTimerOn05h30m)
+End Function
+
+Global Function TimerOn06h00m()
+	IrConnector.IrSend(irdTimerOn06h00m)
+End Function
+
+Global Function TimerOn06h30m()
+	IrConnector.IrSend(irdTimerOn06h30m)
+End Function
+
+Global Function TimerOn07h00m()
+	IrConnector.IrSend(irdTimerOn07h00m)
+End Function
+
+Global Function TimerOn07h30m()
+	IrConnector.IrSend(irdTimerOn07h30m)
+End Function
+
+Global Function TimerOn08h00m()
+	IrConnector.IrSend(irdTimerOn08h00m)
+End Function
+
+Global Function TimerOn08h30m()
+	IrConnector.IrSend(irdTimerOn08h30m)
+End Function
+
+Global Function TimerOn09h00m()
+	IrConnector.IrSend(irdTimerOn09h00m)
+End Function
+
+Global Function TimerOn09h30m()
+	IrConnector.IrSend(irdTimerOn09h30m)
+End Function
+
+Global Function TimerOn10h00m()
+	IrConnector.IrSend(irdTimerOn10h00m)
+End Function
+
+Global Function TimerOn11h00m()
+	IrConnector.IrSend(irdTimerOn11h00m)
+End Function
+
+Global Function TimerOn12h00m()
+	IrConnector.IrSend(irdTimerOn12h00m)
+End Function
+
+Global Function TimerOn14h00m()
+	IrConnector.IrSend(irdTimerOn14h00m)
+End Function
+
+Global Function TimerOn15h00m()
+	IrConnector.IrSend(irdTimerOn15h00m)
+End Function
+
+Global Function TimerOn16h00m()
+	IrConnector.IrSend(irdTimerOn16h00m)
+End Function
+
+Global Function TimerOn17h00m()
+	IrConnector.IrSend(irdTimerOn17h00m)
+End Function
+
+Global Function TimerOn18h00m()
+	IrConnector.IrSend(irdTimerOn18h00m)
+End Function
+
+Global Function TimerOn20h00m()
+	IrConnector.IrSend(irdTimerOn20h00m)
+End Function
+
+Global Function TimerOn21h00m()
+	IrConnector.IrSend(irdTimerOn21h00m)
+End Function
+
+Global Function TimerOn22h00m()
+	IrConnector.IrSend(irdTimerOn22h00m)
+End Function
+
+Global Function TimerOn23h00m()
+	IrConnector.IrSend(irdTimerOn23h00m)
+End Function
+
+Global Function TimerOn24h00m()
+	IrConnector.IrSend(irdTimerOn24h00m)
+End Function
+
+Global Function TimerOn19h00m()
+	IrConnector.IrSend(irdTimerOn19h00m)
+End Function
+
+Global Function TimerOn13h00m()
+	IrConnector.IrSend(irdTimerOn13h00m)
+End Function
+
+End DeviceClass

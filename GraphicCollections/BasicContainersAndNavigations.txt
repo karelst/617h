@@ -1,0 +1,2121 @@
+// ***************************************************************************************
+// Collection Name:	BasicContainersAndNavigations
+// Date of build:	13.7.2014
+// Last edited by:	Richard Milek
+// ***************************************************************************************
+
+
+// Start of object -----------------------------------------------------------------------
+// MessageBox
+
+
+Public GraphicClass MessageBox Inherits BaseGraphicWindow WithAttributes
+{
+	ObjectCode := "OB0007-001",
+	DefaultWidth := 320,
+	DefaultHeight := 240
+	, DesignName := "Basic", GroupName := "Containers"
+}
+
+Protected Property Opacity As Byte := 255 WithAttributes
+{
+	PropertyGroup := "Appearance",
+	DisplayName := "Opacity",
+	EditMode := "Opacity"
+}
+
+Protected Property NavigationBarButtonID As Long := 0 WithAttributes
+{
+	PropertyGroup := "Behavior"
+}
+
+Protected Property OpenMode As Long := _OW_TOPMOST WithAttributes
+{
+	PropertyGroup := "Behavior",
+	EditMode := "Enum; 'Modal' := _OW_MODAL, 'Modeless' := 0, 'Topmost' := _OW_TOPMOST"
+}
+
+// Caption
+Protected Property CaptionAlign As Long := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER WithAttributes
+{
+	PropertyGroup := "Caption",
+	EditMode := "Enum; 'Left-Top' := _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNTOP,"
+	"'Left-Middle' := _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNVCENTER,"
+	"'Left-Bottom' := _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNBOTTOM,"
+	"'Center-Top' := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNTOP,"
+	"'Center-Middle' := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER,"
+	"'Center-Bottom' := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNBOTTOM,"
+	"'Right-Top' := _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNTOP,"
+	"'Right-Middle' := _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNVCENTER,"
+	"'Right-Bottom' := _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNBOTTOM"
+}
+
+Protected Property CaptionFont As AddressOf _Font := fntDefault16 WithAttributes
+{
+	PropertyGroup := "Caption"
+}
+
+Protected Property CaptionText As AddressOf Text := txtCaption WithAttributes
+{
+	PropertyGroup := "Caption"
+}
+
+// Message
+Protected Property MessageAlign As Long := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER WithAttributes
+{
+	PropertyGroup := "Message",
+	EditMode := "Enum; 'Left-Top' := _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNTOP,"
+				"'Left-Middle' := _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNVCENTER,"
+				"'Left-Bottom' := _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNBOTTOM,"
+				"'Center-Top' := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNTOP,"
+				"'Center-Middle' := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER,"
+				"'Center-Bottom' := _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNBOTTOM,"
+				"'Right-Top' := _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNTOP,"
+				"'Right-Middle' := _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNVCENTER,"
+				"'Right-Bottom' := _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNBOTTOM"
+}
+
+Protected Property MessageFont As AddressOf _Font := fntDefault16 WithAttributes
+{
+	PropertyGroup := "Message"
+}
+
+Protected Property MessageLineSpacing As Double  := 1.2 WithAttributes
+{
+	PropertyGroup := "Message"
+}
+
+Protected Property MessageText As AddressOf Text := txtMessage WithAttributes
+{
+	PropertyGroup := "Message"
+}
+
+Public Event OnShowObject As Function ()
+Public Event OnHideObject As Function ()
+
+// Picture resources
+Protected Const MESSAGE_BOX_TOP_MIDDLE_BOTTOM_LINE As AddressOf _Picture := picMessageBox2560x1536TopMiddleBottomLine
+Protected Const MESSAGE_BOX_LEFT_RIGHT_BORDER As AddressOf _Picture := picMessageBox2560x1536LeftRightBorder
+
+// Picture positions
+Protected Const SRC_RESOLUTION_W As Long := 2560
+
+Protected Const SRC_TOP_X As Long := 0
+Protected Const SRC_TOP_Y As Long := 0
+Protected Const SRC_TOP_H As Long := 16
+
+Protected Const SRC_MIDDLE_X As Long := 0
+Protected Const SRC_MIDDLE_Y As Long := SRC_TOP_H
+Protected Const SRC_MIDDLE_H As Long := 2
+
+Protected Const SRC_BOTTOM_X As Long := 0
+Protected Const SRC_BOTTOM_Y As Long := SRC_TOP_H + SRC_MIDDLE_H
+Protected Const SRC_BOTTOM_H As Long := 19
+
+Protected Const SRC_LEFT_X As Long := 0
+Protected Const SRC_FEFT_Y As Long := 0
+Protected Const SRC_LEFT_W As Long := 14
+
+Protected Const SRC_RIGHT_X As Long := SRC_LEFT_W
+Protected Const SRC_RIGHT_Y As Long := 0
+Protected Const SRC_RIGHT_W As Long := 21
+
+Protected Const SRC_LEFT_RIGHT_MIDDLE_Y As Long := 1536
+
+Protected Const SRC_EFFECT_X As Long := 0
+Protected Const SRC_EFFECT_Y As Long := SRC_TOP_H + SRC_MIDDLE_H + SRC_BOTTOM_H
+Protected Const SRC_EFFECT_H As Long := 29
+
+Protected Const INSENSITIVE_LEFT As Long := 3
+Protected Const INSENSITIVE_TOP As Long := 0
+Protected Const INSENSITIVE_RIGHT As Long := 11
+Protected Const INSENSITIVE_BOTTOM As Long := 14
+// -------------------------------------------------------------------------------------------
+
+Private Var WidthIn As Long
+Private Var HeightIn As Long
+Private Var CaptionHeight As Long := 0
+Private Var CaptionFormatFlags As Long
+Private Var MessageFormatFlags As Long
+Private Var ObjectWidth As Long
+Private Var ObjectHeight As Long
+
+Protected Var TextColor As Long := _COLOR_BLACK
+Protected Var TextShadowColor As Long := SetColorComponentOpacity (_COLOR_WHITE, 128)
+
+// Init
+
+Private Function Init()
+
+	SetMySize ()
+	CaptionFormatFlags := CaptionAlign BitOr _TEXT_SINGLELINE
+	MessageFormatFlags := MessageAlign BitOr _TEXT_WORDWRAP
+
+End Function
+
+
+Private Function SetMySize ()
+Private Var W As Long
+Private Var H As Long
+
+	GetSize (W, H)
+	SetInternalSize (W, H)
+	
+End Function
+
+
+Private Function SetInternalSize (w As Long, h As Long) As Boolean
+	
+	If CaptionText = Nothing Or CaptionFont = Nothing Then 
+		CaptionHeight := 0
+	Else
+		CaptionHeight := Max (1.8 * CaptionFont.GetHeight() - SRC_TOP_H, 0)
+	End If
+	
+	WidthIn := w - SRC_LEFT_W - SRC_RIGHT_W
+	HeightIn := h - SRC_TOP_H - SRC_MIDDLE_H - SRC_BOTTOM_H
+
+	WidthIn := Max (WidthIn, 0)
+	HeightIn := Max (HeightIn, CaptionHeight)
+	
+	ObjectWidth := WidthIn + SRC_LEFT_W + SRC_RIGHT_W
+	ObjectHeight := HeightIn + SRC_TOP_H + SRC_MIDDLE_H + SRC_BOTTOM_H
+	
+	Return Value SetSize (ObjectWidth, ObjectHeight)
+	
+End Function
+
+
+Protected Function OnJoinMessage (msgobject As BaseGraphicClass, messageid As Long, ParamArray)
+Private Var Button As Long := ParamArray[1]
+
+	If messageid = 1 Then
+		If Button = NavigationBarButtonID Then
+			ShowObject ()
+		Else
+			HideObject ()
+		End If
+	End If
+
+End Function
+
+
+Private Function DrawShadowText (font As _Font, srctext As Text, opacity As Byte, dstx As Long, dsty As Long, width As Long, height As Long, formatflags As Long, linespacing As Double)
+
+	DrawText(font, srctext, SetColorComponentOpacity (TextShadowColor, (CLong (GetColorComponentOpacity (TextShadowColor)) * opacity)/256),
+		dstx, dsty + 1,
+		width, height,
+		formatflags,
+		linespacing)
+	DrawText(font, srctext, SetColorComponentOpacity (TextColor, (CLong (GetColorComponentOpacity (TextColor)) * opacity)/256),
+		dstx, dsty,
+		width, height,
+		formatflags,
+		linespacing)
+
+End Function
+
+
+Protected Function OnDraw()
+
+	// Top
+	DrawPicture		(MESSAGE_BOX_TOP_MIDDLE_BOTTOM_LINE,
+					0, 0,
+					SRC_LEFT_W + WidthIn, SRC_TOP_H,
+					SRC_TOP_X, SRC_TOP_Y,
+					Opacity)
+	DrawPicture		(MESSAGE_BOX_TOP_MIDDLE_BOTTOM_LINE,
+					SRC_LEFT_W + WidthIn, 0,
+					SRC_RIGHT_W, SRC_TOP_H,
+					SRC_RESOLUTION_W - SRC_RIGHT_W, 0,
+					Opacity)
+	
+	// Caption bottom (middle)
+	DrawPicture		(MESSAGE_BOX_TOP_MIDDLE_BOTTOM_LINE,
+					0, SRC_TOP_H + CaptionHeight,
+					SRC_LEFT_W + WidthIn, SRC_MIDDLE_H,
+					SRC_MIDDLE_X, SRC_MIDDLE_Y,
+					Opacity)
+	DrawPicture		(MESSAGE_BOX_TOP_MIDDLE_BOTTOM_LINE,
+					SRC_LEFT_W + WidthIn, SRC_TOP_H + CaptionHeight,
+					SRC_RIGHT_W, SRC_MIDDLE_H,
+					SRC_RESOLUTION_W - SRC_RIGHT_W, SRC_TOP_H,
+					Opacity)
+	
+	// Caption left
+	DrawPicture		(MESSAGE_BOX_LEFT_RIGHT_BORDER,
+					0, SRC_TOP_H,
+					SRC_LEFT_W, CaptionHeight,
+					SRC_LEFT_X, SRC_FEFT_Y,
+					Opacity)
+	
+	// Caption right
+	DrawPicture		(MESSAGE_BOX_LEFT_RIGHT_BORDER,
+					SRC_LEFT_W + WidthIn, SRC_TOP_H,
+					SRC_RIGHT_W, CaptionHeight,
+					SRC_RIGHT_X, SRC_RIGHT_Y,
+					Opacity)
+					
+	// Bottom
+	DrawPicture		(MESSAGE_BOX_TOP_MIDDLE_BOTTOM_LINE,
+					0, SRC_BOTTOM_Y + HeightIn,
+					SRC_LEFT_W + WidthIn, SRC_BOTTOM_H,
+					SRC_BOTTOM_X, SRC_BOTTOM_Y,
+					Opacity)
+	DrawPicture		(MESSAGE_BOX_TOP_MIDDLE_BOTTOM_LINE,
+					SRC_LEFT_W + WidthIn, SRC_BOTTOM_Y + HeightIn,
+					SRC_RIGHT_W, SRC_BOTTOM_H,
+					SRC_RESOLUTION_W - SRC_RIGHT_W, SRC_BOTTOM_Y,
+					Opacity)
+	
+	// Left
+	DrawPicture		(MESSAGE_BOX_LEFT_RIGHT_BORDER,
+					0, SRC_BOTTOM_Y + CaptionHeight,
+					SRC_LEFT_W, HeightIn - CaptionHeight,
+					SRC_LEFT_X, SRC_LEFT_RIGHT_MIDDLE_Y,
+					Opacity)
+	
+	// Right
+	DrawPicture		(MESSAGE_BOX_LEFT_RIGHT_BORDER,
+					SRC_LEFT_W + WidthIn, SRC_BOTTOM_Y + CaptionHeight,
+					SRC_RIGHT_W, HeightIn - CaptionHeight,
+					SRC_RIGHT_X, SRC_LEFT_RIGHT_MIDDLE_Y,
+					Opacity)
+	
+	// Caption inside
+	DrawRectangle	(Color(218, 218, 218, Opacity),
+					SRC_LEFT_W, SRC_TOP_H,
+					WidthIn, CaptionHeight)
+	
+	// Inside
+	DrawRectangle	(Color(233, 233, 233, Opacity),
+					SRC_LEFT_W, SRC_BOTTOM_Y + CaptionHeight,
+					WidthIn, HeightIn - CaptionHeight)
+
+	// Caption text
+	DrawShadowText	(CaptionFont, CaptionText, Opacity,
+					SRC_LEFT_W, /*SRC_TOP_H*/1,
+					WidthIn, CaptionHeight + SRC_TOP_H,
+					CaptionFormatFlags, 1.2)
+
+	
+	// Message text, if there is an enough space
+	DrawShadowText	(MessageFont, MessageText, Opacity, 
+					SRC_LEFT_W, SRC_BOTTOM_Y + CaptionHeight, 
+					WidthIn, HeightIn - CaptionHeight, 
+					MessageFormatFlags,
+					MessageLineSpacing)
+
+	// Effect
+	DrawPicture(	MESSAGE_BOX_TOP_MIDDLE_BOTTOM_LINE, 
+					0, 0,
+					SRC_LEFT_W + WidthIn, SRC_EFFECT_H,
+					SRC_EFFECT_X, SRC_EFFECT_Y,
+					Opacity)
+	DrawPicture(	MESSAGE_BOX_TOP_MIDDLE_BOTTOM_LINE,
+					SRC_LEFT_W + WidthIn, 0,
+					SRC_RIGHT_W, SRC_EFFECT_H,
+					SRC_RESOLUTION_W - SRC_RIGHT_W, SRC_EFFECT_Y,
+					Opacity)
+End Function
+
+// Show and hide object
+
+Public Function ShowObject ()
+Private Var X As Long
+Private Var Y As Long
+
+	GetPosition (X, Y)
+	If Not GetVisible () Then Open (X, Y, OpenMode) End If
+
+End Function
+
+
+Public Function SetOpenMode (newopenmode As Long) As Boolean
+Private Var notOWmask As Long := &HFFFFFFFF BitXor (_OW_ALIGNBOTTOM BitOr _OW_ALIGNVCENTER BitOr _OW_ALIGNTOP
+	BitOr _OW_ALIGNLEFT BitOr _OW_ALIGNHCENTER BitOr _OW_ALIGNRIGHT 
+	BitOr _OW_BOTTOM BitOr _OW_CLOSESTANDARD BitOr _OW_CLOSETOPMOST
+	BitOr _OW_MODAL BitOr _OW_TOPMOST)
+	
+	If (newopenmode BitAnd notOWmask) > 0 Then
+		Return Value False
+	End If
+	
+	OpenMode := newopenmode
+	Return Value True
+	
+End Function
+
+
+Public Function GetOpenMode () As Long
+
+	Return Value OpenMode
+	
+End Function
+
+
+Public Function ShowObjectEx (newcaptiontext As Text, newmessagetext As Text, Optional newopenmode As Long := _OW_TOPMOST) As Boolean
+Private Var R As Boolean
+
+	SetCaptionText(newcaptiontext)
+	SetMessageText(newmessagetext)
+	R := SetOpenMode (newopenmode)
+	
+	If R Then ShowObject () End If
+
+	Return Value R
+
+End Function
+
+
+Public Function IsObjectVisible () As Boolean
+
+	Return Value GetVisible ()
+
+End Function
+
+
+Public Function HideObject ()
+
+	Close ()
+	
+End Function
+
+
+Protected Function OnShow ()
+
+	RaiseEvent OnShowObject ()
+
+End Function
+
+
+Protected Function OnHide ()
+
+	RaiseEvent OnHideObject ()
+
+End Function
+
+
+// Set and get object dimensions
+
+Public Function SetObjectDimensions(newwidth As Long, newheight As Long) As Boolean
+Private Var R As Boolean
+
+	LockRedraw ()
+	R := SetInternalSize (newwidth, newheight)
+	UnlockRedraw ()
+	Redraw ()
+	Return Value R
+
+End Function
+
+
+Public Function GetObjectDimensions (ByRef currentwidth As Long, ByRef currentheight As Long)
+
+	GetSize (currentwidth, currentheight)
+
+End Function
+
+
+Public Function SetObjectPosition (newx As Long, newy As Long) As Boolean
+
+	SetPosition (newx, newy)
+	Redraw ()
+	Return Value True
+	
+End Function
+
+
+Public Function GetObjectPosition (ByRef currentx As Long, ByRef currenty As Long)
+
+	GetPosition (currentx, currenty)
+	
+End Function
+
+
+Private Var CaptionTextBuffer As Text[500] := ""
+Private Var MessageTextBuffer As Text[2000] := ""
+
+Public Function SetCaptionText(newcaptiontext As Text) As Boolean
+
+	LockRedraw()
+	If GetMemorySegment(newcaptiontext) = _MSEG_RESOURCEDATA Then
+		CaptionText := newcaptiontext
+	Else
+		CaptionTextBuffer := newcaptiontext
+		CaptionText := CaptionTextBuffer
+	End If
+	UnlockRedraw()
+    Redraw()
+	Return Value True
+	
+End Function
+
+
+Public Function SetMessageText(newmessagetext As Text) As Boolean
+	
+	LockRedraw()
+	If GetMemorySegment(newmessagetext) = _MSEG_RESOURCEDATA Then
+		MessageText := newmessagetext
+	Else
+		MessageTextBuffer := newmessagetext
+		MessageText := MessageTextBuffer
+	End If
+	UnlockRedraw()
+    Redraw()
+	Return Value True
+	
+End Function
+
+
+Public Function GetMessageText () As AddressOf Text
+
+	Return Value MessageText
+	
+End Function
+
+
+Public Function GetCaptionText () As AddressOf Text
+
+	Return Value CaptionText
+	
+End Function
+
+
+Public Function SetOpacity (newopacity As Byte) As Boolean
+
+	LockRedraw()
+	Opacity := newopacity
+	UnlockRedraw()
+	Redraw ()
+	Return Value True
+	
+End Function
+
+
+Public Function GetOpacity () As Byte
+
+	Return Value Opacity
+	
+End Function
+
+
+Public Function GetMessageLineSpacing () As Double
+
+	Return Value MessageLineSpacing
+	
+End Function
+
+
+Public Function SetMessageLineSpacing (newmessagelinespacing As Double) As Boolean
+	
+	If newmessagelinespacing < 0 Then
+		Return Value False
+	End If
+	
+	LockRedraw ()
+	MessageLineSpacing := newmessagelinespacing
+	UnlockRedraw ()
+	Redraw()
+	Return Value True
+	
+End Function
+
+
+Public Function SetCaptionFont (newcaptionfont As AddressOf _Font) As Boolean
+	
+	LockRedraw()
+	CaptionFont := newcaptionfont
+	SetMySize ()
+	UnlockRedraw()
+	Redraw()
+	Return Value True
+	
+End Function
+
+
+Public Function GetCaptionFont () As AddressOf _Font
+
+	Return Value CaptionFont
+	
+End Function
+
+
+Public Function SetMessageFont (newmessagefont As AddressOf _Font) As Boolean
+	
+	LockRedraw()
+	MessageFont := newmessagefont
+	SetMySize ()
+	UnlockRedraw()
+	Redraw()
+	Return Value True
+	
+End Function
+
+
+Public Function GetMessageFont () As AddressOf _Font
+
+	Return Value MessageFont
+	
+End Function
+
+
+Public Function SetCaptionAlign (newcaptionalign As Long) As Boolean
+
+	Select newcaptionalign
+		Case _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNTOP, _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNVCENTER, _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNBOTTOM, _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNTOP, _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER, _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNBOTTOM, _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNTOP, _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNVCENTER, _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNBOTTOM
+			LockRedraw()
+			CaptionAlign := newcaptionalign
+			CaptionFormatFlags := CaptionAlign BitOr _TEXT_SINGLELINE
+			UnlockRedraw()
+			Redraw ()
+			Return Value True
+
+		Case Else
+			Return Value False
+	End Select
+
+End Function
+
+
+Public Function GetCaptionAlign () As Long
+
+	Return Value CaptionAlign
+
+End Function
+
+
+Public Function SetMessageAlign (newmessagealign As Long) As Boolean
+
+	Select newmessagealign
+		Case _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNTOP, _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNVCENTER, _TEXT_ALIGNLEFT BitOr _TEXT_ALIGNBOTTOM, _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNTOP, _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER, _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNBOTTOM, _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNTOP, _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNVCENTER, _TEXT_ALIGNRIGHT BitOr _TEXT_ALIGNBOTTOM
+			LockRedraw()
+			MessageAlign := newmessagealign
+			MessageFormatFlags := MessageAlign BitOr _TEXT_WORDWRAP
+			UnlockRedraw()
+			Redraw ()
+			Return Value True
+
+		Case Else
+			Return Value False
+	End Select
+
+End Function
+
+
+Public Function GetMessageAlign () As Long
+
+	Return Value MessageAlign
+
+End Function
+
+
+// On down generates event
+Public Event OnPush As Process ()
+
+Protected Function OnDown(x As Long, y As Long, eventtime As Time) As Boolean
+
+	If (x < INSENSITIVE_LEFT) Or (y < INSENSITIVE_TOP) Or (x > (ObjectWidth - INSENSITIVE_RIGHT)) Or (y > (ObjectHeight - INSENSITIVE_BOTTOM)) Then
+		Return Value False
+	Else
+		RaiseEvent OnPush ()
+		Return Value True
+	End If
+	
+End Function
+
+End GraphicClass
+
+
+// MessageBox
+// End of object -------------------------------------------------------------------------
+
+
+Public Const MAX_NUMBER_OF_ITEMS As Long := 100
+Public Const MAX_TEXT_LENGHT_OF_ITEM As Long := 50
+
+Private Structure NavigationBarStructure
+	// Content
+	Public Var ItemIcons As AddressOf _Animation
+	Public Var Items As AddressOf Text [1000]
+	Public Var ItemCaption [MAX_NUMBER_OF_ITEMS] As Text [MAX_TEXT_LENGHT_OF_ITEM]
+	Public Var Font As AddressOf _Font
+	Public Var NumberOfItems As Long
+	Public Var FirstDisplayedItem As Long
+	Public Var NumberOfItemsToDisplay As Long
+	Public Var SelectedItem As Long
+	Public Var DefaultItem As Long
+	// Graphic
+	Public Var SizeX As Long
+	Public Var SizeY As Long
+	Public Var IconX As Long
+	Public Var IconY As Long
+	Public Var IconWidth As Long
+	Public Var IconHeight As Long
+	Public Var CaptionX As Long
+	Public Var CaptionY As Long
+	Public Var ItemSizeY As Long
+	Public Var ItemSizeX As Long
+	Public Var ButtonSizeX As Long
+	Public Var ButtonSizeY As Long
+	Public Var LineColor As Long
+	Public Var LineShadowColor As Long
+	Public Var FirstItemX As Long
+	Public Var FirstItemY As Long
+	Public Var DrawArrows As Boolean
+End Structure
+
+
+Public Function CreateItems (ByRef navigationbar As NavigationBarStructure)
+
+	// Creates Item [I] from text Items
+
+	Private Var I As Long
+	Private Var From As Long
+	Private Var ItemsLength As Long
+	Private Var DelimiterPosition As Long
+
+	Private Var NumberOfTextItems As Long
+	
+	I := 0
+	From := 1
+	NumberOfTextItems := 0
+	ItemsLength := GetTextActualLength (navigationbar.Items)
+	navigationbar.NumberOfItems := 0
+	
+	// Captions
+	If ItemsLength <> 0 Then
+		Do			
+			DelimiterPosition := GetSubTextPosition (navigationbar.Items, "\000A", From)
+			Select DelimiterPosition
+				Case 0	
+					I += 1
+					GetTextMiddle (navigationbar.Items, From, ItemsLength - From + 1, navigationbar.ItemCaption [I])
+				Case ItemsLength	
+					I += 1
+					GetTextMiddle (navigationbar.Items, From, DelimiterPosition - From, navigationbar.ItemCaption [I])									
+				Case Else
+					I += 1
+					GetTextMiddle (navigationbar.Items, From, DelimiterPosition - From, navigationbar.ItemCaption [I])
+					
+			End Select
+			From := DelimiterPosition + 1
+		Loop While DelimiterPosition <> 0
+		NumberOfTextItems := I
+	End If
+	
+	// Number of items
+	If navigationbar.ItemIcons.GetFrameCount() > NumberOfTextItems
+		Then navigationbar.NumberOfItems :=	navigationbar.ItemIcons.GetFrameCount()
+		Else navigationbar.NumberOfItems := NumberOfTextItems
+	End If
+	
+	// Default item
+	If navigationbar.DefaultItem > navigationbar.NumberOfItems Then navigationbar.DefaultItem := navigationbar.NumberOfItems End If
+	If navigationbar.DefaultItem < 1 Then navigationbar.DefaultItem := 1 End If
+	
+	navigationbar.DrawArrows := (navigationbar.NumberOfItems > navigationbar.NumberOfItemsToDisplay)
+	
+End Function
+
+
+Public Function NextItem (ByRef navigationbardata As NavigationBarStructure) As Boolean
+	// Button Down or Left
+	If navigationbardata.FirstDisplayedItem < navigationbardata.NumberOfItems - navigationbardata.NumberOfItemsToDisplay + 1 
+		Then	navigationbardata.FirstDisplayedItem += 1 
+				Return Value True
+		Else 	Return Value False
+	End If
+End Function
+
+
+Public Function PreviousItem (ByRef navigationbardata As NavigationBarStructure) As Boolean
+	// Button Up or Right
+	If navigationbardata.FirstDisplayedItem > 1 
+		Then 	navigationbardata.FirstDisplayedItem -= 1
+				Return Value True
+		Else	Return Value False
+	End If
+End Function
+
+
+// Start of object -----------------------------------------------------------------------
+// VerticalNavigationBar
+
+Public GraphicClass VerticalNavigationBar Inherits BaseGraphicWindow WithAttributes
+{
+	ObjectCode := "OB0037-001"
+	, DesignName := "Basic", GroupName := "Navigators"
+}
+
+Protected Property NumberOfButtonsToDisplay As Long := 4 WithAttributes
+{
+	PropertyGroup := "Content"
+}
+
+Protected Property DefaultButton As Long := 1 WithAttributes
+{
+	PropertyGroup := "Behavior"
+}
+
+Protected Property ButtonCaptions As AddressOf Text WithAttributes
+{
+	PropertyGroup := "Content",
+	EditMode := "Text"
+}
+
+Protected Property Font As AddressOf _Font := fntDefault16Bold WithAttributes
+{
+	PropertyGroup := "Content"
+}
+
+Protected Property LineSpacing As Double := 1.2 WithAttributes
+{
+	PropertyGroup := "Content"
+}
+
+Protected Var TextColor As Long := _COLOR_WHITE
+Protected Var SelectedTextColor As Long := _COLOR_WHITE
+Protected Var TextShadowColor As Long := SetColorComponentOpacity (_COLOR_WHITE, 128)
+
+Private Const OPACITY_50_P As Byte := 128
+Private Const OPACITY_100_P As Byte := 255
+
+Private Var NavigationBarData As NavigationBarStructure
+Public Event OnPress As Process (itemid As Long)
+
+Private Var PictureBackground As AddressOf _Picture
+Private Var PictureSelected As AddressOf _Picture
+
+
+Protected Function Init ()
+
+	NavigationBarData.Items := ButtonCaptions
+	NavigationBarData.NumberOfItemsToDisplay := NumberOfButtonsToDisplay
+	NavigationBarData.LineColor := _COLOR_BLACK
+	NavigationBarData.LineShadowColor := Color (192, 192, 192, 255)
+	CreateItems (NavigationBarData)
+
+	NavigationBarData.SelectedItem := DefaultButton
+	
+	GetSize (NavigationBarData.SizeX, NavigationBarData.SizeY)
+	
+	If GetPrimaryDisplay().GetWidth() <= 640 Then
+		PictureBackground := picVerticalNavigationBar640x480Background
+		PictureSelected := picVerticalNavigationBar640x480Selected
+	Else
+		PictureBackground := picVerticalNavigationBar800x600Background
+		PictureSelected := picVerticalNavigationBar800x600Selected
+	End If
+	
+	NavigationBarData.SizeX := PictureBackground.GetWidth ()
+
+	SetSize (GetPrimaryDisplay().GetWidth(), NavigationBarData.SizeY)
+	NavigationBarData.CaptionX := NavigationBarData.SizeX / 10
+	
+	If NavigationBarData.DrawArrows Then
+		NavigationBarData.ItemSizeY := NavigationBarData.SizeY / (NumberOfButtonsToDisplay + 1)
+		NavigationBarData.ButtonSizeY := NavigationBarData.ItemSizeY / 2
+		NavigationBarData.CaptionY := NavigationBarData.ItemSizeY
+		NavigationBarData.FirstItemY := NavigationBarData.ButtonSizeY
+	Else
+		NavigationBarData.ItemSizeY := NavigationBarData.SizeY / NumberOfButtonsToDisplay
+		NavigationBarData.ButtonSizeY := 0
+		NavigationBarData.CaptionY := NavigationBarData.ItemSizeY
+		NavigationBarData.FirstItemY := NavigationBarData.ButtonSizeY
+	End If
+	
+	NavigationBarData.FirstDisplayedItem := 1
+	
+End Function
+
+
+Private Function OnSetLanguage(languageid As Long)
+	
+	LockRedraw()
+	CreateItems (NavigationBarData)
+	UnlockRedraw()
+	Redraw()
+
+End Function
+
+
+Private Function DrawShadowText (font As _Font, srctext As Text, opacity As Byte, dstx As Long, dsty As Long, width As Long, height As Long, formatflags As Long, linespacing As Double)
+
+	DrawText(font, srctext, SetColorComponentOpacity (TextShadowColor, (CLong (GetColorComponentOpacity (TextShadowColor)) * opacity)/256),
+		dstx, dsty + 1,
+		width, height,
+		formatflags,
+		linespacing)
+	DrawText(font, srctext, SetColorComponentOpacity (TextColor, (CLong (GetColorComponentOpacity (TextColor)) * opacity)/256),
+		dstx, dsty,
+		width, height,
+		formatflags,
+		linespacing)
+
+End Function
+
+
+Private Function DrawSelectedShadowText (font As _Font, srctext As Text, opacity As Byte, dstx As Long, dsty As Long, width As Long, height As Long, formatflags As Long, linespacing As Double)
+
+	DrawText(font, srctext, SetColorComponentOpacity (TextShadowColor, (CLong (GetColorComponentOpacity (TextShadowColor)) * opacity)/256),
+		dstx, dsty + 1,
+		width, height,
+		formatflags,
+		linespacing)
+	DrawText(font, srctext, SetColorComponentOpacity (SelectedTextColor, (CLong (GetColorComponentOpacity (SelectedTextColor)) * opacity)/256),
+		dstx, dsty,
+		width, height,
+		formatflags,
+		linespacing)
+
+End Function
+
+
+Private Function DrawVerticalTiledPicture (picture As _Picture, dsty As Long, height As Long, opacity As Byte)
+Private Var Y As Long := dsty
+Private Var Hrest As Long := height
+Private Var PicH As Long := picture.GetHeight()
+Private Var Hdraw As Long
+	
+	Do
+		Hdraw := Min (PicH, Hrest)
+		DrawPicture (picture, 0, Y, -1, Hdraw, 0, 0, opacity)
+		Hrest -= Hdraw
+		Y += Hdraw
+	Loop While Hrest > 0
+
+End Function
+
+
+
+Protected Function OnDraw ()
+Private Var I As Long
+Private Var J As Long := 0
+Private Var Y As Long
+Private Var Hdraw As Long
+Private Var Ydraw As Long
+Private Var T As Long
+	
+	// Draw background picture
+	DrawVerticalTiledPicture (PictureBackground, 0, NavigationBarData.SizeY, 200)
+
+	// Draw items
+	J := NavigationBarData.FirstDisplayedItem
+	For I := 1 To NumberOfButtonsToDisplay
+		Ydraw := NavigationBarData.ButtonSizeY + (I-1) * NavigationBarData.ItemSizeY
+		
+		If I = NumberOfButtonsToDisplay  And Not NavigationBarData.DrawArrows Then
+			GetSize (T, Hdraw)
+			Hdraw -= Ydraw
+		Else
+			Hdraw := NavigationBarData.ItemSizeY
+		End If
+		
+		// Draw selected item
+		If J = NavigationBarData.SelectedItem Then
+			DrawVerticalTiledPicture (PictureSelected, Ydraw, Hdraw, 200)
+			DrawSelectedShadowText(Font, NavigationBarData.ItemCaption [J], OPACITY_100_P, 0, Ydraw, NavigationBarData.SizeX, Hdraw, _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER BitOr _TEXT_WORDWRAP, LineSpacing)
+		Else
+			DrawShadowText (Font, NavigationBarData.ItemCaption [J], OPACITY_100_P, 0, Ydraw, NavigationBarData.SizeX, Hdraw, _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER BitOr _TEXT_WORDWRAP, LineSpacing)
+		End If
+		
+		Y := NavigationBarData.ButtonSizeY + (I-1) * NavigationBarData.ItemSizeY
+		If I <> 1 Or NavigationBarData.DrawArrows Then
+			DrawLine (0, Y, NavigationBarData.SizeX, Y, NavigationBarData.LineColor)
+			DrawLine (0, Y + 1, NavigationBarData.SizeX, Y + 1, NavigationBarData.LineShadowColor)
+		End If
+		J +=1
+	End For
+	
+	If  NavigationBarData.DrawArrows Then
+		Y := NavigationBarData.ButtonSizeY + (I-1) * NavigationBarData.ItemSizeY
+		DrawLine (0, Y, NavigationBarData.SizeX, Y, NavigationBarData.LineColor)
+		DrawLine (0, Y + 1, NavigationBarData.SizeX, Y + 1, NavigationBarData.LineShadowColor)
+	End If
+	
+	// Draw buttons Up And Down
+	If NavigationBarData.DrawArrows Then
+		If NavigationBarData.FirstDisplayedItem > 1 Then
+			DrawShadowText (fntWingdings347Bold, txtArrowUp, OPACITY_100_P, 0, 0, NavigationBarData.SizeX, NavigationBarData.ButtonSizeY, _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER, 1) 
+		Else
+			DrawShadowText (fntWingdings347Bold, txtArrowUp, OPACITY_50_P, 0, 0, NavigationBarData.SizeX, NavigationBarData.ButtonSizeY, _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER, 1) 	
+		End If
+		If NavigationBarData.FirstDisplayedItem + NumberOfButtonsToDisplay - 1 < NavigationBarData.NumberOfItems Then
+			DrawShadowText (fntWingdings347Bold, txtArrowDown, OPACITY_100_P, 0, NavigationBarData.SizeY - NavigationBarData.ButtonSizeY, NavigationBarData.SizeX, NavigationBarData.ButtonSizeY, _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER, 1)	
+		Else
+			DrawShadowText (fntWingdings347Bold, txtArrowDown, OPACITY_50_P, 0, NavigationBarData.SizeY - NavigationBarData.ButtonSizeY, NavigationBarData.SizeX, NavigationBarData.ButtonSizeY, _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER, 1)	
+		End If
+	End If
+	
+End Function
+
+
+Protected Function OnDown(x As Long, y As Long, eventtime As Time) As Boolean
+	Private Var I As Long
+	
+	If x > NavigationBarData.SizeX Then
+		Return Value False
+	End If
+
+	// Items
+	For I := 1 To NumberOfButtonsToDisplay
+		If y > NavigationBarData.FirstItemY + NavigationBarData.ItemSizeY * (I-1) And y < NavigationBarData.FirstItemY + NavigationBarData.ItemSizeY * I 
+			Then
+				If	GetTextActualLength (NavigationBarData.ItemCaption [I + NavigationBarData.FirstDisplayedItem - 1]) > 0 Then 	
+					SetSelectedButton ( I + NavigationBarData.FirstDisplayedItem - 1)
+					RaiseEvent OnPress (NavigationBarData.SelectedItem)
+				End If				
+		End If
+	End For 
+
+	// Button Up
+	If y < NavigationBarData.ButtonSizeY Then PreviousItem (NavigationBarData) End If
+		
+	// Button Down
+	If y > NavigationBarData.SizeY - NavigationBarData.ButtonSizeY Then NextItem (NavigationBarData) End If
+	
+	//	
+	Redraw ()
+	Return Value True
+	
+End Function
+
+
+Public Function SetSelectedButton (newselectedbutton As Long) As Boolean
+
+	LockRedraw()
+	If newselectedbutton <=  NavigationBarData.NumberOfItems And newselectedbutton > 0 Then
+		NavigationBarData.SelectedItem := newselectedbutton
+	Else
+		NavigationBarData.SelectedItem := 0
+	End If
+	
+	If IsObjectVisible() Then
+		SendJoinMessage(False, 1, newselectedbutton)
+	End If
+	
+	UnlockRedraw()
+	Redraw ()
+	Return Value ((newselectedbutton = NavigationBarData.SelectedItem) And (newselectedbutton <> 0))
+	
+End Function
+
+
+Public Function GetSelectedButton () As Long
+
+	Return Value NavigationBarData.SelectedItem
+
+End Function
+
+
+Public Function ShowObject ()
+
+	If Not GetVisible () Then Open (0, 0, _OW_TOPMOST) End If
+
+End Function
+
+
+Protected Function OnShow ()
+
+	SetSelectedButton (NavigationBarData.SelectedItem)
+
+End Function
+
+
+Public Function HideObject ()
+
+	Close ()
+
+End Function
+
+
+Protected Function OnHide ()
+
+	SendJoinMessage(False, 1, -1)
+
+End Function
+
+
+Public Function IsObjectVisible () As Boolean
+
+	Return Value GetVisible ()
+
+End Function
+
+
+End GraphicClass
+
+// VerticalNavigationBar
+// End of object -----------------------------------------------------------------------
+
+
+
+// Start of object -----------------------------------------------------------------------
+// HiddenNavigator
+
+Public GraphicClass HiddenNavigator Inherits BaseGraphicClass WithAttributes
+{
+	ObjectCode := "OB0048-001",
+	DefaultWidth := 36,
+	DefaultHeight := 36
+	, DesignName := "Basic", GroupName := "Navigators"
+}
+
+
+Protected Property DefaultButton As Long := 1 WithAttributes
+{
+	PropertyGroup := "Behavior"
+}
+
+Private Var ShowMe As Boolean := True
+Private Var SelectedButton As Long := DefaultButton
+
+
+Private Function Init ()
+
+	StartTimer(1, :.1)
+
+End Function
+
+
+Protected Function OnTimer(timerid As Long)
+
+	If timerid = 1 Then
+		ShowMe := False
+	End If
+	
+	Redraw()
+
+End Function
+
+
+Protected Function OnDraw()
+
+	If ShowMe Then
+		DrawText(fntWebdings36, "\0032", _COLOR_BLACK)
+	End If
+
+End Function
+
+
+Protected Function OnShow ()
+
+	SetSelectedButton (SelectedButton)
+
+End Function
+
+
+Protected Function OnHide ()
+
+	SendJoinMessage(False, 1, -1)
+
+End Function
+
+
+Public Function SetSelectedButton (newselectedbutton As Long) As Boolean
+
+	SelectedButton := Max (newselectedbutton, 0)
+
+	If GetVisible() Then
+		SendJoinMessage(False, 1, newselectedbutton)
+	End If
+	
+	Redraw ()
+	Return Value ((newselectedbutton = SelectedButton) And (newselectedbutton <> 0))
+	
+End Function
+
+
+Public Function GetSelectedButton () As Long
+
+	Return Value SelectedButton
+	
+End Function
+
+
+End GraphicClass
+
+// HiddenNavigator
+// End of object -----------------------------------------------------------------------
+
+
+
+// Start of object -----------------------------------------------------------------------
+// HorizonatalSelector
+
+//Public GraphicClass HorizontalSelector Inherits BaseGraphicClass WithAttributes
+//{
+//	ObjectCode := "OB0034-001"
+//}
+//
+//Protected Property Icons As AddressOf _Animation := Nothing WithAttributes
+//{
+//	PropertyGroup := "Content"
+//}
+//
+//Protected Property NumberOfItemsToDisplay As Long := 4 WithAttributes
+//{
+//	PropertyGroup := "Content"
+//}
+//
+//Protected Property DefaultItem As Long := 1 WithAttributes
+//{
+//	PropertyGroup := "Content"
+//}
+//
+//Protected Property Items As AddressOf Text WithAttributes
+//{
+//	PropertyGroup := "Content",
+//	EditMode := "Text"
+//}
+//
+//Protected Property BackgroundColor As Long := Color (128,128,128,255) WithAttributes
+//{
+//PropertyGroup := "Appearance", 
+//EditMode := "color"
+//}
+//
+//Protected Property Font As AddressOf _Font := fntDefault16Bold WithAttributes
+//{
+//	PropertyGroup := "Content"
+//}
+//
+//Protected Property TextColor As Long := Color (0,0,0,255) WithAttributes
+//{
+//PropertyGroup := "Content", 
+//EditMode := "color"
+//}
+//
+//
+//Public Var NavigationBarData As NavigationBarStructure
+//
+//Private Var IsDown As Boolean := False
+//Private Var MovingTime As Time := :0.02
+//Private Var MovingOffsetX As Double := 0
+//Private Var DiffX As Double := 0
+//Private Var IsMovingLeft As Boolean := False
+//Private Var IsMovingRight As Boolean := False
+//
+//Public Event OnPress As Process (itemid As Long)
+//
+//
+//Protected Function Init ()
+//	NavigationBarData.Items := Items
+//	NavigationBarData.NumberOfItemsToDisplay := NumberOfItemsToDisplay
+//	NavigationBarData.LineColor := Color (0,0,0,255)
+//	NavigationBarData.DefaultItem := DefaultItem
+//	NavigationBarData.Font := Font
+//	
+//	NavigationBarData.ItemIcons := Icons
+//	NavigationBarData.IconWidth := Icons.GetFrameWidth(1)
+//	NavigationBarData.IconHeight := Icons.GetFrameHeight(1)
+//	
+//	NavigationBarData.SelectedItem := DefaultItem
+//	NavigationBarData.FirstDisplayedItem := 1
+//	
+//	CreateItems (NavigationBarData)
+//	
+//	GetSize (NavigationBarData.SizeX, NavigationBarData.SizeY)
+//
+//	NavigationBarData.ItemSizeX := NavigationBarData.SizeX / (NavigationBarData.NumberOfItemsToDisplay + 1)
+//	NavigationBarData.ButtonSizeX := NavigationBarData.ItemSizeX / 2
+//	NavigationBarData.CaptionX := NavigationBarData.ButtonSizeX
+//	NavigationBarData.FirstItemX := NavigationBarData.ButtonSizeX
+//
+//
+//	If NavigationBarData.ItemIcons.GetHeight() <> 0 And GetTextActualLength(NavigationBarData.Items) <> 0
+//		Then 	// Icons + Captions
+//				NavigationBarData.IconY := (NavigationBarData.SizeY - NavigationBarData.ItemIcons.GetHeight() - NavigationBarData.Font.GetHeight()) / 3
+//				NavigationBarData.CaptionY :=  2 * NavigationBarData.IconY + NavigationBarData.ItemIcons.GetHeight()
+//		Else	If NavigationBarData.ItemIcons.GetHeight() <> 0
+//					Then	// Icons only
+//							NavigationBarData.IconY := (NavigationBarData.SizeY - NavigationBarData.ItemIcons.GetHeight()) / 2
+//							NavigationBarData.CaptionY := 0
+//					Else	If GetTextActualLength(NavigationBarData.Items) <> 0
+//								Then 	// Caption only
+//										NavigationBarData.IconY := 0
+//										NavigationBarData.CaptionY := (NavigationBarData.SizeY - NavigationBarData.Font.GetHeight()) / 2
+//								Else	// Nothing
+//										NavigationBarData.IconY := 0
+//										NavigationBarData.CaptionY := 0
+//							End If
+//				End If
+//	End If						
+//					
+//End Function
+//
+//
+//Protected Function OnDraw ()
+//	Private Var I As Long
+//	Private Var J As Long
+//	Private Var ItemIconOffsetX As Long
+//
+//	Private Var ItemX As Long
+//
+//	CreateItems (NavigationBarData)
+//
+//	// Item icon offset
+//	ItemIconOffsetX := (NavigationBarData.ItemSizeX - NavigationBarData.ItemIcons.GetWidth ()) / 2
+//
+//	// Draw background
+//	DrawRectangle (BackGroundColor, 0, 0, NavigationBarData.SizeX, NavigationBarData.SizeX)
+//
+//	// Draw items
+//	J := NavigationBarData.FirstDisplayedItem
+//
+//	If IsMovingRight Then
+//		ItemX := MovingOffsetX + NavigationBarData.ButtonSizeX
+//		DrawAnimationFrame (NavigationBarData.ItemIcons, J-1, ItemX - NavigationBarData.ItemSizeX + ItemIconOffsetX, NavigationBarData.IconY)
+//		DrawText (Font, NavigationBarData.ItemCaption [J-1],TextColor, ItemX - NavigationBarData.ItemSizeX, NavigationBarData.CaptionY, NavigationBarData.ItemSizeX, NavigationBarData.Font.GetHeight (), _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNTOP)
+//	End If
+//
+//
+//	For I := 1 To NumberOfItemsToDisplay
+//		
+//		ItemX := MovingOffsetX + NavigationBarData.ButtonSizeX + (I-1) * NavigationBarData.ItemSizeX
+//
+//		DrawAnimationFrame (NavigationBarData.ItemIcons, J, ItemX + ItemIconOffsetX, NavigationBarData.IconY)
+//		DrawText (Font, NavigationBarData.ItemCaption [J],TextColor, ItemX, NavigationBarData.CaptionY, NavigationBarData.ItemSizeX, NavigationBarData.Font.GetHeight (), _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNTOP)
+//
+//		If J = NavigationBarData.SelectedItem And IsDown Then
+//			DrawRectangle (Color(255,255,255,128), ItemX + ItemIconOffsetX, NavigationBarData.IconY, NavigationBarData.IconWidth, NavigationBarData.IconHeight)
+//		End If
+//		
+//		//DrawLine (NavigationBarData.CaptionX + (I-1) * NavigationBarData.ItemSizeX, 0, NavigationBarData.CaptionX + (I-1) * NavigationBarData.ItemSizeX, NavigationBarData.SizeY, NavigationBarData.LineColor)
+//		
+//		J +=1
+//	
+//	End For
+//	
+//	If IsMovingLeft Then
+//		ItemX := MovingOffsetX + NavigationBarData.ButtonSizeX + NumberOfItemsToDisplay * NavigationBarData.ItemSizeX
+//		DrawAnimationFrame (NavigationBarData.ItemIcons, J, ItemX + ItemIconOffsetX, NavigationBarData.IconY)
+//		DrawText (Font, NavigationBarData.ItemCaption [J], TextColor, ItemX, NavigationBarData.CaptionY, NavigationBarData.ItemSizeX, NavigationBarData.Font.GetHeight (), _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNTOP)
+//	End If
+//
+//	
+//	//DrawLine (NavigationBarData.CaptionX + (I-1) * NavigationBarData.ItemSizeX, 0, NavigationBarData.CaptionX + (I-1) * NavigationBarData.ItemSizeX, NavigationBarData.SizeY, NavigationBarData.LineColor)
+//	
+//	// Draw buttons Up And Down
+//
+//	DrawRectangle (BackgroundColor, 0, 0, NavigationBarData.ButtonSizeX, NavigationBarData.SizeY)
+//	DrawRectangle (BackgroundColor, NavigationBarData.SizeX - NavigationBarData.ButtonSizeX, 0, NavigationBarData.ButtonSizeX + ItemIconOffsetX, NavigationBarData.SizeY)	
+//
+//	If NavigationBarData.FirstDisplayedItem > 1 Then
+//		DrawText (fntWingdings347Bold, txtArrowLeft, TextColor, 0, 0, NavigationBarData.ButtonSizeX, NavigationBarData.SizeY, _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER) 
+//	End If
+//	
+//	If NavigationBarData.FirstDisplayedItem + NumberOfItemsToDisplay - 1 < NavigationBarData.NumberOfItems Then
+//		DrawText (fntWingdings347Bold, txtArrowRight, TextColor, NavigationBarData.SizeX - NavigationBarData.ButtonSizeX, 0, NavigationBarData.ButtonSizeX, NavigationBarData.SizeY, _TEXT_ALIGNHCENTER BitOr _TEXT_ALIGNVCENTER)	
+//	End If
+//End Function
+//
+//
+//Protected Function OnDown(x As Long, y As Long, eventtime As Time) As Boolean
+//	Private Var I As Long
+//
+//	// Items
+//	For I := 1 To NumberOfItemsToDisplay
+//		If x > NavigationBarData.FirstItemX + NavigationBarData.ItemSizeX * (I-1) And x < NavigationBarData.FirstItemX + NavigationBarData.ItemSizeX * I 
+//			Then
+//				If	GetTextActualLength (NavigationBarData.ItemCaption [I + NavigationBarData.FirstDisplayedItem - 1]) > 0 Then 	
+//					IsDown := True
+//					SetSelectedItem (I + NavigationBarData.FirstDisplayedItem - 1)
+////					NavigationBarData.SelectedItem := I + NavigationBarData.FirstDisplayedItem - 1
+////					IsDown := True
+////					Redraw ()
+////					RaiseEvent OnPress (NavigationBarData.SelectedItem)
+//				End If				
+//		End If
+//	End For 
+//
+//	// Button Left
+//	If Not IsMovingRight And x < NavigationBarData.ButtonSizeX And NavigationBarData.FirstDisplayedItem > 1
+//		Then	IsMovingRight := True
+//				StartTimer (1, MovingTime)
+//				DiffX := NavigationBarData.ItemSizeX / 2
+//				MovingOffsetX := DiffX
+//	End If
+//		
+//	// Button Right
+//	If Not IsMovingLeft And x > (NavigationBarData.SizeX - NavigationBarData.ButtonSizeX) And navigationbardata.FirstDisplayedItem < navigationbardata.NumberOfItems - navigationbardata.NumberOfItemsToDisplay + 1 
+//		Then	IsMovingLeft := True
+//				StartTimer (2, MovingTime)
+//				DiffX := NavigationBarData.ItemSizeX / 2
+//				MovingOffsetX := -DiffX
+//	End If
+//	
+//	// Redraw	
+//	Redraw ()
+//	
+//	Return Value True
+//	
+//End Function
+//
+//
+//Protected Function OnTimer(timerid As Long)
+//
+//	Select timerid
+//		
+//		Case 1	If DiffX > 1
+//					Then 	DiffX := DiffX / 2
+//							MovingOffsetX := MovingOffsetX + DiffX 
+//							StartTimer (1, MovingTime)
+//							//Redraw ()
+//					Else 	IsMovingRight := False
+//							DiffX := 0
+//							MovingOffsetX := 0
+//							NavigationBarData.FirstDisplayedItem -= 1
+//				End If 	
+//
+//		Case 2	If DiffX > 1
+//					Then 	DiffX := DiffX / 2
+//							MovingOffsetX := MovingOffsetX - DiffX
+//							StartTimer (2, MovingTime)
+//							//Redraw ()
+//					Else 	IsMovingLeft := False
+//							DiffX := 0
+//							MovingOffsetX := 0
+//							NavigationBarData.FirstDisplayedItem += 1
+//				End If 	
+//	End Select
+//
+//	Redraw ()
+//	
+//End Function
+//
+//
+//Protected Function OnUp(x As Long,y As Long,eventtime As Time,isinside As Boolean)
+//	IsDown := False
+//	If Not IsMovingLeft And Not IsMovingRight Then Redraw () End If
+//End Function
+//
+//
+//Public Function SetSelectedItem (newselecteditem As Long) As Boolean
+//	If newselecteditem > MAX_NUMBER_OF_ITEMS Then Return Value False End If
+//	If newselecteditem < 0 Then Return Value False End If
+//	NavigationBarData.SelectedItem := newselecteditem
+//	RaiseEvent OnPress (NavigationBarData.SelectedItem)
+//	SendJoinMessage(False, 1, NavigationBarData.SelectedItem)
+//	Redraw ()
+//	Return Value True
+//End Function
+//
+//
+//Public Function ShowObject ()
+//	Show ()
+//End Function
+//
+//Protected Function OnShow ()
+//	SetSelectedItem (NavigationBarData.SelectedItem)
+//End Function
+//
+//
+//Public Function HideObject ()
+//	Hide ()
+//End Function
+//
+//
+//Protected Function OnHide ()
+//	SendJoinMessage(False, 1, -1)
+//End Function
+//
+//
+//End GraphicClass
+
+
+// HorizonatalSelector
+// End of object -----------------------------------------------------------------------
+
+
+
+// Start of group ***************************************************************** 
+// FullscreenWindows
+// Revised: 27.4.2010
+// Author: Miroslav Pechlat
+
+
+// Start of object -----------------------------------------------------------------------
+// FullscreenWindow
+
+Public GraphicClass FullscreenWindow Inherits BaseGraphicWindow WithAttributes {ObjectCode := "OB0001-001", DesignName := "Basic", GroupName := "Containers"}
+
+// Private constant declaration
+Public Const PICTURE_ALIGNLEFT As Long := _TEXT_ALIGNLEFT
+Public Const PICTURE_ALIGNHCENTER As Long := _TEXT_ALIGNHCENTER
+Public Const PICTURE_ALIGNRIGHT As Long := _TEXT_ALIGNRIGHT
+Public Const PICTURE_ALIGNTOP As Long := _TEXT_ALIGNTOP
+Public Const PICTURE_ALIGNVCENTER As Long := _TEXT_ALIGNVCENTER
+Public Const PICTURE_ALIGNBOTTOM As Long := _TEXT_ALIGNBOTTOM
+
+// Appearance Property Group
+Protected Property BackgroundColor As Long := &HFF808080 WithAttributes
+{
+	PropertyGroup := "Appearance",
+	EditMode := "color"
+}
+
+Protected Property BackgroundPicture As AddressOf _Picture := Nothing WithAttributes
+{
+	PropertyGroup := "Appearance"
+}
+
+Protected Property BackgroundPictureAlign As Long := PICTURE_ALIGNHCENTER BitOr PICTURE_ALIGNVCENTER WithAttributes
+{
+	PropertyGroup := "Appearance",
+	EditMode := "ENUM; 'Left-Top' := PICTURE_ALIGNLEFT BitOr PICTURE_ALIGNTOP, 'Left-Middle' := PICTURE_ALIGNLEFT BitOr PICTURE_ALIGNVCENTER, 'Left-Bottom' := PICTURE_ALIGNLEFT BitOr PICTURE_ALIGNBOTTOM, 'Center-Top' := PICTURE_ALIGNHCENTER BitOr PICTURE_ALIGNTOP, 'Center-Middle' := PICTURE_ALIGNHCENTER BitOr PICTURE_ALIGNVCENTER, 'Center-Bottom' := PICTURE_ALIGNHCENTER BitOr PICTURE_ALIGNBOTTOM, 'Right-Top' := PICTURE_ALIGNRIGHT BitOr PICTURE_ALIGNTOP, 'Right-Middle' := PICTURE_ALIGNRIGHT BitOr PICTURE_ALIGNVCENTER, 'Right-Bottom' := PICTURE_ALIGNRIGHT BitOr PICTURE_ALIGNBOTTOM"
+}
+
+// Behavior Property Group
+Protected Property NavigationBarButtonID As Long := 0 WithAttributes
+{
+	PropertyGroup := "Behavior"
+}
+
+// Common declaration
+Private Var DisplayBackgroundColor As Boolean
+Private Var BackgroundPictureX As Long
+Private Var BackgroundPictureY As Long
+
+Public Event OnHideObject As Function ()
+Public Event OnPush As Process ()
+Public Event OnShowObject As Function ()
+
+Private Function Init()
+
+	SetSize (GetPrimaryDisplay().GetWidth(), GetPrimaryDisplay().GetHeight())
+	SetDrawParameters ()
+	
+End Function
+
+
+Protected Function OnDraw ()
+
+	If DisplayBackgroundColor Then
+		DrawRectangle (BackgroundColor)
+	End If
+
+	DrawPicture (BackgroundPicture, BackgroundPictureX, BackgroundPictureY)
+	
+End Function
+
+
+Private Function SetDrawParameters ()
+Private Var BackgroundPictureWidth As Long
+Private Var BackgroundPictureHeight As Long
+Private Var PrimaryDisplayWidth As Long
+Private Var PrimaryDisplayHeight As Long
+
+	If BackgroundPicture = Nothing Then
+		DisplayBackgroundColor := True
+		Return
+	End If
+
+	BackgroundPictureWidth := BackgroundPicture.GetWidth()
+	BackgroundPictureHeight := BackgroundPicture.GetHeight()
+	PrimaryDisplayWidth := GetPrimaryDisplay().GetWidth()
+	PrimaryDisplayHeight := GetPrimaryDisplay().GetHeight()
+
+	If BackgroundPictureWidth < PrimaryDisplayWidth Or BackgroundPictureHeight < PrimaryDisplayHeight Then
+		DisplayBackgroundColor := True
+		Select BackgroundPictureAlign
+			Case PICTURE_ALIGNLEFT BitOr PICTURE_ALIGNTOP // Left-Top
+				BackgroundPictureX := 0
+				BackgroundPictureY := 0
+			Case PICTURE_ALIGNLEFT BitOr PICTURE_ALIGNVCENTER // Left-Middle
+				BackgroundPictureX := 0
+				BackgroundPictureY := (PrimaryDisplayHeight - BackgroundPictureHeight) / 2
+			Case PICTURE_ALIGNLEFT BitOr PICTURE_ALIGNBOTTOM // Left-Bottom
+				BackgroundPictureX := 0
+				BackgroundPictureY := PrimaryDisplayHeight - BackgroundPictureHeight
+			Case PICTURE_ALIGNHCENTER BitOr PICTURE_ALIGNTOP // Center-Top
+				BackgroundPictureX := (PrimaryDisplayWidth - BackgroundPictureWidth) / 2
+				BackgroundPictureY := 0
+			Case PICTURE_ALIGNHCENTER BitOr PICTURE_ALIGNVCENTER // Center-Middle
+				BackgroundPictureX := (PrimaryDisplayWidth - BackgroundPictureWidth) / 2
+				BackgroundPictureY := (PrimaryDisplayHeight - BackgroundPictureHeight) / 2
+			Case PICTURE_ALIGNHCENTER BitOr PICTURE_ALIGNBOTTOM // Center-Bottom
+				BackgroundPictureX := (PrimaryDisplayWidth - BackgroundPictureWidth) / 2
+				BackgroundPictureY := PrimaryDisplayHeight - BackgroundPictureHeight
+			Case PICTURE_ALIGNRIGHT BitOr PICTURE_ALIGNTOP // Right-Top
+				BackgroundPictureX := PrimaryDisplayWidth - BackgroundPictureWidth
+				BackgroundPictureY := 0
+			Case PICTURE_ALIGNRIGHT BitOr PICTURE_ALIGNVCENTER // Right-Middle
+				BackgroundPictureX := PrimaryDisplayWidth - BackgroundPictureWidth
+				BackgroundPictureY := (PrimaryDisplayHeight - BackgroundPictureHeight) / 2
+			Case PICTURE_ALIGNRIGHT BitOr PICTURE_ALIGNBOTTOM // Right-Bottom
+				BackgroundPictureX := PrimaryDisplayWidth - BackgroundPictureWidth
+				BackgroundPictureY := PrimaryDisplayHeight - BackgroundPictureHeight
+		End Select
+	Else
+		DisplayBackgroundColor := False
+		BackgroundPictureX := 0
+		BackgroundPictureY := 0
+	End If
+	
+End Function
+
+
+Protected Function OnDown(x As Long, y As Long, eventtime As Time) As Boolean
+
+	RaiseEvent OnPush ()
+	Return Value True
+	
+End Function
+
+
+Protected Function OnJoinMessage (msgobject As BaseGraphicClass, messageid As Long, ParamArray)
+Private Var Button As Long := ParamArray[1]
+
+	If messageid = 1 Then
+		If Button = NavigationBarButtonID Then
+			ShowObject ()
+		Else
+			HideObject ()
+		End If
+	End If
+
+End Function
+
+
+Public Function SetBackgroundColor (newbackgroundcolor As Long) As Boolean
+
+	BackgroundColor := newbackgroundcolor
+	Redraw ()
+	Return Value True
+	
+End Function
+
+
+Public Function GetBackgroundColor () As Long
+
+	Return Value BackgroundColor
+	
+End Function
+
+
+Public Function SetBackgroundPicture (newbackgroundpicture As AddressOf _Picture) As Boolean
+
+	BackgroundPicture := newbackgroundpicture
+	SetDrawParameters ()
+	Redraw ()
+	Return Value True
+	
+End Function
+
+
+Public Function GetBackgroundPicture () As AddressOf _Picture
+
+	Return Value BackgroundPicture
+	
+End Function
+
+
+Public Function SetBackgroundPictureAlign (newbackgroundpicturealign As Long) As Boolean
+
+	Select newbackgroundpicturealign
+		Case PICTURE_ALIGNLEFT BitOr PICTURE_ALIGNTOP, PICTURE_ALIGNLEFT BitOr PICTURE_ALIGNVCENTER, PICTURE_ALIGNLEFT BitOr PICTURE_ALIGNBOTTOM, PICTURE_ALIGNHCENTER BitOr PICTURE_ALIGNTOP, PICTURE_ALIGNHCENTER BitOr PICTURE_ALIGNVCENTER, PICTURE_ALIGNHCENTER BitOr PICTURE_ALIGNBOTTOM, PICTURE_ALIGNRIGHT BitOr PICTURE_ALIGNTOP, PICTURE_ALIGNRIGHT BitOr PICTURE_ALIGNVCENTER, PICTURE_ALIGNRIGHT BitOr PICTURE_ALIGNBOTTOM
+			BackgroundPictureAlign := newbackgroundpicturealign
+			SetDrawParameters ()
+			Return Value True
+
+		Case Else
+			Return Value False
+	End Select
+
+End Function
+
+
+Public Function GetBackgroundPictureAlign () As Long
+
+	Return Value BackgroundPictureAlign
+
+End Function
+
+
+Protected Function OnShow ()
+
+	RaiseEvent OnShowObject ()
+
+End Function
+
+
+Protected Function OnHide ()
+
+	RaiseEvent OnHideObject ()
+
+End Function
+
+
+Public Function ShowObject ()
+	
+	If Not GetVisible () Then Open () End If
+
+End Function
+
+
+Public Function HideObject ()
+	
+	Close ()
+
+End Function
+
+
+Public Function IsObjectVisible () As Boolean
+
+	Return Value GetVisible ()
+
+End Function
+
+
+End GraphicClass
+
+// FullscreenWindow
+// End of object -------------------------------------------------------------------------
+
+
+// FullscreenWindows
+// End of group ******************************************************************* 
+
+
+
+// Start of group ***************************************************************** 
+// NavigationBars
+// Revised: 15.9.2010 by Miroslav Pechlat & Richard Milek
+// Author: Jaroslav Dibitanzl
+
+
+Private Structure NavigationBarButtonLibraryClass
+	Public Var Picture As AddressOf _Picture
+	Public Var Txt As AddressOf Text
+	Public Var Sound As AddressOf _Sound
+End Structure
+
+
+Private Structure NavigationBarUsedButtonsClass
+	Public Var LibraryID As Long
+	Public Var PictureX As Long
+	Public Var TouchX As Long
+End Structure
+
+
+// Start of object -----------------------------------------------------------------------
+// NavigationBar
+
+Public GraphicClass NavigationBar Inherits BaseGraphicWindow WithAttributes
+{
+	ObjectCode 		:= "OB0023-001"
+	, DesignName := "Basic", GroupName := "Navigators"
+}
+
+Private Const NUMBER_OF_BUTTONS_IN_LIBRARY As Long := 14
+Private Const MAX_NUMBER_OF_USED_BUTTONS As Long := 8
+
+Public Const BUTTON_APPEARANCE_NOT_USED 		As Long := -1
+Public Const BUTTON_APPEARANCE_BLANK 			As Long := 0
+Public Const BUTTON_APPEARANCE_TEMPERATURE 		As Long := 1
+Public Const BUTTON_APPEARANCE_LIGHTS 			As Long := 2
+Public Const BUTTON_APPEARANCE_HOME 			As Long := 3
+Public Const BUTTON_APPEARANCE_AV 				As Long := 4
+Public Const BUTTON_APPEARANCE_RESERVATION 		As Long := 5
+Public Const BUTTON_APPEARANCE_SECURITY 		As Long := 6
+Public Const BUTTON_APPEARANCE_BLINDS 			As Long := 7
+Public Const BUTTON_APPEARANCE_SETTINGS1		As Long := 8
+Public Const BUTTON_APPEARANCE_SETTINGS2		As Long := 9
+Public Const BUTTON_APPEARANCE_WEATHER			As Long := 10
+Public Const BUTTON_APPEARANCE_APPLICATIONS		As Long := 11
+Public Const BUTTON_APPEARANCE_NOTES			As Long := 12
+Public Const BUTTON_APPEARANCE_BASIC_CONTROL 	As Long := 13
+Public Const BUTTON_APPEARANCE_AUDIO		 	As Long := 14
+
+
+Private Property DefaultButton As Long := 1 WithAttributes
+{	
+	PropertyGroup	:= "Behavior"
+}
+
+Private Property Button1 As Long := -1 WithAttributes 
+{	
+	PropertyGroup 	:= "Appearance", 
+	DisplayName 	:= "Button1", 
+	EditMode 		:= "ENUM; 'Not Used' := -1, 'Blank' := 0,'Temperature' := 1, 'Lights' := 2,'Home' := 3, 'AV' := 4, 'Reservation' := 5, 'Security' := 6, 'Blinds' := 7, 'Settings1' := 8, 'Settings2' := 9, 'Weather' := 10, 'Applications' := 11, 'Notes' := 12, 'Basic Control' := 13, 'Audio' := 14"
+}
+	
+Private Property Button2 As Long := -1 WithAttributes 
+{	
+	PropertyGroup 	:= "Appearance", 
+	DisplayName 	:= "Button2", 
+	EditMode 		:= "ENUM; 'Not Used' := -1, 'Blank' := 0,'Temperature' := 1, 'Lights' := 2,'Home' := 3, 'AV' := 4, 'Reservation' := 5, 'Security' := 6, 'Blinds' := 7, 'Settings1' := 8, 'Settings2' := 9, 'Weather' := 10, 'Applications' := 11, 'Notes' := 12, 'Basic Control' := 13, 'Audio' := 14"
+}
+	
+Private Property Button3 As Long := -1 WithAttributes 
+{	
+	PropertyGroup	:= "Appearance", 
+	DisplayName 	:= "Button3", 
+	EditMode 		:= "ENUM; 'Not Used' := -1, 'Blank' := 0,'Temperature' := 1, 'Lights' := 2,'Home' := 3, 'AV' := 4, 'Reservation' := 5, 'Security' := 6, 'Blinds' := 7, 'Settings1' := 8, 'Settings2' := 9, 'Weather' := 10, 'Applications' := 11, 'Notes' := 12, 'Basic Control' := 13, 'Audio' := 14"	
+}
+
+Private Property Button4 As Long := -1 WithAttributes 
+{	
+	PropertyGroup 	:= "Appearance", 
+	DisplayName 	:= "Button4", 
+	EditMode 		:= "ENUM; 'Not Used' := -1, 'Blank' := 0,'Temperature' := 1, 'Lights' := 2,'Home' := 3, 'AV' := 4, 'Reservation' := 5, 'Security' := 6, 'Blinds' := 7, 'Settings1' := 8, 'Settings2' := 9, 'Weather' := 10, 'Applications' := 11, 'Notes' := 12, 'Basic Control' := 13, 'Audio' := 14"
+}
+	
+Private Property Button5 As Long := -1 WithAttributes 
+{	
+	PropertyGroup 	:= "Appearance", 
+	DisplayName 	:= "Button5", 
+	EditMode 		:= "ENUM; 'Not Used' := -1, 'Blank' := 0,'Temperature' := 1, 'Lights' := 2,'Home' := 3, 'AV' := 4, 'Reservation' := 5, 'Security' := 6, 'Blinds' := 7, 'Settings1' := 8, 'Settings2' := 9, 'Weather' := 10, 'Applications' := 11, 'Notes' := 12, 'Basic Control' := 13, 'Audio' := 14"
+}
+	
+Private Property Button6 As Long := -1 WithAttributes 
+{	
+	PropertyGroup 	:= "Appearance", 
+	DisplayName 	:= "Button6", 
+	EditMode 		:= "ENUM; 'Not Used' := -1, 'Blank' := 0,'Temperature' := 1, 'Lights' := 2,'Home' := 3, 'AV' := 4, 'Reservation' := 5, 'Security' := 6, 'Blinds' := 7, 'Settings1' := 8, 'Settings2' := 9, 'Weather' := 10, 'Applications' := 11, 'Notes' := 12, 'Basic Control' := 13, 'Audio' := 14"
+}
+	
+Private Property Button7 As Long := -1 WithAttributes 
+{	
+	PropertyGroup 	:= "Appearance", 
+	DisplayName 	:= "Button7", 
+	EditMode 		:= "ENUM; 'Not Used' := -1, 'Blank' := 0,'Temperature' := 1, 'Lights' := 2,'Home' := 3, 'AV' := 4, 'Reservation' := 5, 'Security' := 6, 'Blinds' := 7, 'Settings1' := 8, 'Settings2' := 9, 'Weather' := 10, 'Applications' := 11, 'Notes' := 12, 'Basic Control' := 13, 'Audio' := 14"
+}
+	
+Private Property Button8 As Long := -1 WithAttributes 
+{	
+	PropertyGroup 	:= "Appearance", 
+	DisplayName 	:= "Button8", 
+	EditMode 		:= "ENUM; 'Not Used' := -1, 'Blank' := 0,'Temperature' := 1, 'Lights' := 2,'Home' := 3, 'AV' := 4, 'Reservation' := 5, 'Security' := 6, 'Blinds' := 7, 'Settings1' := 8, 'Settings2' := 9, 'Weather' := 10, 'Applications' := 11, 'Notes' := 12, 'Basic Control' := 13, 'Audio' := 14"
+}
+
+Private Var BackroundPicture As AddressOf _Picture
+Private Var BackLight As AddressOf _Picture
+Private Var ButtonLibrary [NUMBER_OF_BUTTONS_IN_LIBRARY] As NavigationBarButtonLibraryClass
+Private Var UsedButtons [MAX_NUMBER_OF_USED_BUTTONS] As NavigationBarUsedButtonsClass
+Private Var SelectedButton As Long := -1
+Private Var NumberOfUsedButtons As Long := 0
+Private Var MyFont As AddressOf _Font
+Private Var MyFontHeight As Long := 0
+Private Var DisplayWidth As Long := 0
+Private Var ButtonPictureWidth As Long := 0
+Private Var ButtonTouchWidth As Long := 0
+Private Var BackLightXShift As Long := 0
+Private Var TextY As Long := 0
+
+Private Var DrawY As Long
+
+Public Event OnPress As Process(buttonid As Long)
+
+
+Public Function ShowObject ()
+
+	Open (0, 0, _OW_TOPMOST)// + _OW_ALIGNHCENTER + _OW_ALIGNBOTTOM)
+	SetSelectedButton (SelectedButton)
+
+End Function
+
+
+Public Function HideObject ()
+	
+	Close ()
+
+End Function
+
+
+Public Function IsObjectVisible () As Boolean
+
+	Return Value GetVisible ()
+
+End Function
+
+
+Protected Function Init ()
+
+	ButtonLibrary [1].Txt		:= txtTemperature
+	ButtonLibrary [2].Txt		:= txtLights
+	ButtonLibrary [3].Txt		:= txtHome
+	ButtonLibrary [4].Txt		:= txtAVControl
+	ButtonLibrary [5].Txt		:= txtReservation
+	ButtonLibrary [6].Txt		:= txtSecurity
+	ButtonLibrary [7].Txt		:= txtBlinds
+	ButtonLibrary [8].Txt		:= txtSettings
+	ButtonLibrary [9].Txt		:= txtSettings
+	ButtonLibrary [10].Txt		:= txtWeather
+	ButtonLibrary [11].Txt		:= txtApplications
+	ButtonLibrary [12].Txt		:= txtNotepad
+	ButtonLibrary [13].Txt		:= txtBasicControl
+	ButtonLibrary [14].Txt		:= txtAudio
+
+//	ButtonLibrary [1].Sound		:= IDSND_Temperature
+//	ButtonLibrary [2].Sound		:= IDSND_Lights_Control
+//	ButtonLibrary [3].Sound		:= IDSND_Basic_Control
+//	ButtonLibrary [4].Sound		:= IDSND_AV_Control
+//	ButtonLibrary [5].Sound		:= IDSND_Reservation_system
+
+	
+	DisplayWidth := GetPrimaryDisplay ().GetWidth ()
+
+	Select GetPrimaryDisplay ().GetHeight()
+	
+	Case 0 To 480
+		ButtonPictureWidth				:= picNavigationBarH480IcoTemperature.GetWidth ()
+		BackroundPicture 				:= picNavigationBarH480Background
+		BackLight						:= picNavigationBarH480BackLight
+		ButtonLibrary [1].Picture		:= picNavigationBarH480IcoTemperature
+		ButtonLibrary [2].Picture 		:= picNavigationBarH480IcoLights
+		ButtonLibrary [3].Picture 		:= picNavigationBarH480IcoHome
+		ButtonLibrary [4].Picture 		:= picNavigationBarH480IcoAudioVideo
+		ButtonLibrary [5].Picture 		:= picNavigationBarH480IcoReservations
+		ButtonLibrary [6].Picture 		:= picNavigationBarH480IcoSecurity
+		ButtonLibrary [7].Picture 		:= picNavigationBarH480IcoBlinds
+		ButtonLibrary [8].Picture 		:= picNavigationBarH480IcoSettings1
+		ButtonLibrary [9].Picture 		:= picNavigationBarH480IcoSettings2
+		ButtonLibrary [10].Picture 		:= picNavigationBarH480IcoWeather
+		ButtonLibrary [11].Picture 		:= picNavigationBarH480IcoApplications
+		ButtonLibrary [12].Picture 		:= picNavigationBarH480IcoNotepad
+		ButtonLibrary [13].Picture 		:= picNavigationBarH480IcoBasicControl
+		ButtonLibrary [14].Picture 		:= picNavigationBarH480IcoAudio
+
+		TextY							:= 45
+	
+	Case 481 To 600
+		ButtonPictureWidth				:= picNavigationBarH600IcoTemperature.GetWidth ()
+		BackroundPicture 				:= picNavigationBarH600Background
+		BackLight						:= picNavigationBarH600BackLight
+		ButtonLibrary [1].Picture		:= picNavigationBarH600IcoTemperature
+		ButtonLibrary [2].Picture 		:= picNavigationBarH600IcoLights
+		ButtonLibrary [3].Picture 		:= picNavigationBarH600IcoHome
+		ButtonLibrary [4].Picture 		:= picNavigationBarH600IcoAudioVideo
+		ButtonLibrary [5].Picture 		:= picNavigationBarH600IcoReservations
+		ButtonLibrary [6].Picture 		:= picNavigationBarH600IcoSecurity
+		ButtonLibrary [7].Picture 		:= picNavigationBarH600IcoBlinds
+		ButtonLibrary [8].Picture 		:= picNavigationBarH600IcoSettings1
+		ButtonLibrary [9].Picture 		:= picNavigationBarH600IcoSettings2
+		ButtonLibrary [10].Picture 		:= picNavigationBarH600IcoWeather
+		ButtonLibrary [11].Picture 		:= picNavigationBarH600IcoApplications
+		ButtonLibrary [12].Picture 		:= picNavigationBarH600IcoNotepad
+		ButtonLibrary [13].Picture 		:= picNavigationBarH600IcoBasicControl
+		ButtonLibrary [14].Picture 		:= picNavigationBarH600IcoAudio
+
+		TextY							:= 58
+
+	Case Else
+		ButtonPictureWidth				:= picNavigationBarH600IcoTemperature.GetWidth ()
+		BackroundPicture 				:= picNavigationBarH1536Background
+		BackLight						:= picNavigationBarH600BackLight
+		ButtonLibrary [1].Picture		:= picNavigationBarH600IcoTemperature
+		ButtonLibrary [2].Picture 		:= picNavigationBarH600IcoLights
+		ButtonLibrary [3].Picture 		:= picNavigationBarH600IcoHome
+		ButtonLibrary [4].Picture 		:= picNavigationBarH600IcoAudioVideo
+		ButtonLibrary [5].Picture 		:= picNavigationBarH600IcoReservations
+		ButtonLibrary [6].Picture 		:= picNavigationBarH600IcoSecurity
+		ButtonLibrary [7].Picture 		:= picNavigationBarH600IcoBlinds
+		ButtonLibrary [8].Picture 		:= picNavigationBarH600IcoSettings1
+		ButtonLibrary [9].Picture 		:= picNavigationBarH600IcoSettings2
+		ButtonLibrary [10].Picture 		:= picNavigationBarH600IcoWeather
+		ButtonLibrary [11].Picture 		:= picNavigationBarH600IcoApplications
+		ButtonLibrary [12].Picture 		:= picNavigationBarH600IcoNotepad
+		ButtonLibrary [13].Picture 		:= picNavigationBarH600IcoBasicControl
+		ButtonLibrary [14].Picture 		:= picNavigationBarH600IcoAudio
+
+		TextY							:= 58
+
+	End Select
+
+	//BackgroundY 				:= Display.GetHeight () - BackroundPicture.GetHeight () + 1
+	BackLightXShift 			:= (BackLight.GetWidth () - ButtonPictureWidth) / 2
+
+	MyFont 						:= fntDefault10Bold
+	MyFontHeight 				:= MyFont.GetHeight ()
+	
+	UsedButtons [1].LibraryID	:= Button1
+	UsedButtons [2].LibraryID	:= Button2
+	UsedButtons [3].LibraryID	:= Button3
+	UsedButtons [4].LibraryID	:= Button4
+	UsedButtons [5].LibraryID	:= Button5
+	UsedButtons [6].LibraryID	:= Button6
+	UsedButtons [7].LibraryID	:= Button7
+	UsedButtons [8].LibraryID	:= Button8
+	
+	AllocateButtons ()
+	
+	SelectedButton := DefaultButton
+	
+	SelectedButton := Min (SelectedButton, MAX_NUMBER_OF_USED_BUTTONS)
+	SelectedButton := Max (SelectedButton, 1)
+	
+	DrawY := GetPrimaryDisplay().GetHeight() - BackroundPicture.GetHeight()
+	
+	TextY += DrawY
+
+	SetSize (DisplayWidth, GetPrimaryDisplay ().GetHeight ())
+
+End Function
+
+
+Public Function SetButtonAppearance (button As Long, newappearance As Long) As Boolean
+
+	If button < 1 Or button > MAX_NUMBER_OF_USED_BUTTONS Then
+		Return Value False
+	End If
+	
+	If newappearance < -1 Or newappearance > NUMBER_OF_BUTTONS_IN_LIBRARY Then
+		Return Value False
+	End If
+	
+	UsedButtons [button].LibraryID := newappearance
+	AllocateButtons ()
+	Redraw ()
+	
+	Return Value True
+	
+End Function
+
+
+Public Function GetButtonAppearance (button As Long) As Long
+
+	If button < 1 Or button > MAX_NUMBER_OF_USED_BUTTONS Then
+		Return Value BUTTON_APPEARANCE_NOT_USED
+	End If
+	
+	Return Value UsedButtons [button].LibraryID
+	
+End Function
+
+
+Private Function AllocateButtons ()
+Private Var ButtonPitch As Double
+Private Var I As Long
+Private Var J As Long := 0
+	
+	NumberOfUsedButtons := 0
+
+	For I := 1 To MAX_NUMBER_OF_USED_BUTTONS
+		If UsedButtons [I].LibraryID >= 0 Then
+			NumberOfUsedButtons += 1
+		End If
+	End For
+
+	ButtonPitch := CDouble(DisplayWidth) / (NumberOfUsedButtons + 1)
+	ButtonTouchWidth := Min (ButtonPictureWidth, ButtonPitch)
+	
+	For I := 1 To MAX_NUMBER_OF_USED_BUTTONS
+		If UsedButtons[I].LibraryID >= 0 Then
+			J += 1
+			UsedButtons[I].PictureX := J * ButtonPitch - ButtonPictureWidth / 2
+			UsedButtons[I].TouchX := UsedButtons[I].PictureX
+		Else 
+			UsedButtons[I].PictureX := 0
+			UsedButtons[I].TouchX := -1000
+		End If
+		
+	End For
+	
+	If (ButtonTouchWidth < ButtonPictureWidth) Then
+		For  I := 1 To MAX_NUMBER_OF_USED_BUTTONS
+			If UsedButtons[I].LibraryID > 0 Then
+				UsedButtons[I].TouchX += (ButtonPictureWidth - ButtonTouchWidth) / 2
+			End If
+		End For
+	End If
+
+End Function
+
+
+Protected Function OnDraw() 
+
+	Private Var I As Long
+
+	DrawPicture (BackroundPicture, 0, DrawY, -1, -1, 0, 0, 128)
+
+	If NumberOfUsedButtons > 0 Then
+
+		For I := 1 To MAX_NUMBER_OF_USED_BUTTONS
+			
+			If UsedButtons [I].LibraryID > 0 Then
+				
+				If I = SelectedButton Then 	
+					DrawPicture(BackLight, UsedButtons [I].PictureX - BackLightXShift, DrawY, -1, -1, 0, 0, 255)
+					DrawPicture (ButtonLibrary [UsedButtons [I].LibraryID].Picture, UsedButtons [I].PictureX, DrawY, -1, -1, 0, 0, 255)
+					DrawText (MyFont, ButtonLibrary [UsedButtons [I].LibraryID].Txt, Color (255,255,255,55), UsedButtons [I].PictureX, TextY, ButtonPictureWidth, MyFontHeight, _TEXT_ALIGNHCENTER + _TEXT_ALIGNTOP)
+					DrawText (MyFont, ButtonLibrary [UsedButtons [I].LibraryID].Txt, Color (0,0,0), UsedButtons [I].PictureX, TextY + 1, ButtonPictureWidth, MyFontHeight, _TEXT_ALIGNHCENTER + _TEXT_ALIGNTOP)
+				Else
+					DrawPicture (ButtonLibrary [UsedButtons [I].LibraryID].Picture, UsedButtons [I].PictureX, DrawY, -1, -1, 0, 0, 128)
+					DrawText (MyFont, ButtonLibrary [UsedButtons [I].LibraryID].Txt, Color (0,0,0,55), UsedButtons [I].PictureX, TextY + 1, ButtonPictureWidth, MyFontHeight, _TEXT_ALIGNHCENTER + _TEXT_ALIGNTOP)
+					DrawText (MyFont, ButtonLibrary [UsedButtons [I].LibraryID].Txt, Color (255,255,255), UsedButtons [I].PictureX, TextY, ButtonPictureWidth, MyFontHeight, _TEXT_ALIGNHCENTER + _TEXT_ALIGNTOP)
+				End If
+				
+			End If
+		
+		End For
+	
+	End If
+	
+End Function
+
+
+Protected Function OnDown (x As Long, y As Long, msgtime As Time) As Boolean
+Private Var I As Long := 1
+
+	If y < DrawY Then
+		Return Value False
+	End If
+
+	Do 
+		If UsedButtons [I].LibraryID > 0 
+			Then 
+				If x > UsedButtons [I].TouchX And x < UsedButtons [I].TouchX + ButtonTouchWidth Then //BackLight.GetWidth ()	
+					SetSelectedButton (I)
+					RaiseEvent OnPress (SelectedButton)
+					Exit Do
+				End If
+		End If
+		I += 1
+	Loop While I <= MAX_NUMBER_OF_USED_BUTTONS
+	
+	Return Value True
+	
+End Function
+
+
+Public Function SetSelectedButton (newselectedbutton As Long) As Boolean
+	
+	LockRedraw()
+	If newselectedbutton <=  MAX_NUMBER_OF_USED_BUTTONS And newselectedbutton > 0 Then
+		SelectedButton := newselectedbutton	
+	Else
+		SelectedButton := 0
+	End If
+	
+	If IsObjectVisible() Then
+		SendJoinMessage(False, 1, newselectedbutton)
+		//AudioOutput.Play (ButtonLibrary [UsedButtons [SelectedButton].LibraryID].Sound)
+	End If
+	
+	UnlockRedraw()
+	Redraw ()
+	Return Value ((newselectedbutton = SelectedButton) And (newselectedbutton <> 0))
+
+End Function
+
+
+Public Function GetSelectedButton () As Long
+
+	Return Value SelectedButton
+	
+End Function
+
+
+End GraphicClass
+
+// NavigationBar
+// End of object -------------------------------------------------------------------------
+
+// NavigationBars
+// End of group ******************************************************************* 
+
+
+

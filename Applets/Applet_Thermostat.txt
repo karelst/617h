@@ -1,0 +1,219 @@
+//Thermostat
+Public Class ClassModuleThermostat
+
+Private Var HeatingActive_RoomIndx As Long := 0
+Public Var MenuHeatingXRef_RoomIndx[MAX_ROOMS + 1] As Long
+
+//Global Event OnHeatingMenuSelect As Process ()
+
+Public Function GetThermostatIndex() As Long
+	Return Value HeatingActive_RoomIndx
+End Function
+
+Public Function InitInAutoexec()
+
+End Function
+
+
+//Public Function EvaluateNavigation_Thermostat(userindex1 As Long )
+//Var ThermostatIndex As Long
+//Var RoomIndex As Long
+//
+//Var MenuIndex As Long := 1
+//Var T As Text[30]
+//	//smazat predchozi stav
+//	_ClearVariable(MenuHeatingXRef_RoomIndx)	
+//	NavigationBarHeating.VerticalScrollListBox1.RemoveAllItems()
+//	
+//	//uvivatel
+//	If userindex1 = 0 Or Main.MySiteConfiguration.AllUsers.Users[userindex1].Enable Then
+//	
+//		//heating
+//		If userindex1 = 0 Or Main.MySiteConfiguration.AllUsers.Users[userindex1].UserHeating.Enable Then
+//		
+//			//rooms
+//			For RoomIndex := 1 To MAX_ROOMS
+//			
+//			//thermostat
+//				ThermostatIndex := GetTermostatIndexFromRoomIndex(Main.MySiteConfiguration, RoomIndex)
+//				
+//				If Main.MySiteConfiguration.Hvac.AllThermostats.Thermostat[ThermostatIndex].Enabled Then					
+//					
+//					DebugPrintFormat("******user {n}, thermostatindex {n}, roomindex {n}", userindex1,ThermostatIndex,RoomIndex)
+//					
+//					If userindex1 = 0 Or Main.MySiteConfiguration.AllUsers.Users[userindex1].UserHeating.Rooms[RoomIndex] Then
+//						MenuHeatingXRef_RoomIndx[MenuIndex] := ThermostatIndex
+//						If DEBUG Then
+//							FormatText(T,"{T} R:{n.0},T:{n.0}",GetRoomNameFromThermostatIndex(Main.MySiteConfiguration, ThermostatIndex),RoomIndex,ThermostatIndex) 
+//						Else
+//							T := GetRoomNameFromThermostatIndex(Main.MySiteConfiguration, ThermostatIndex)
+//						End If
+//						NavigationBarHeating.VerticalScrollListBox1.AddItem(T)
+//						
+//						MenuIndex += 1	
+//					End If
+//					
+//				End If
+//			End For
+////			
+////			//rooms0
+////			For RoomIndex := 1 To MAX_ROOMS
+////				
+////				//thermostat
+////				ThermostatIndex := GetTermostatIndexFromRoomIndex(Main.MySiteConfiguration, RoomIndex)
+////				
+////				If ThermostatIndex > 0 And Main.MySiteConfiguration.Hvac.AllThermostats.Thermostat[ThermostatIndex].Enabled Then					
+////					DebugPrintFormat("******user {n}, thermostatindex {n}, roomindex {n}", userindex1,ThermostatIndex,RoomIndex)
+////					
+////					If userindex1 = 0 Or Main.MySiteConfiguration.AllUsers.Users[userindex1].UserHeating.Rooms[RoomIndex] Then
+////						MenuHeatingXRef_RoomIndx[MenuIndex] := ThermostatIndex
+////						NavigationBarHeating.VerticalScrollListBox1.AddItem(GetRoomNameFromThermostatIndex(Main.MySiteConfiguration, ThermostatIndex))
+////						MenuIndex += 1	
+////					End If
+////				End If
+////				
+////				//split
+////				SplitIndex := GetSplitIndexFromRoomIndex(Main.MySiteConfiguration, RoomIndex)
+////				
+////				If SplitIndex > 0 And Main.MySiteConfiguration.Hvac.AllZenio.Zenio[ThermostatIndex].Enabled Then					
+////					DebugPrintFormat("******user {n}, splitindex {n}, roomindex {n}", userindex1,SplitIndex,RoomIndex)
+////					
+////					If userindex1 = 0 Or Main.MySiteConfiguration.AllUsers.Users[userindex1].UserHeating.Rooms[RoomIndex] Then
+////						MenuHeatingXRef_RoomIndx[MenuIndex] := SplitIndex + 1000
+////						FormatText(mujtext,"{T}(split)", GetRoomNameFromRoomIndex(Main.MySiteConfiguration, RoomIndex))
+////						NavigationBarHeating.VerticalScrollListBox1.AddItem(mujtext)
+////						MenuIndex += 1	
+////					End If
+////				End If
+////				
+////			End For
+////		
+//			
+//			NavigationBarHeating.VerticalScrollListBox1.SetSelectedItem(1)
+//		End If
+//	Else
+//		NavigationBarHeating.VerticalScrollListBox1.AddItem("UNKNOWN user")
+//	End If
+//	
+//End Function
+
+Public Function ShowHeatingPage1 (newselecteditem As Long)
+	Var tTxt As Text[200]
+	Main.PageSelectSemaphore.Lock()
+	
+	HeatingActive_RoomIndx:= MenuHeatingXRef_RoomIndx[newselecteditem]
+		DebugPrintFormat ("ShowHeatingPage newselecteditem:{n} HeatingActive_RoomIndx:{n}",newselecteditem,HeatingActive_RoomIndx)
+		tTxt := Controller1.Dat.Room[HeatingActive_RoomIndx].tName
+		
+		StatusBar.TextSelectedPage.SetText(tTxt)
+
+		PageHeating.ShowObject()
+//		DebugPrint ("ShowHeatingPage2")
+		UpdateThermostats()
+	Main.PageSelectSemaphore.Unlock()
+	
+End Function
+
+Public Function OnDataChange()
+	UpdateThermostats()
+End Function
+
+
+Public Function UpdateThermostats()
+Var TempData As AddressOf Controller1.MyCommon.SingleRoomStructure
+//Var TempData As AddressOf SingleRoomStructure
+Var dTmp As Double
+Var temp As Text[20]
+
+	TempData :=  Controller1.Dat.Room[HeatingActive_RoomIndx]
+		//Current Temperature
+		PrintTemperature(TempData.Thermometer.dTemperature,temp)
+		PageHeating.CurrentTemperature.SetText(temp)								
+		
+//		//Temperature X1
+//		PrintTemperature(TempData.Thermostat[PageIndex].TemperatureX1,temp)
+//		PageHeating.TemperatureX1.SetText(temp)								
+//		
+		//Comfort temperature
+		dTmp := Controller1.Heating.HeatingCalendar.RoomHeatingCalendar[HeatingActive_RoomIndx].iSetpoint[HVAC_MODE_COMFORT]
+		PageHeating.HeatingTemperatureComfort.SetValue(dTmp)
+		PageHeating.HeatingTemperatureEco.SetMaximum(dTmp) //Limit ECO
+
+				
+		//Eco temperature
+		dTmp := Controller1.Heating.HeatingCalendar.RoomHeatingCalendar[HeatingActive_RoomIndx].iSetpoint[HVAC_MODE_ECO]
+		PageHeating.HeatingTemperatureEco.SetValue(dTmp)
+		PageHeating.HeatingTemperatureComfort.SetMinimum(dTmp)		
+						
+		//Manual/auto mode
+		dTmp := Controller1.Dat.Room[HeatingActive_RoomIndx].iHvacMode
+		PageHeating.HeatingPresetAuto.SetIndication(dTmp = HVAC_MODE_AUTO)
+		
+		//Current mode
+		PageHeating.HeatingPresetComfort.SetIndication(		dTmp = HVAC_MODE_COMFORT)		
+		PageHeating.HeatingPresetEco.SetIndication(			dTmp = HVAC_MODE_ECO)
+		PageHeating.HeatingPresetProtection.SetIndication(	dTmp = HVAC_MODE_FREEZPROTECT)
+		
+//		//HeatingOutputPrimary
+//		If TempData.Thermostat[PageIndex].OutputPrimary > 0 Then
+//			PageHeating.RectangleHeatingPrimary.ShowObject()
+//		Else
+//			PageHeating.RectangleHeatingPrimary.HideObject()
+//		End If
+//		
+//		//ManualOFF
+////		If TempData.Thermostat[PageIndex].ManualOFF Then
+////			PageHeating.TextPresetsInformation1.ShowObject()
+////		Else
+////			PageHeating.TextPresetsInformation1.HideObject()
+////		End If
+//		PageHeating.TextPresetsInformation1.HideObject()
+//		
+//	End If
+		
+End Function
+
+//Public Function UpdateCommonHeating()
+//	Private Var T As Text[10]
+//	Private Var index As Long
+//	Private Var selected As Long
+//	
+//	Var common As CommonDataStructure
+//	common := Main.MySiteConfiguration.CommonData
+//	
+//	//Common
+////	PageHeatingCommon.PresetSUMMER.SetIndication(common.SummerMode)
+//		
+//	//ventilation
+////	PrintPercent(common.VentilationStage,T)
+////	PageHeatingCommon.DisplayVentilationStage.SetText(T)
+//	
+////	//ventilation	
+////	If(Main.MySiteConfiguration.CommonData.VentilationStageSelection > 100) Then
+////		Main.MySiteConfiguration.CommonData.VentilationStageSelection := 100
+////	End If
+////	index := Main.MySiteConfiguration.CommonData.VentilationStageSelection / 10
+////	DebugPrintFormat("######## VentilationStageSelection {n}",index)
+////	selected := PageHeatingCommon.DropDownVentilationStageSelection.GetSelectedItem()
+////	If(selected <> index) Then
+////		PageHeatingCommon.DropDownVentilationStageSelection.SetSelectedItem(index)
+////	End If
+//
+//	
+//	//Rooms
+////	If common.EnableRoomPresets Then
+////		PageHeating.TextPresetsInformation1.SetText("")
+////	Else
+////		PageHeating.TextPresetsInformation1.SetText(common.T)
+////	End If
+////	
+////	
+////	PageHeating.HeatingPresetAuto.SetEnabled(common.EnableRoomPresets)
+////	PageHeating.HeatingPresetComfort.SetEnabled(common.EnableRoomPresets)
+////	PageHeating.HeatingPresetEco.SetEnabled(common.EnableRoomPresets)
+////	PageHeating.HeatingPresetProtection.SetEnabled(common.EnableRoomPresets)
+////		
+//	
+//End Function
+
+End Class

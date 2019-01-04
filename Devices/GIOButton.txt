@@ -1,0 +1,46 @@
+Global DeviceClass GIOButton
+Connector GeneralIOConnector
+
+Global Event OnPush As Process ()
+
+
+Private Function Init ()
+
+	GeneralIOConnector.Open ()
+	GeneralIOConnector.PullupOn ()
+	StartProcess CheckInput ()
+
+End Function
+
+
+Private Process CheckInput ()
+
+	Wait (:0.5)
+	Do
+		GeneralIOConnector.WaitWhileVoltageInRange (2, 1000)
+		RaiseEvent OnPush ()
+		GeneralIOConnector.WaitWhileVoltageInRange (0, 2)
+	End Do
+
+End Process
+
+
+Global Function WaitWhilePressed (Optional timeout As Time := _TIME_INFINITE) As Boolean
+
+	Return Value GeneralIOConnector.WaitWhileVoltageInRange (0, 2, timeout)
+	
+End Function
+
+
+Global Function IsPressed () As Boolean
+
+	If GeneralIOConnector.GetVoltage () < 2 Then
+		Return Value True
+	Else
+		Return Value False
+	End If
+	
+End Function
+
+
+End DeviceClass

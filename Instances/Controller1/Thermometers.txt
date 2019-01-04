@@ -1,0 +1,78 @@
+//
+//Global Structure ThermometerStructure
+//	Var bOK As Boolean
+//	Var dTemperature As Double
+//	Var iModbusAddr As Long
+//End Structure
+//
+
+//Var Dat.Room[INDX_MAX] As ThermometerStructure
+
+
+Private Var DebugEnable As Boolean :=  True//False //
+
+Private Function Init( )
+	Dat.Room[INDX_SLEEPING ].Thermometer.iModbusAddr 	:= THERMOMETER_MODBUSADDR_SLEEPING
+	Dat.Room[INDX_KITCHEN  ].Thermometer.iModbusAddr 	:= THERMOMETER_MODBUSADDR_KITCHEN
+//	Dat.Room[INDX_LIVING   ].Thermometer.iModbusAddr 	:= THERMOMETER_MODBUSADDR_LIVING
+	Dat.Room[INDX_CHILDWEST].Thermometer.iModbusAddr 	:= THERMOMETER_MODBUSADDR_CHILDWEST
+	Dat.Room[INDX_CHILDEAST].Thermometer.iModbusAddr 	:= THERMOMETER_MODBUSADDR_CHILDEAST
+	Dat.Room[INDX_BATHROOM ].Thermometer.iModbusAddr 	:= THERMOMETER_MODBUSADDR_BATHROOM
+	Dat.Room[INDX_BATHROOM2].Thermometer.iModbusAddr 	:= THERMOMETER_MODBUSADDR_BATHROOM2
+	//Dat.Room[INDX_RESERVE  ].Thermometer.iModbusAddr 	:= THERMOMETER_MODBUSADDR_RESERVE
+//show
+	XXX(XX)
+End Function
+
+Function XX()
+End Function
+
+
+Function XXX ( Optional x As AddressOf Function() := Nothing)
+End Function
+
+//THERMOMETER_MODBUSADDR_SLEEPING 	
+//THERMOMETER_MODBUSADDR_KITCHEN 	
+//THERMOMETER_MODBUSADDR_LIVING 	
+//THERMOMETER_MODBUSADDR_CHILDWEST 	
+//THERMOMETER_MODBUSADDR_CHILDEAST 	
+//THERMOMETER_MODBUSADDR_RESERVE	
+//THERMOMETER_MODBUSADDR_BATHROOM	
+//THERMOMETER_MODBUSADDR_BATHROOM2
+
+
+Global Function scanTemperatures ()
+Var i As Long
+
+Var j As Long 
+Var b As Boolean 
+Var iRegister[2] As Long
+
+
+	getTemperature( INDX_SLEEPING 	)	
+	getTemperature( INDX_KITCHEN 	)	
+	getTemperature( INDX_LIVING 	)	
+	getTemperature( INDX_CHILDWEST	) 	
+	getTemperature( INDX_CHILDEAST 	)	
+	getTemperature( INDX_BATHROOM 	)
+	getTemperature( INDX_BATHROOM2	)
+		
+End  Function
+
+
+Function getTemperature(indx As Long )
+Var j As Long 
+Var b As Boolean 
+Var iRegister[2] As Long
+	j := Dat.Room[indx].Thermometer.iModbusAddr
+	b := Modbus1.ReadInputRegisters(0,2,iRegister, j )
+	Dat.Room[indx].Thermometer.bOK :=  b And iRegister[1] = 0
+	If Dat.Room[indx].Thermometer.bOK Then 
+	 	Dat.Room[indx].Thermometer.dTemperature := CDouble(iRegister[2])/10 
+		If DebugEnable Then DebugPrintFormat("Temp {t} {n}  Registers: {n},{n}", Dat.Room[indx].tName,j, Dat.Room[indx].Thermometer.dTemperature ,iRegister[2] )  End If
+	Else 
+		If DebugEnable Then DebugPrintFormat("Temp {t} not read", Dat.Room[indx].tName )  End If
+	End If 
+End Function
+
+

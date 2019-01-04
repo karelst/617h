@@ -1,0 +1,1059 @@
+GraphicClass HorizontalScrollListBox Inherits Namespace "CUE.GraphicCollection.FlatScrollListBox.1".HorizontalScrollListBox
+	//Icon	
+	Protected Var Icons 				As AddressOf _Animation 
+	Protected Var IconsSelectedItem		As AddressOf _Animation 
+//	Protected Var FontSelectedItem			As AddressOf _Font 
+//	Protected Var FontColorSelectedItem		As Long 
+//	Protected Var FontColorDrawSelectedItem		As Long
+		
+	Public Function SetIcons(newicons As AddressOf _Animation)As Boolean
+		Icons := newicons
+		AniOffsetPosY	:= (LineHeight - Icons.GetWidth())/2 + LineWeight/2
+		Redraw()
+		Return Value True		
+	End Function
+	
+	Public Function SetIconsSelectedItem(newicons As AddressOf _Animation)As Boolean
+		IconsSelectedItem := newicons
+//		AniOffsetPosY	:= (LineHeight - Icons.GetWidth())/2 + LineWeight/2
+		Redraw()
+		Return Value True		
+	End Function
+	
+//	Public Function SetFontSelectedItem(newfont As AddressOf _Font)As Boolean
+//		FontSelectedItem := newfont
+//		Redraw()
+//		Return Value True
+//	End Function
+//	
+//	Public Function GetFontSelectedItem()As AddressOf _Font
+//		Return Value FontSelectedItem
+//	End Function
+//
+//	Public Function SetFontColorSelectedItem(newfontcolor As Long)As Boolean
+//		FontColorSelectedItem := newfontcolor
+////		SetColorComponent()
+////		FontColorDrawSelectedItem := SetColorComponentOpacity(FontColorDrawSelectedItem, GetColorComponentOpacity(FontColorDrawSelectedItem) * Opacity / 255)
+//		Redraw()
+//		Return Value True		
+//	End Function
+//	
+//	Public Function GetFontColorSelectedItem() As Long
+//		Return Value FontColorSelectedItem
+//	End Function
+	
+	Protected Function OnDraw()
+		Var i As Long
+		Var j As Long := 1
+		Var LinePosY As Long := - LineHeight
+		Var myindexupline As Long := indexupline
+		Var myVisibleLines As Long := VisibleLines
+				
+		DrawRectangle(BackgroundColorDraw)
+			
+		If VisibleLine Then
+			DrawRectangle(CellColor,TextPosY[ActiveL-myindexupline+2]+Offset,0,LineHeight,-1)
+		End If
+
+		If KeepSelected  And (ActualActiveLine-myindexupline <= myVisibleLines And ActualActiveLine-myindexupline >= -1) Or  (FirstMaxPositionNum <= myVisibleLines ) Then
+			DrawRectangle(SetColorComponentOpacity(SelectedLineColorDraw,GetColorComponentOpacity(SelectedLineColorDraw)*0.8),TextPosY[ActualActiveLine-myindexupline+2]+Offset,0,LineHeight,-1)	
+		End If	
+			
+		For i := 1 To myVisibleLines + 2
+			DrawRectangle (LineColorDraw,LinePosY + Offset,0,LineWeight,ObjectHeight)
+			LinePosY += LineHeight
+		End For	
+		
+
+		For i := myindexupline-1 To myindexupline + myVisibleLines 
+			If i = ActualActiveLine Then
+				DrawAnimationFrame(IconsSelectedItem,i,TextPosY[j]+Offset+AniOffsetPosY+HorizontalIconShift,VerticalIconShift,LineHeight,-1,0,0,Opacity)
+				DrawText(FontSelectedItem,Lines[i].LineText,FontColorDrawSelectedItem,TextPosY[j]+Offset+HorizontalTextShift,VerticalTextShift,LineHeight,-1,VerticalTextAlign BitOr _TEXT_ALIGNHCENTER)
+			Else
+				DrawAnimationFrame(Icons,i,TextPosY[j]+Offset+AniOffsetPosY+HorizontalIconShift,VerticalIconShift,LineHeight,-1,0,0,Opacity)
+				DrawText(Font,Lines[i].LineText,FontColorDraw,TextPosY[j]+Offset+HorizontalTextShift,VerticalTextShift,LineHeight,-1,VerticalTextAlign BitOr _TEXT_ALIGNHCENTER)	
+			End If
+			j += 1		
+		End For
+		
+		If OnMoving And FirstMaxPositionNum > myVisibleLines Then
+			DrawRectangle(SliderColorDraw,CDouble(ObjectWidth * (myindexupline-1) /FirstMaxPositionNum-(Offset*myVisibleLines/FirstMaxPositionNum))+0.9,ObjectHeight-Font.GetHeight()/4,ScrollWidth,Font.GetHeight()/4)
+		End If
+	End Function
+			
+End GraphicClass
+
+Global GraphicClass HorizontalNavigationBar Inherits BaseNavigationBar WithAttributes {defaultwidth := 500, defaultheight := 100, designname := "Flat", groupname := "Navigators"}
+	
+	Protected Property VerticalTextAlign As Long := _TEXT_ALIGNVCENTER WithAttributes
+	{	PropertyGroup := "Text",
+		EditMode := "Enum; 'Top' := _TEXT_ALIGNTOP, 'Center' := _TEXT_ALIGNVCENTER, 'Bottom' := _TEXT_ALIGNBOTTOM"
+	}
+
+	Protected Var MyScrollListBox As HorizontalScrollListBox//Namespace "CUE.GraphicCollection.FlatScrollListBox.1".HorizontalScrollListBox//ScrollListBox
+
+	Protected Property Glide				As Long := 0 WithAttributes {propertygroup := "Appearance", EditMode := "Enum; 'None' := 0, 'Up' := 3, 'Down' := 4"}	
+
+	Public Const GLIDE_NONE As Long := 0
+	Public Const GLIDE_UP As Long := 3
+	Public Const GLIDE_DOWN As Long := 4
+	
+	Public Function GetItemText(item As Long)As AddressOf Text
+		Return Value MyScrollListBox.GetItemText(item)
+	End Function
+	
+	Protected Function OnSetLanguage(languageid As Long)
+		Var i As Long
+		Var TextToDraw As Text[99]
+		LockRedraw()
+		InitTextFormat()
+		For i := 1 To FirstMaxPositionNum
+			GetText(i,TextToDraw)
+			MyScrollListBox.SetItemText(i,TextToDraw)
+		End For
+		UnlockRedraw()
+//		SetTexts(Texts)
+	End Function
+	
+	Public Function SetGlide (newglide As Long) As Boolean
+		If newglide = GLIDE_NONE Or newglide = GLIDE_UP Or newglide = GLIDE_DOWN Then
+			Glide := newglide
+			Return Value True
+		End If	
+		Return Value False
+	End Function
+	
+	Public Function GetGlide()As Long
+		Return Value Glide
+	End Function
+	
+	Public Function ShowObject()
+		Var i As Long	
+		If Not GetVisible() Then
+			Select Glide
+			Case 0
+				Open(ObjectX,ObjectY,OpenMode)
+			Case 3
+
+				MyScrollListBox.SetPosition(0,-ObjectHeight)
+				Open(ObjectX,ObjectY,OpenMode)
+				For i := 1 To 10
+					MyScrollListBox.SetPosition(0,i*ObjectHeight/10-ObjectHeight)
+					Wait(:0.01)
+				End For	
+			Case 4
+				MyScrollListBox.SetPosition(0,2*ObjectHeight)
+				Open(ObjectX,ObjectY,OpenMode)
+				For i := 1 To 10
+					MyScrollListBox.SetPosition(0,ObjectHeight-i*ObjectHeight/10)
+					Wait(:0.01)
+				End For	
+			End Select
+		End If	
+	End Function
+	
+	Public Function HideObject()
+		Var i As Long
+			Select Glide
+			Case 0
+				Close()
+			Case 3
+				For i := 1 To 10
+				MyScrollListBox.SetPosition(0,-i*ObjectHeight/10)
+				Wait(:0.01)
+				End For	
+				Close()
+			Case 4
+				For i := 1 To 10
+				MyScrollListBox.SetPosition(0,i*ObjectHeight/10)
+				Wait(:0.01)
+				End For	
+				Close()
+			End Select
+	End Function
+	
+	Protected Function Init()
+		SelectedItem := DefaultSelectedItem
+		SetObjectParams()
+		
+	End Function
+	
+	Protected Function SetObjectParams()
+		LockRedraw()
+		GetPosition(ObjectX, ObjectY)
+		GetSize(ObjectWidth, ObjectHeight)
+
+		MyScrollListBox.SetHorizontalTextShift(HorizontalTextShift)
+		MyScrollListBox.SetVerticalTextShift(VerticalTextShift)
+		MyScrollListBox.SetVerticalTextAlign(VerticalTextAlign)
+		MyScrollListBox.SetHorizontalIconShift(HorizontalIconShift)
+		MyScrollListBox.SetVerticalIconShift(VerticalIconShift)	
+		MyScrollListBox.SetBackgroundColor(BackgroundColor)
+		MyScrollListBox.SetSelectedItemColor(SelectedItemColor)
+		MyScrollListBox.SetKeepSelected(KeepSelected)
+		MyScrollListBox.SetVisibleItems(VisibleItems)
+		MyScrollListBox.SetEnsureVisibleSelectedTimeout(EnsureVisibleSelectedTimeout)
+		MyScrollListBox.SetOpacity(Opacity)		
+		MyScrollListBox.SetFont(Font)
+		MyScrollListBox.SetFontColor(FontColor)
+		MyScrollListBox.SetFontSelectedItem(FontSelectedItem)
+		MyScrollListBox.SetFontColorSelectedItem(FontColorSelectedItem)
+		MyScrollListBox.SetLineColor(LineColor)
+		MyScrollListBox.SetLineWeight(LineWeight)
+		MyScrollListBox.SetObjectPosition(0,0)
+		MyScrollListBox.SetObjectDimensions(ObjectWidth,ObjectHeight)
+		MyScrollListBox.SetColorBreath(ColorBreath)
+		
+		SetTexts(Texts)
+		MyScrollListBox.SetIcons(Icons)
+		MyScrollListBox.SetIconsSelectedItem(IconsSelectedItem)
+		MyScrollListBox.SetSelectedItem(SelectedItem)
+		
+		MyScrollListBox.ShowObject()
+		UnlockRedraw()
+		Redraw()
+	End Function
+	
+	Protected Process EventOnSelect(newselecteditem As Long) Link MyScrollListBox.OnSelect
+		SelectedItem := newselecteditem
+		If IsObjectVisible() Then
+			SendJoinMessage(False, 1, SelectedItem)
+		End If
+		RaiseEvent OnSelect (newselecteditem)
+	End Process
+
+	Public Function SetColorBreath(newcolorbreath As Boolean)As Boolean
+		ColorBreath := newcolorbreath
+		MyScrollListBox.SetColorBreath(ColorBreath)
+		Return Value True
+	End Function
+	
+	Public Function GetColorBreath()As Boolean
+		Return Value ColorBreath 
+	End Function	
+	
+	Public Function SetObjectDimensions(newwidth As Long, newheight  As Long) As Boolean
+		SetSize(newwidth, newheight)
+		SetObjectParams()
+		Return Value True
+	End Function
+	
+	Public Function SetVerticalTextAlign(newverticaltextalign As Long)As Boolean
+		If newverticaltextalign = _TEXT_ALIGNTOP Or newverticaltextalign = _TEXT_ALIGNVCENTER Or newverticaltextalign = _TEXT_ALIGNBOTTOM Then
+			VerticalTextAlign := newverticaltextalign
+			MyScrollListBox.SetVerticalTextAlign(VerticalTextAlign)
+			Return Value True
+		End If
+		Return Value False
+	End Function
+	
+	Public Function GetVerticalTextAlign()As Long
+		Return Value VerticalTextAlign
+	End Function
+	
+	Public Function SetSelectedItem(newselecteditem As Long)As Boolean	
+		If MyScrollListBox.SetSelectedItem(newselecteditem) Then
+			If newselecteditem <> SelectedItem Then				
+				SelectedItem := newselecteditem
+				If GetVisible() Then
+					SendJoinMessage(False, 1, SelectedItem)
+				End If
+			End If
+			Return Value True
+		End If
+		Return Value False
+	End Function
+
+	Protected Function SetLineText()
+		Var i As Long
+		Var TextToDraw As Text[99]
+		LockRedraw()
+		MyScrollListBox.RemoveAllItems()
+		For i := 1 To FirstMaxPositionNum
+			GetText(i,TextToDraw)
+			MyScrollListBox.AddItem(TextToDraw)
+		End For
+		UnlockRedraw()
+	End Function
+		
+	Public Function SetOpacity(newopacity As Byte) As Boolean	
+		Opacity := newopacity
+		MyScrollListBox.SetOpacity(Opacity)
+		Return Value True		
+	End Function
+
+	Public Function SetBackgroundColor(newbackgroundcolor As Long)As Boolean
+		BackgroundColor := newbackgroundcolor
+		MyScrollListBox.SetBackgroundColor(BackgroundColor)
+		Return Value True
+	End Function
+
+	Public Function SetSelectedItemColor(newselecteditemcolor As Long)As Boolean
+		SelectedItemColor := newselecteditemcolor
+		MyScrollListBox.SetSelectedItemColor(SelectedItemColor)
+		Return Value True		
+	End Function
+	
+	Public Function SetKeepSelected (newkeepselected  As Boolean)As Boolean
+		KeepSelected  := newkeepselected 
+		MyScrollListBox.SetKeepSelected(KeepSelected)
+		Return Value True
+	End Function
+
+	Public Function SetEnsureVisibleSelectedTimeout(newensurevisibleselectedtimeout As Time)As Boolean
+		EnsureVisibleSelectedTimeout := newensurevisibleselectedtimeout
+		MyScrollListBox.SetEnsureVisibleSelectedTimeout(EnsureVisibleSelectedTimeout)
+		Return Value True
+	End Function
+	
+	Public Function EnsureVisible()
+		MyScrollListBox.EnsureVisible()
+	End Function
+		
+	Public Function SetFont(newfont As AddressOf _Font)As Boolean
+		Font := newfont
+		MyScrollListBox.SetFont(Font)
+		Return Value True
+	End Function
+
+	Public Function SetFontSelectedItem(newfont As AddressOf _Font)As Boolean
+		FontSelectedItem := newfont
+		MyScrollListBox.SetFontSelectedItem(FontSelectedItem)
+		Return Value True
+	End Function
+	
+	Public Function SetFontColor(newfontcolor As Long)As Boolean
+		FontColor := newfontcolor
+		MyScrollListBox.SetFontColor(FontColor)
+		Return Value True		
+	End Function	
+	
+	Public Function SetFontColorSelectedItem(newfontcolor As Long)As Boolean
+		FontColorSelectedItem := newfontcolor
+		MyScrollListBox.SetFontColorSelectedItem(FontColorSelectedItem)
+		Return Value True		
+	End Function
+	
+	Public Function SetIcons(newicons As AddressOf _Animation)As Boolean
+		Icons := newicons
+		MyScrollListBox.SetIcons(Icons)
+		Return Value True		
+	End Function
+	
+	Public Function SetIconsSelectedItem(newicons As AddressOf _Animation)As Boolean
+		IconsSelectedItem := newicons
+		MyScrollListBox.SetIconsSelectedItem(IconsSelectedItem)
+		Return Value True		
+	End Function
+
+	Public Function SetVisibleItems(newvisibleitems As Long)As Boolean
+		If newvisibleitems > 0 Then
+			VisibleItems := newvisibleitems
+			MyScrollListBox.SetVisibleItems(VisibleItems)
+			Return Value True		
+		End If
+		Return Value False
+	End Function
+
+	Public Function SetLineColor(newlinecolor As Long)As Boolean
+		LineColor := newlinecolor
+		MyScrollListBox.SetLineColor(LineColor)
+		Return Value True		
+	End Function
+
+	Public Function SetLineWeight(newlineweight As Long)As Boolean
+		If newlineweight >= 0 Then
+			LineWeight := newlineweight
+			MyScrollListBox.SetLineWeight(LineWeight)
+			Return Value True		
+		End If
+		Return Value False
+	End Function
+
+	Public Function SetHorizontalTextShift(newhorizontaltextshift As Long)As Boolean
+		HorizontalTextShift := newhorizontaltextshift
+		MyScrollListBox.SetHorizontalTextShift(HorizontalTextShift)
+		Return Value True
+	End Function
+	
+	Public Function GetHorizontalTextShift()As Long
+		Return Value HorizontalTextShift
+	End Function
+	
+	Public Function SetVerticalTextShift(newverticaltextshift As Long)As Boolean
+		VerticalTextShift := newverticaltextshift
+		MyScrollListBox.SetVerticalTextShift(VerticalTextShift)
+		Return Value True
+	End Function
+	
+	Public Function GetVerticalTextShift()As Long
+		Return Value VerticalTextShift
+	End Function
+	
+	Public Function SetHorizontalIconShift(newhorizontaliconshift As Long)As Boolean
+		HorizontalIconShift := newhorizontaliconshift
+		MyScrollListBox.SetHorizontalIconShift(HorizontalIconShift)
+		Return Value True
+	End Function
+	
+	Public Function GetHorizontalIconShift()As Long
+		Return Value HorizontalIconShift
+	End Function
+
+	Public Function SetVerticalIconShift(newverticaliconshift As Long)As Boolean
+		VerticalIconShift := newverticaliconshift
+		MyScrollListBox.SetVerticalIconShift(VerticalIconShift)
+		Return Value True
+	End Function
+	 
+	Public Function GetVerticalIconShift()As Long
+		Return Value VerticalIconShift
+	End Function
+	
+End GraphicClass
+
+GraphicClass VerticalScrollListBox Inherits Namespace "CUE.GraphicCollection.FlatScrollListBox.1".VerticalScrollListBox
+	Protected Var Icons 				As AddressOf _Animation 
+	Protected Var IconsSelectedItem		As AddressOf _Animation 
+//	Protected Var FontSelectedItem			As AddressOf _Font 
+//	Protected Var FontColorSelectedItem		As Long 
+//	Protected Var FontColorDrawSelectedItem		As Long
+	
+	Public Function SetIcons(newicons As AddressOf _Animation)As Boolean
+		Icons := newicons
+		AniOffsetPosY	:= (LineHeight - Icons.GetWidth())/2 + LineWeight/2
+		Redraw()
+		Return Value True		
+	End Function
+	
+	Public Function SetIconsSelectedItem(newicons As AddressOf _Animation)As Boolean
+		IconsSelectedItem := newicons
+//		AniOffsetPosY	:= (LineHeight - Icons.GetWidth())/2 + LineWeight/2
+		Redraw()
+		Return Value True		
+	End Function
+	
+//	Public Function SetFontSelectedItem(newfont As AddressOf _Font)As Boolean
+//		FontSelectedItem := newfont
+//		Redraw()
+//		Return Value True
+//	End Function
+//	
+//	Public Function GetFontSelectedItem()As AddressOf _Font
+//		Return Value FontSelectedItem
+//	End Function
+//
+//	Public Function SetFontColorSelectedItem(newfontcolor As Long)As Boolean
+//		FontColorSelectedItem := newfontcolor
+////		SetColorComponent()
+////		FontColorDrawSelectedItem := SetColorComponentOpacity(FontColorDrawSelectedItem, GetColorComponentOpacity(FontColorDrawSelectedItem) * Opacity / 255)
+//		Redraw()
+//		Return Value True		
+//	End Function
+//	
+//	Public Function GetFontColorSelectedItem() As Long
+//		Return Value FontColorSelectedItem
+//	End Function
+	
+	Protected Function OnDraw()
+		Var i As Long
+		Var j As Long := 1
+		Var LinePosY As Long := - LineHeight
+		Var myindexupline As Long := indexupline
+		Var myVisibleLines As Long := VisibleLines
+				
+		DrawRectangle(BackgroundColorDraw)
+			
+		If VisibleLine Then
+			DrawRectangle(CellColor,0,TextPosY[ActiveL-myindexupline+2]+Offset,-1,LineHeight)
+		End If
+
+		If KeepSelected  And (ActualActiveLine-myindexupline <= myVisibleLines And ActualActiveLine-myindexupline >= -1) Or  (FirstMaxPositionNum <= myVisibleLines ) Then
+			DrawRectangle(SetColorComponentOpacity(SelectedLineColorDraw,GetColorComponentOpacity(SelectedLineColorDraw)*0.8),0,TextPosY[ActualActiveLine-myindexupline+2]+Offset,-1,LineHeight)	
+		End If	
+			
+		For i := 1 To myVisibleLines + 3
+			DrawRectangle (LineColorDraw,0,LinePosY + Offset,ObjectWidth,LineWeight)
+			LinePosY += LineHeight
+		End For	
+		
+		For i := myindexupline-1 To myindexupline + myVisibleLines
+			If i = ActualActiveLine Then
+				DrawAnimationFrame(IconsSelectedItem,i,HorizontalIconShift,TextPosY[j]+Offset+AniOffsetPosY+VerticalIconShift,-1,LineHeight,0,0,Opacity)
+				DrawText(FontSelectedItem,Lines[i].LineText,FontColorDrawSelectedItem,HorizontalTextShift,TextPosY[j]+Offset+VerticalTextShift,-1,LineHeight,HorizontalTextAlign BitOr _TEXT_ALIGNVCENTER)	
+ 			Else
+				DrawAnimationFrame(Icons,i,HorizontalIconShift,TextPosY[j]+Offset+AniOffsetPosY+VerticalIconShift,-1,LineHeight,0,0,Opacity)
+				DrawText(Font,Lines[i].LineText,FontColorDraw,HorizontalTextShift,TextPosY[j]+Offset+VerticalTextShift,-1,LineHeight,HorizontalTextAlign BitOr _TEXT_ALIGNVCENTER)	
+			End If
+			j += 1		
+		End For
+
+		If OnMoving And FirstMaxPositionNum > myVisibleLines Then
+			DrawRectangle(SliderColorDraw,ObjectWidth-Font.GetHeight()/4, CDouble(ObjectHeight * (myindexupline-1) /FirstMaxPositionNum-(Offset*myVisibleLines/FirstMaxPositionNum))+0.9,Font.GetHeight()/4,ScrollWidth)
+		End If	
+	End Function
+End GraphicClass
+
+Global GraphicClass VerticalNavigationBar Inherits BaseNavigationBar WithAttributes {defaultwidth := 215, defaultheight := 295, designname := "Flat", groupname := "Navigators"}
+	
+	Protected Property HorizontalTextAlign As Long := _TEXT_ALIGNHCENTER WithAttributes
+	{	PropertyGroup := "Text",
+		EditMode := "Enum; 'Left' := _TEXT_ALIGNLEFT, 'Center' := _TEXT_ALIGNHCENTER, 'Right' := _TEXT_ALIGNRIGHT"
+	}
+
+	Protected Var MyScrollListBox As VerticalScrollListBox//Namespace "CUE.GraphicCollection.FlatScrollListBox.1".VerticalScrollListBox//ScrollListBox
+
+	Protected Property Glide				As Long := 0 WithAttributes {propertygroup := "Appearance", EditMode := "Enum; 'None' := 0, 'Left' := 1, 'Right' := 2"}	
+
+	Public Const GLIDE_NONE As Long := 0
+	Public Const GLIDE_LEFT As Long := 1
+	Public Const GLIDE_RIGHT As Long := 2
+
+	Public Function GetItemText(item As Long)As AddressOf Text
+		Return Value MyScrollListBox.GetItemText(item)
+	End Function
+	
+	Protected Function OnSetLanguage(languageid As Long)
+		Var i As Long
+		Var TextToDraw As Text[99]
+		LockRedraw()
+		InitTextFormat()
+		For i := 1 To FirstMaxPositionNum
+			GetText(i,TextToDraw)
+			MyScrollListBox.SetItemText(i,TextToDraw)
+		End For
+		UnlockRedraw()
+//		SetTexts(Texts)
+	End Function
+			
+	Public Function SetGlide (newglide As Long) As Boolean
+		If newglide = GLIDE_NONE Or newglide = GLIDE_LEFT Or newglide = GLIDE_RIGHT Then
+			Glide := newglide
+			Return Value True
+		End If	
+		Return Value False
+	End Function
+	
+	Public Function GetGlide()As Long
+		Return Value Glide
+	End Function
+		
+	Public Function ShowObject()
+		Var i As Long	
+		If Not GetVisible() Then
+
+		Select Glide
+			Case 0
+				Open(ObjectX,ObjectY,OpenMode)
+			Case 1
+				MyScrollListBox.SetPosition(-ObjectWidth,0)
+				Open(ObjectX,ObjectY,OpenMode)
+				For i := 1 To 10
+					MyScrollListBox.SetPosition(i*ObjectWidth/10-ObjectWidth,0)
+					Wait(:0.01)
+				End For	
+			Case 2
+					MyScrollListBox.SetPosition(2*ObjectWidth,0)
+					Open(ObjectX,ObjectY,OpenMode)
+				For i := 1 To 10
+					MyScrollListBox.SetPosition(ObjectWidth - i*ObjectWidth/10,0)
+					Wait(:0.01)
+				End For	
+			End Select
+
+		End If	
+	End Function
+	
+	Public Function HideObject()
+		Var i As Long
+		Select Glide
+		Case 0
+			Close()
+		Case 1
+			For i := 1 To 10
+			MyScrollListBox.SetPosition(-i*ObjectWidth/10,0)		
+			Wait(:0.01)
+			End For	
+			Close()
+		Case 2
+			For i := 1 To 10
+			MyScrollListBox.SetPosition(i*ObjectWidth/10,0)
+			Wait(:0.01)
+			End For	
+			Close()
+		End Select
+	End Function
+			
+	Protected Function Init()
+		SelectedItem := DefaultSelectedItem
+		SetObjectParams()
+	End Function
+	
+	Protected Function SetObjectParams()
+		LockRedraw()
+		GetPosition(ObjectX, ObjectY)
+		GetSize(ObjectWidth, ObjectHeight)
+		MyScrollListBox.SetHorizontalTextShift(HorizontalTextShift)
+		MyScrollListBox.SetVerticalTextShift(VerticalTextShift)
+		MyScrollListBox.SetHorizontalTextAlign(HorizontalTextAlign)
+		MyScrollListBox.SetVerticalIconShift(VerticalIconShift)
+		MyScrollListBox.SetHorizontalIconShift(HorizontalIconShift)	
+		MyScrollListBox.SetBackgroundColor(BackgroundColor)
+		MyScrollListBox.SetSelectedItemColor(SelectedItemColor)
+		MyScrollListBox.SetKeepSelected(KeepSelected)
+		MyScrollListBox.SetVisibleItems(VisibleItems)
+		MyScrollListBox.SetEnsureVisibleSelectedTimeout(EnsureVisibleSelectedTimeout)
+		MyScrollListBox.SetOpacity(Opacity)		
+		MyScrollListBox.SetFont(Font)
+		MyScrollListBox.SetFontColor(FontColor)	
+		MyScrollListBox.SetFontSelectedItem(FontSelectedItem)
+		MyScrollListBox.SetFontColorSelectedItem(FontColorSelectedItem)	
+		MyScrollListBox.SetLineColor(LineColor)
+		MyScrollListBox.SetLineWeight(LineWeight)
+		MyScrollListBox.SetObjectPosition(0,0)
+		MyScrollListBox.SetObjectDimensions(ObjectWidth,ObjectHeight)
+		MyScrollListBox.SetColorBreath(ColorBreath)
+		SetTexts(Texts)
+		MyScrollListBox.SetIcons(Icons)
+		MyScrollListBox.SetIconsSelectedItem(IconsSelectedItem)
+		MyScrollListBox.SetSelectedItem(SelectedItem)
+		
+		MyScrollListBox.ShowObject()
+		UnlockRedraw()
+		Redraw()
+	End Function
+	
+	Protected Process EventOnSelect(newselecteditem As Long) Link MyScrollListBox.OnSelect
+		SelectedItem := newselecteditem
+		If IsObjectVisible() Then
+			SendJoinMessage(False, 1, SelectedItem)
+		End If
+		RaiseEvent OnSelect (newselecteditem)
+	End Process
+
+	Public Function SetColorBreath(newcolorbreath As Boolean)As Boolean
+		ColorBreath := newcolorbreath
+		MyScrollListBox.SetColorBreath(ColorBreath)
+		Return Value True
+	End Function
+	
+	Public Function GetColorBreath()As Boolean
+		Return Value ColorBreath 
+	End Function
+	
+	Public Function SetObjectDimensions(newwidth As Long, newheight  As Long) As Boolean
+		SetSize(newwidth, newheight)
+		SetObjectParams()
+		Return Value True
+	End Function
+	
+	Public Function SetHorizontalTextAlign(newhorizontaltextalign As Long)As Boolean
+		If newhorizontaltextalign = _TEXT_ALIGNLEFT Or newhorizontaltextalign = _TEXT_ALIGNHCENTER Or newhorizontaltextalign = _TEXT_ALIGNRIGHT Then
+			HorizontalTextAlign := newhorizontaltextalign
+			MyScrollListBox.SetHorizontalTextAlign(HorizontalTextAlign)
+			Return Value True
+		End If
+		Return Value False
+	End Function
+	
+	Public Function GetHorizontalTextAlign()As Long
+		Return Value HorizontalTextAlign
+	End Function
+	
+	Public Function SetSelectedItem(newselecteditem As Long)As Boolean	
+		If MyScrollListBox.SetSelectedItem(newselecteditem) Then
+			If newselecteditem <> SelectedItem Then				
+				SelectedItem := newselecteditem
+				If GetVisible() Then
+					SendJoinMessage(False, 1, SelectedItem)
+				End If
+			End If
+			Return Value True
+		End If
+		Return Value False
+	End Function
+	
+	Protected Function SetLineText()
+		Var i As Long
+		Var TextToDraw As Text[99]
+		LockRedraw()
+		MyScrollListBox.RemoveAllItems()
+		For i := 1 To FirstMaxPositionNum
+			GetText(i,TextToDraw)
+			MyScrollListBox.AddItem(TextToDraw)
+		End For
+		UnlockRedraw()
+	End Function
+		
+	Public Function SetOpacity(newopacity As Byte) As Boolean	
+		Opacity := newopacity
+		MyScrollListBox.SetOpacity(Opacity)
+		Return Value True		
+	End Function
+
+	Public Function SetBackgroundColor(newbackgroundcolor As Long)As Boolean
+		BackgroundColor := newbackgroundcolor
+		MyScrollListBox.SetBackgroundColor(BackgroundColor)
+		Return Value True
+	End Function
+
+	Public Function SetSelectedItemColor(newselecteditemcolor As Long)As Boolean
+		SelectedItemColor := newselecteditemcolor
+		MyScrollListBox.SetSelectedItemColor(SelectedItemColor)
+		Return Value True		
+	End Function
+	
+	Public Function SetKeepSelected (newkeepselected  As Boolean)As Boolean
+		KeepSelected  := newkeepselected 
+		MyScrollListBox.SetKeepSelected(KeepSelected)
+		Return Value True
+	End Function
+
+	Public Function SetEnsureVisibleSelectedTimeout(newensurevisibleselectedtimeout As Time)As Boolean
+		EnsureVisibleSelectedTimeout := newensurevisibleselectedtimeout
+		MyScrollListBox.SetEnsureVisibleSelectedTimeout(EnsureVisibleSelectedTimeout)
+		Return Value True
+	End Function
+	
+	Public Function EnsureVisible()
+		MyScrollListBox.EnsureVisible()
+	End Function
+		
+	Public Function SetFont(newfont As AddressOf _Font)As Boolean
+		Font := newfont
+		MyScrollListBox.SetFont(Font)
+		Return Value True
+	End Function
+	
+	Public Function SetFontColor(newfontcolor As Long)As Boolean
+		FontColor := newfontcolor
+		MyScrollListBox.SetFontColor(FontColor)
+		Return Value True		
+	End Function
+	
+	Public Function SetFontSelectedItem(newfont As AddressOf _Font)As Boolean
+		FontSelectedItem := newfont
+		MyScrollListBox.SetFontSelectedItem(FontSelectedItem)
+		Return Value True
+	End Function
+
+	Public Function SetFontColorSelectedItem(newfontcolor As Long)As Boolean
+		FontColorSelectedItem := newfontcolor
+		MyScrollListBox.SetFontColorSelectedItem(FontColorSelectedItem)
+		Return Value True		
+	End Function	
+
+	Public Function SetIcons(newicons As AddressOf _Animation)As Boolean
+		Var i As Long
+		Icons := newicons
+		MyScrollListBox.SetIcons(Icons)
+		Return Value True		
+	End Function
+
+	Public Function SetIconsSelectedItem(newicons As AddressOf _Animation)As Boolean
+		Var i As Long
+		IconsSelectedItem := newicons
+		MyScrollListBox.SetIconsSelectedItem(IconsSelectedItem)
+		Return Value True		
+	End Function
+	
+	Public Function SetVisibleItems(newvisibleitems As Long)As Boolean
+		If newvisibleitems > 0 Then
+			VisibleItems := newvisibleitems
+			MyScrollListBox.SetVisibleItems(VisibleItems)
+			Return Value True		
+		End If
+		Return Value False
+	End Function
+
+	Public Function SetLineColor(newlinecolor As Long)As Boolean
+		LineColor := newlinecolor
+		MyScrollListBox.SetLineColor(LineColor)
+		Return Value True		
+	End Function
+
+	Public Function SetLineWeight(newlineweight As Long)As Boolean
+		If newlineweight >= 0 Then
+			LineWeight := newlineweight
+			MyScrollListBox.SetLineWeight(LineWeight)
+			Return Value True		
+		End If
+		Return Value False
+	End Function
+
+	Public Function SetHorizontalTextShift(newhorizontaltextshift As Long)As Boolean
+		HorizontalTextShift := newhorizontaltextshift
+		MyScrollListBox.SetHorizontalTextShift(HorizontalTextShift)
+		Return Value True
+	End Function
+	
+	Public Function GetHorizontalTextShift()As Long
+		Return Value HorizontalTextShift
+	End Function
+	
+	Public Function SetVerticalTextShift(newverticaltextshift As Long)As Boolean
+		VerticalTextShift := newverticaltextshift
+		MyScrollListBox.SetVerticalTextShift(VerticalTextShift)
+		Return Value True
+	End Function
+	
+	Public Function GetVerticalTextShift()As Long
+		Return Value VerticalTextShift
+	End Function
+	
+	Public Function SetHorizontalIconShift(newhorizontaliconshift As Long)As Boolean
+		HorizontalIconShift := newhorizontaliconshift
+		MyScrollListBox.SetHorizontalIconShift(HorizontalIconShift)
+		Return Value True
+	End Function
+	
+	Public Function GetHorizontalIconShift()As Long
+		Return Value HorizontalIconShift
+	End Function
+
+	Public Function SetVerticalIconShift(newverticaliconshift As Long)As Boolean
+		VerticalIconShift := newverticaliconshift
+		MyScrollListBox.SetVerticalIconShift(VerticalIconShift)
+		Return Value True
+	End Function
+	 
+	Public Function GetVerticalIconShift()As Long
+		Return Value VerticalIconShift
+	End Function
+	
+End GraphicClass
+
+Structure TextTabId
+      Var start As Long
+      Var len As Long
+End Structure
+
+GraphicClass BaseNavigationBar Inherits BaseGraphicWindow WithAttributes {hiddenininde}
+
+	Protected Property 	DefaultSelectedItem	As Long := 1 WithAttributes{PropertyGroup := "Appearance"} 
+	Protected Property	BackgroundColor		As Long := &H00000000 WithAttributes {PropertyGroup := "Appearance",EditMode := "color"}
+	Protected Property	SelectedItemColor	As Long := &H33000000 WithAttributes {PropertyGroup := "Appearance",EditMode := "color",DisplayName := "SelectedItemColor"}
+	Protected Property	KeepSelected 		As Boolean := True WithAttributes {PropertyGroup := "Appearance", EditMode := "Boolean; 'Yes' := True, 'No' := False"}
+	Protected Property  VisibleItems		As Long := 5 WithAttributes{PropertyGroup := "Appearance",DisplayName := "VisibleItems"}
+	Protected Property  EnsureVisibleSelectedTimeout 		As Time := :0 WithAttributes{PropertyGroup := "Appearance"}
+	Protected Property  ColorBreath 		As Boolean := True WithAttributes{PropertyGroup := "Appearance",EditMode := "Boolean; 'Yes' := True, 'No' := False"}
+
+	Protected Property  Opacity 			As Byte := 255 WithAttributes {PropertyGroup := "Appearance", EditMode := "time"}
+	
+	Protected Property OpenMode 			As Long := _OW_TOPMOST WithAttributes {PropertyGroup := "Behavior", EditMode := "Enum; 'Modal' := _OW_MODAL, 'Modeless' := 0, 'Topmost' := _OW_TOPMOST"}
+	Protected Property NavigationBarButtonID As Long := 0 WithAttributes {PropertyGroup := "Behavior"}
+		
+	//Text	
+	Protected Property Texts 				As AddressOf Text := Nothing WithAttributes{PropertyGroup := "Text",DisplayName := "Texts"}
+	Protected Property Font					As AddressOf _Font := fntSegoeUI23 WithAttributes{PropertyGroup := "Text"}
+	Protected Property FontColor 			As Long := _COLOR_BLACK WithAttributes {PropertyGroup := "Text",EditMode := "color"}
+	
+	Protected Property FontSelectedItem			As AddressOf _Font := Font WithAttributes{PropertyGroup := "Text"}
+	Protected Property FontColorSelectedItem 	As Long := FontColor WithAttributes {PropertyGroup := "Text",EditMode := "color"}
+	//Icon	
+	Protected Property Icons 				As AddressOf _Animation WithAttributes{PropertyGroup := "Icon",DisplayName := "Icons"}
+	Protected Property IconsSelectedItem	As AddressOf _Animation := Icons WithAttributes{PropertyGroup := "Icon",DisplayName := "Icons selected item"}
+	//Line
+	Protected Property LineColor 			As Long := _COLOR_WHITE WithAttributes{PropertyGroup := "Line",EditMode := "color"}	
+	Protected Property LineWeight 			As Long := 0 WithAttributes{PropertyGroup := "Line"}	
+
+	Protected Property HorizontalTextShift 	As Long := 0 WithAttributes{PropertyGroup := "Text"}		
+	Protected Property VerticalTextShift 	As Long := 0 WithAttributes{PropertyGroup := "Text"}		
+	Protected Property HorizontalIconShift 	As Long := 0 WithAttributes{PropertyGroup := "Icon"}
+	Protected Property VerticalIconShift 	As Long := 0 WithAttributes{PropertyGroup := "Icon"}
+		
+	Protected Var ObjectWidth As Long
+	Protected Var ObjectHeight As Long
+	Protected Var ObjectX As Long
+	Protected Var ObjectY As Long
+	Protected Var SelectedItem As Long
+	Protected Var SetTextBuffer 		As Text[1000] := ""	
+	
+	Protected Var FirstMaxPositionNum As Long := 0
+	Protected Var 		TextTab[1000] 		As TextTabId
+	
+	Public Event OnSelect 	As Process (newselecteditem As Long)
+	Public Event OnHideObject As Function()
+	Public Event OnShowObject As Function()
+	
+	Protected Function OnJoinMessage(msgobject As BaseGraphicClass, messageid As Long, ParamArray)
+		Var Button As Long := ParamArray[1]	
+		If messageid = 1 Then
+			If Button = NavigationBarButtonID Then
+				ShowObject()
+			Else
+				HideObject()
+			End If
+		End If	
+	End Function
+
+	Public Function SetTexts(newtexts As Text)As Boolean
+	//nutno řešit přes SetTextBuffer, protože Texts je addressof text
+
+		If GetMemorySegment(newtexts) = _MSEG_RESOURCEDATA Then
+			Texts := newtexts
+		Else
+			SetTextBuffer := newtexts
+			Texts := SetTextBuffer
+		End If	
+		
+		
+		FirstMaxPositionNum := InitTextFormat ()
+		If FirstMaxPositionNum < Icons.GetFrameCount() Then
+			FirstMaxPositionNum := Icons.GetFrameCount()
+		End If
+		
+		SetLineText()		
+
+		Return Value True
+	End Function
+	
+	Public Function GetTexts() As AddressOf Text
+		Return Value Texts
+	End Function
+
+	Protected Function InitTextFormat ()As Long
+		Var I As Long := 1
+		Var Index As Long := 1
+		Var Iend As Long := 0
+		Var CRLF As ByteString :=&S"\0a"
+		Var CRLFtxt As Text[5]	
+		ByteStringToText(CRLF,CRLFtxt,_ASCII_TO_TEXT)
+		Do 
+			Iend:=GetSubTextPosition(Texts, CRLFtxt ,I)
+			TextTab[Index].start := I
+			TextTab[Index].len   := Iend - I
+         	If Iend =0 Then 
+   				TextTab[Index].len :=  1 + GetTextActualLength(Texts) -I
+  				Return Value Index
+         	End If 
+			I:=Iend +1
+			Index +=1		
+		End Do			
+		Return Value Index	
+	End Function
+
+	Protected Function SetLineText()
+	End Function
+		
+	Protected Function GetText(line As Long, ByRef textline As Text[99])
+		Var TextToDraw As Text [99]				
+		GetTextMiddle(Texts,TextTab[line].start,TextTab[line].len,TextToDraw)
+		textline := TextToDraw	
+	End Function
+		
+	Public Function ShowObject()
+		If Not GetVisible() Then
+			Open(ObjectX,ObjectY,OpenMode)
+		End If	
+	End Function
+
+	Public Function HideObject()	
+		Close()
+	End Function
+	
+	Public Function IsObjectVisible() As Boolean
+		Return Value GetVisible()
+	End Function
+	
+	Protected Function OnShow()
+		If IsObjectVisible() Then
+			SendJoinMessage(False, 1, SelectedItem)
+		End If
+		RaiseEvent OnShowObject()
+	End Function
+	
+	Protected Function OnHide()
+		SendJoinMessage(False, 1, -1)
+		RaiseEvent OnHideObject()
+	End Function
+	
+	Public Function GetObjectDimensions(ByRef currentwidth As Long, ByRef currentheight As Long)
+		GetSize (currentwidth, currentheight)
+	End Function
+	
+	Public Function SetObjectPosition(newx As Long, newy As Long) As Boolean
+		ObjectX := newx
+		ObjectY := newy
+		SetPosition(ObjectX, ObjectY)
+		Return Value True	
+	End Function
+	
+	Public Function GetObjectPosition(ByRef currentx As Long, ByRef currenty As Long)
+		GetPosition(currentx, currenty)	
+	End Function
+	
+	Public Function SetOpenMode(newopenmode As Long) As Boolean	
+		If (newopenmode BitAnd (&HFFFFFFFF BitXor (_OW_ALIGNBOTTOM BitOr _OW_ALIGNVCENTER BitOr _OW_ALIGNTOP BitOr _OW_ALIGNLEFT BitOr _OW_ALIGNHCENTER BitOr _OW_ALIGNRIGHT BitOr _OW_BOTTOM BitOr _OW_CLOSESTANDARD BitOr _OW_CLOSETOPMOST BitOr _OW_MODAL BitOr _OW_TOPMOST))) > 0 Then
+			Return Value False
+		Else
+			OpenMode := newopenmode
+			Return Value True
+		End If	
+	End Function
+	
+	Public Function GetOpenMode() As Long
+		Return Value OpenMode	
+	End Function
+
+	Public Function GetSelectedItem()As Long
+		Return Value SelectedItem
+	End Function
+		
+	Public Function GetOpacity() As Byte	
+		Return Value Opacity		
+	End Function
+	
+	Public Function GetBackgroundColor()As Long
+		Return Value BackgroundColor
+	End Function
+	
+	Public Function GetSelectedItemColor() As Long
+		Return Value SelectedItemColor
+	End Function
+
+	Public Function GetKeepSelected ()As Boolean
+		Return Value KeepSelected 
+	End Function
+
+	Public Function GetEnsureVisibleSelectedTimeout()As Time
+		Return Value EnsureVisibleSelectedTimeout
+	End Function
+	
+	Public Function GetFont()As AddressOf _Font
+		Return Value Font
+	End Function
+	
+	Public Function GetFontSelectedItem()As AddressOf _Font
+		Return Value FontSelectedItem
+	End Function
+	
+	Public Function GetFontColor() As Long
+		Return Value FontColor
+	End Function	
+	
+	Public Function GetFontColorSelectedItem() As Long
+		Return Value FontColorSelectedItem
+	End Function
+	
+	Public Function GetIcons() As AddressOf _Animation
+		Return Value Icons
+	End Function
+	
+	Public Function GetIconsSelectedItem() As AddressOf _Animation
+		Return Value IconsSelectedItem
+	End Function
+	
+	Public Function GetVisibleItems() As Long
+		Return Value VisibleItems
+	End Function
+	
+	Public Function GetLineColor() As Long
+		Return Value LineColor
+	End Function
+
+	Public Function GetLineWeight() As Long
+		Return Value LineWeight
+	End Function
+			
+End GraphicClass
