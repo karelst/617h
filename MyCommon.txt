@@ -1,0 +1,262 @@
+// MyCommon - common functions and constants module
+
+Global Const MAX_SHORT_TEXT_LENGTH 				As Long := 20
+Global Const MAX_STD_TEXT_LENGTH	 			As Long := 50
+Global Const MAX_LONG_TEXT_LENGTH 				As Long := 120
+Global Const MAX_ROOMS 							As Long := 9
+Global Const MAX_AREAS 							As Long := 4
+Global Const MAX_FLOORS 						As Long := 3
+Global Const MAX_THERMOSTATS					As Long := 08
+Global Const MAX_ROOM_LIGHTS					As Long := 3
+
+
+
+
+Global Structure SingleRoomStructure
+	Var	tName								As	Text [MAX_STD_TEXT_LENGTH]
+	Var Thermometer 						As ThermometerStructure 
+	Var iActualSetpoint 					As Double  //:= INIT_TEMP_FREEZPROTECT
+	Var	iHvacMode							As HVAC_MODE
+
+//	Var LightSwitchable[MAX_ROOM_LIGHTS]	As Lights.LightSwitchableStructure  
+	Var LightSwitchable[MAX_ROOM_LIGHTS]	As LightSwitchableStructure  
+	Var Pir 								As PirStructure
+End Structure
+
+Global Structure ThermometerStructure
+	Var bOK As Boolean
+	Var dTemperature As Double
+	Var iModbusAddr As Long
+End Structure
+
+
+Global Structure LightSwitchableStructure
+	Var bEnabled 						As Boolean
+	Var bActualValue					As Boolean
+	Var iRelay							As AddressOf relayCUE_8.Relay			
+	Var iPositionInRoom					As Long
+	Var tName							As Text[MAX_STD_TEXT_LENGTH]
+End Structure
+
+Global Structure PirStructure
+	Var bOK 			As Boolean
+	Var bEnabled 		As Boolean 
+	Var DioPort 		As AddressOf Controller1._DigitalIO
+End Structure
+
+
+
+
+
+Global Const INDX_SLEEPING 			As Byte :=  1  
+Global Const INDX_KITCHEN 			As Byte :=  2
+Global Const INDX_LIVING 			As Byte :=  3
+Global Const INDX_STAIRS 			As Byte :=  4
+Global Const INDX_CHILDWEST 		As Byte :=  5
+Global Const INDX_CHILDEAST 		As Byte :=  6
+Global Const INDX_BATHROOM 			As Byte :=  7
+Global Const INDX_BATHROOM2 		As Byte :=  8
+Global Const INDX_RESERVE			As Byte :=  9
+Global Const INDX_MAX				As Byte :=  9
+
+Global Const LIGHT_SLEEPING 		As Byte :=  2  //RELAYNUMBER
+Global Const LIGHT_KITCHEN 			As Byte :=  6  //table+ tlacitka
+Global Const LIGHT_LIVING 			As Byte :=  5
+Global Const LIGHT_STAIRS 			As Byte :=  4
+Global Const LIGHT_KITCHEN2 		As Byte :=  1  //kitchen+tlac.neznamo kde 222H?
+Global Const LIGHT_CHILDWEST 		As Byte :=  7
+Global Const LIGHT_CHILDEAST 		As Byte :=  3
+Global Const LIGHT_RESERVE			As Byte :=  8
+
+Global Const LEVEL_TOGGLE			As Byte :=  222
+Global Const LEVEL_ON				As Byte :=  100
+Global Const LEVEL_OFF				As Byte :=  0
+
+Global Const TIMEOUT_UPDATE_LIGHTS As Time := :5
+
+
+Global Const THERMOMETER_MODBUSADDR_SLEEPING 		As Byte :=  54 // 6 modbus slave address
+Global Const THERMOMETER_MODBUSADDR_KITCHEN 		As Byte :=  53 // 5
+Global Const THERMOMETER_MODBUSADDR_CHILDWEST 		As Byte :=  52 // 4
+Global Const THERMOMETER_MODBUSADDR_CHILDEAST 		As Byte :=  51 // 3
+Global Const THERMOMETER_MODBUSADDR_BATHROOM 		As Byte :=  55 // 7
+Global Const THERMOMETER_MODBUSADDR_BATHROOM2 		As Byte :=  56 // 8
+//Global Const THERMOMETER_MODBUSADDR_LIVING 			As Byte :=  50 // 2 //OK
+//Global Const THERMOMETER_MODBUSADDR_RESERVE			As Byte :=	48 //? 0 
+
+
+Global Const MAX_HVAC_MODES			As Long := 4
+Global Const HVAC_MODE_AUTO			As Long := 0
+Global Const HVAC_MODE_ECO			As Long := 1
+Global Const HVAC_MODE_COMFORT		As Long := 2
+Global Const HVAC_MODE_FREEZPROTECT	As Long := 3
+
+Global Enum HVAC_MODE
+	AUTO 	:= 0,
+	ECO 	:= 1,
+	COMFORT	:= 2,
+	PROTECT	:= 3
+End Enum
+
+Global Const INIT_TEMP_FREEZPROTECT As Double := 8.0
+Global Const INIT_TEMP_ECO 			As Double := 10.0
+Global Const INIT_TEMP_COMFORT		As Double := 15.0
+
+Global Const TEMPERATURE_MAX As Double := 35.0
+Global Const TEMPERATURE_MIN As Double := 5.0
+
+//?
+Global Const MAX_SETPOINT_FILE_LENGTH	As Long := 5000
+
+Public Const TIMELINE_NUM				As Long := 24 // po hodinách //96// celý den po 15 minutách//288 // celý den po 5 minutách 
+Public Const WEEKDAYS 					As Long := 7
+//Public Const MAX_ENUM_STATES 			As Long := 3
+Public Const FILE_CALENDAR 				As Text := "/filestorage/Callendar.json"
+
+
+Public Structure HeatingCalendarStructure
+	Var iVersion As Long
+	Var RoomHeatingCalendar[MAX_ROOMS]  		As RoomHeatingCalendarStructrue
+End Structure
+
+
+Public Structure RoomHeatingCalendarStructrue
+	Var	tRoom								As	Text [MAX_STD_TEXT_LENGTH]
+	
+//	Var bEnable 							As Boolean
+	Var iSetpoint[MAX_HVAC_MODES-1] 			As Double 
+	Var Day[WEEKDAYS] 						As DayStructure
+End Structure
+
+Public Structure DayStructure
+	Var	tDay						As	Text [MAX_SHORT_TEXT_LENGTH]
+//	Var Selected 						As Boolean
+	Var iHour[TIMELINE_NUM] 			As Long
+End Structure
+
+//Public Structure TimeLineStrucure
+////	Var Temperature As Double
+//	Var EnumState	As Long	 //ENUM_STATE_COMFORT/ENUM_STATE_STANDARD/ENUM_STATE_ECO
+//End Structure
+//
+//Public Structure EnumStatesStrucure
+//	Var Enable 			As Boolean
+//	Var Color 			As Long	
+//	Var Label 			As Text[50]
+//End Structure
+//
+//Public Enum DBShowLevelEnum
+//	SHOW_DAY 	:= 0,
+//	SHOW_WEEK 	:= 1,
+//	SHOW_MONTH 	:= 2
+//End Enum
+
+
+///////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+
+Public Function GetYear() As Long
+	Var mujtime As _TimeStructure
+	If GetLocalTimeStructure(mujtime) Then
+		Return Value mujtime.Year
+	End If
+	Return Value 0		
+End Function
+
+Public Function GetMonth() As Long
+	Var mujtime As _TimeStructure
+	If GetLocalTimeStructure(mujtime) Then
+		Return Value mujtime.Month
+	End If
+	Return Value 0		
+End Function
+
+Public Function GetDay() As Long
+	Var mujtime As _TimeStructure
+	If GetLocalTimeStructure(mujtime) Then
+		Return Value mujtime.Day
+	End If
+	Return Value 0		
+End Function
+
+
+Public Function GetMinute() As Long
+	Var mujtime As _TimeStructure
+	If GetLocalTimeStructure(mujtime) Then
+		Return Value mujtime.Minute
+	End If
+	Return Value 0		
+End Function
+
+Public Function GetHour() As Long
+	Var mujtime As _TimeStructure
+	If GetLocalTimeStructure(mujtime) Then
+		Return Value mujtime.Hour
+	End If
+	Return Value 0		
+End Function
+
+Public Function WaitForNextUTCTimeStep(x As Time)
+//example for calling:
+//WaitForNextUTCTime(1:0) – čekej na začátek další minuty 
+//WaitForNextUTCTime(15:0) – čekej na začátek další čtvrthodiny
+//WaitForNextUTCTime(1:0:0) – čekej na začátek další hodiny
+//WaitForNextUTCTime(24:0:0) – čekej na začátek dalšího dne v UTC
+
+  Var nexttimestartsat As Time := GetUTCTime() + x            
+  // aligning
+  nexttimestartsat :=  nexttimestartsat - (nexttimestartsat Mod x) 
+  //waiting
+  WaitForUTCTime(nexttimestartsat)        
+               
+End Function
+
+//Public Function WaitForNextXX_59minutes()
+//  Var nexttimestartsat As Time := GetUTCTime() + 1:0:0            
+//  // aligning
+//  nexttimestartsat :=  nexttimestartsat - (nexttimestartsat Mod 1:0:0) 
+//  //waiting
+//  WaitForUTCTime(nexttimestartsat - :59)        
+//End Function
+
+//------------------------support utils---------------------------------------
+Global Function PrintTemperature (temp As Double, ByRef T As Text ) As Boolean
+	
+	If temp < -100 Or temp > 100 Then
+		T := "**"
+		Return Value False
+	Else
+		FormatText(T, "{n.1} °C", temp)
+		Return Value True
+	End If		
+	
+End Function		
+
+Global Function PrintANONE (en As Boolean, ByRef T As Text )
+	
+	If en Then 
+		T := "ANO" 
+	Else
+		T := "NE"
+	End If		
+	
+End Function		
+
+Global Function PrintPercent(percent As Long, ByRef T As Text )
+	
+	FormatText(T, "{n.0} %", percent)
+	
+End Function		
+
+
+Global Function PrintkWatt (kWatt As Double, ByRef T As Text )
+	
+	FormatText(T, "{n.3} kW", kWatt)
+	
+End Function
+
+Global Function PrintPresure (Pa As Double, ByRef T As Text )
+	
+	FormatText(T, "{n.1} hPa", Pa / 100)
+
+End Function	
